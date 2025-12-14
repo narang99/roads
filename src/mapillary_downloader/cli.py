@@ -159,6 +159,7 @@ def cmd_test_download(args):
         sys.exit(1)
 
     output_dir = Path(args.output)
+    bbox_label = "test_bbox"
 
     # Create downloader
     downloader = CityImageDownloader(
@@ -172,12 +173,34 @@ def cmd_test_download(args):
     # Safety check: ensure we don't overwrite an existing dataset
     existing_city = downloader.state.get_metadata("city_name")
     if existing_city:
-        print(f"Error: Output directory already contains data for '{existing_city}'.", file=sys.stderr)
-        print("Use a different --output directory to avoid corrupting existing dataset.", file=sys.stderr)
-        sys.exit(1)
+        if existing_city == bbox_label:
+            # It's a previous test_bbox, ask if user wants to wipe
+            print(f"Output directory already contains test data.")
+            response = input("Do you want to wipe the existing test data and start fresh? [y/N]: ")
+            if response.lower() in ("y", "yes"):
+                # Wipe the state database
+                import os
+                state_db = output_dir / "state.db"
+                if state_db.exists():
+                    os.remove(state_db)
+                # Recreate downloader with fresh state
+                downloader = CityImageDownloader(
+                    access_token=args.token,
+                    output_dir=output_dir,
+                    image_size=args.size,
+                    rate_limit_delay=args.delay,
+                    save_metadata=not args.no_metadata,
+                )
+                print("Wiped existing test data.")
+            else:
+                print("Resuming existing test download...")
+        else:
+            # It's a real city dataset, don't allow overwrite
+            print(f"Error: Output directory already contains data for '{existing_city}'.", file=sys.stderr)
+            print("Use a different --output directory to avoid corrupting existing dataset.", file=sys.stderr)
+            sys.exit(1)
 
     # Set metadata for this test download
-    bbox_label = f"test_bbox_{args.bbox}"
     downloader.state.set_metadata("city_name", bbox_label)
     downloader.state.set_metadata("bbox", args.bbox)
 

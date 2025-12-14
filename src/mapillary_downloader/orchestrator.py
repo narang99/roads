@@ -143,6 +143,9 @@ class CityImageDownloader:
             image_limit: Optional limit on number of images to download
         """
         log = self._make_logger(progress_callback)
+        
+        # Store original bbox for optimization in _process_tile
+        self._original_bbox = bbox
 
         # Phase 1: Calculate and register tiles
         tiles = get_tiles_for_bbox(*bbox)
@@ -165,7 +168,7 @@ class CityImageDownloader:
                 f"Processing tile {tile.z}/{tile.x}/{tile.y}",
             )
 
-            await self._process_tile(client, tile)
+            await self._process_tile(client, tile, original_bbox=bbox, progress_callback=progress_callback)
 
             # Rate limiting
             await asyncio.sleep(self.rate_limit_delay)
@@ -225,16 +228,45 @@ class CityImageDownloader:
             f"Download complete! {final_stats}",
         )
 
-    async def _process_tile(self, client: httpx.AsyncClient, tile: Tile):
+    async def _process_tile(
+        self,
+        client: httpx.AsyncClient,
+        tile: Tile,
+        original_bbox: Optional[tuple[float, float, float, float]] = None,
+        progress_callback: ProgressCallback = None,
+    ):
         """Process a single tile to discover images."""
         self.state.mark_tile_started(tile)
+        
+        def print_bbox_progress(current: int, total: int, images_found: int):
+            """Print progress bar for bbox processing."""
+            if total <= 1:
+                return  # No progress bar needed for single bbox
+            bar_width = 30
+            filled = int(bar_width * current / total)
+            bar = "█" * filled + "░" * (bar_width - filled)
+            pct = current / total * 100
+            print(f"\r    Bbox [{bar}] {pct:5.1f}% ({current}/{total}) - {images_found} images", end="", flush=True)
+            if current == total:
+                print()  # Newline when complete
 
         try:
             # Split tile into smaller bboxes for API compliance
             bboxes = tile_to_small_bboxes(tile)
+            
+            # Optimization: if original bbox is smaller than tile, use it directly
+            # This avoids fetching images outside the requested area
+            if original_bbox and len(bboxes) > 1:
+                # Check if original bbox fits within this tile's area
+                # If so, just use the original bbox directly
+                bboxes = [original_bbox]
+            
             all_images = []
+            total_bboxes = len(bboxes)
+            idx = 0
 
-            for bbox in bboxes:
+            while idx < total_bboxes:
+                bbox = bboxes[idx]
                 try:
                     images = await fetch_images_in_bbox(
                         client,
@@ -251,16 +283,17 @@ class CityImageDownloader:
                         img["lat"] = coords[1] if len(coords) > 1 else None
 
                     all_images.extend(images)
+                    
+                    # Success - update progress and move to next bbox
+                    idx += 1
+                    print_bbox_progress(idx, total_bboxes, len(all_images))
+                    await asyncio.sleep(self.rate_limit_delay)
 
                 except RateLimitError:
-                    # Wait and retry
+                    # Log error and wait before retrying same bbox
+                    print(f"\n    ⚠ Rate limit hit, waiting 60s before retrying bbox {idx + 1}/{total_bboxes}...")
                     await asyncio.sleep(60)
-                    images = await fetch_images_in_bbox(
-                        client, self.access_token, *bbox
-                    )
-                    all_images.extend(images)
-
-                await asyncio.sleep(self.rate_limit_delay)
+                    # Don't increment idx - will retry same bbox
 
             # Deduplicate by image ID
             seen = set()
