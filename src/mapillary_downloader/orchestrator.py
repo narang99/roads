@@ -24,10 +24,27 @@ from .api_client import (
 )
 from .geocoder import get_city_bbox
 from .state import StateManager
-from .tiles import Tile, get_tiles_for_bbox, tile_to_small_bboxes
+from .tiles import Tile, get_tiles_for_bbox, tile_to_bbox, tile_to_small_bboxes
 
 # Type alias for progress callback
 ProgressCallback = Optional[Callable[[str, int, int, str], None]]
+
+
+def print_bbox_progress(current: int, total: int, images_found: int):
+    """Print progress bar for bbox processing."""
+    if total <= 1:
+        return  # No progress bar needed for single bbox
+    bar_width = 30
+    filled = int(bar_width * current / total)
+    bar = "█" * filled + "░" * (bar_width - filled)
+    pct = current / total * 100
+    print(
+        f"\r    Bbox [{bar}] {pct:5.1f}% ({current}/{total}) - {images_found} images",
+        end="",
+        flush=True,
+    )
+    if current == total:
+        print()  # Newline when complete
 
 
 class CityImageDownloader:
@@ -91,15 +108,19 @@ class CityImageDownloader:
     def print_bbox_info(bbox: tuple[float, float, float, float]):
         """
         Print bounding box info with Google Maps URLs.
-        
+
         Args:
             bbox: Bounding box as (min_lon, min_lat, max_lon, max_lat)
         """
         min_lon, min_lat, max_lon, max_lat = bbox
-        
+
         print(f"\n📍 Bounding box:")
-        print(f"   SW corner: https://www.google.com/maps/?q={min_lat:.6f},{min_lon:.6f}")
-        print(f"   NE corner: https://www.google.com/maps/?q={max_lat:.6f},{max_lon:.6f}")
+        print(
+            f"   SW corner: https://www.google.com/maps/?q={min_lat:.6f},{min_lon:.6f}"
+        )
+        print(
+            f"   NE corner: https://www.google.com/maps/?q={max_lat:.6f},{max_lon:.6f}"
+        )
         print()
 
     async def download_city(
@@ -137,7 +158,7 @@ class CityImageDownloader:
                 self.state.set_metadata("city_name", city_name)
                 self.state.set_metadata("bbox", ",".join(map(str, bbox)))
                 log("geocode", 1, 1, f"Bounding box: {bbox}")
-            
+
             # Print bounding box info with Google Maps URL
             self.print_bbox_info(bbox)
 
@@ -152,6 +173,7 @@ class CityImageDownloader:
         bbox: tuple[float, float, float, float],
         progress_callback: ProgressCallback = None,
         image_limit: Optional[int] = None,
+        skip_chunking: bool = False,
     ):
         """
         Download all images within a bounding box.
@@ -165,7 +187,7 @@ class CityImageDownloader:
             image_limit: Optional limit on number of images to download
         """
         log = self._make_logger(progress_callback)
-        
+
         # Store original bbox for optimization in _process_tile
         self._original_bbox = bbox
 
@@ -190,7 +212,9 @@ class CityImageDownloader:
                 f"Processing tile {tile.z}/{tile.x}/{tile.y}",
             )
 
-            await self._process_tile(client, tile, original_bbox=bbox, progress_callback=progress_callback)
+            await self._process_tile(
+                client, tile, original_bbox=bbox, progress_callback=progress_callback
+            )
 
             # Rate limiting
             await asyncio.sleep(self.rate_limit_delay)
@@ -254,35 +278,17 @@ class CityImageDownloader:
         self,
         client: httpx.AsyncClient,
         tile: Tile,
-        original_bbox: Optional[tuple[float, float, float, float]] = None,
         progress_callback: ProgressCallback = None,
     ):
         """Process a single tile to discover images."""
         self.state.mark_tile_started(tile)
-        
-        def print_bbox_progress(current: int, total: int, images_found: int):
-            """Print progress bar for bbox processing."""
-            if total <= 1:
-                return  # No progress bar needed for single bbox
-            bar_width = 30
-            filled = int(bar_width * current / total)
-            bar = "█" * filled + "░" * (bar_width - filled)
-            pct = current / total * 100
-            print(f"\r    Bbox [{bar}] {pct:5.1f}% ({current}/{total}) - {images_found} images", end="", flush=True)
-            if current == total:
-                print()  # Newline when complete
 
         try:
             # Split tile into smaller bboxes for API compliance
             bboxes = tile_to_small_bboxes(tile)
-            
+
             # Optimization: if original bbox is smaller than tile, use it directly
             # This avoids fetching images outside the requested area
-            if original_bbox and len(bboxes) > 1:
-                # Check if original bbox fits within this tile's area
-                # If so, just use the original bbox directly
-                bboxes = [original_bbox]
-            
             all_images = []
             total_bboxes = len(bboxes)
             idx = 0
@@ -305,7 +311,7 @@ class CityImageDownloader:
                         img["lat"] = coords[1] if len(coords) > 1 else None
 
                     all_images.extend(images)
-                    
+
                     # Success - update progress and move to next bbox
                     idx += 1
                     print_bbox_progress(idx, total_bboxes, len(all_images))
@@ -316,7 +322,9 @@ class CityImageDownloader:
                     logger.exception(
                         f"Rate limit hit on bbox {idx + 1}/{total_bboxes}, waiting 60s before retry"
                     )
-                    print(f"\n    ⚠ Rate limit hit, waiting 60s before retrying bbox {idx + 1}/{total_bboxes}...")
+                    print(
+                        f"\n    ⚠ Rate limit hit, waiting 60s before retrying bbox {idx + 1}/{total_bboxes}..."
+                    )
                     await asyncio.sleep(60)
                     # Don't increment idx - will retry same bbox
 
@@ -372,22 +380,21 @@ class CityImageDownloader:
 
             # Download image
             output_path = self.images_dir / f"{image_id}.jpg"
-            success = await download_image(client, image_url, output_path)
+            await download_image(client, image_url, output_path)
 
-            if success:
-                self.state.mark_image_downloaded(image_id, str(output_path))
+            self.state.mark_image_downloaded(image_id, str(output_path))
 
-                # Save metadata
-                if self.save_metadata:
-                    meta_path = self.metadata_dir / f"{image_id}.json"
-                    with open(meta_path, "w") as f:
-                        json.dump(metadata, f, indent=2)
-            else:
-                self.state.mark_image_failed(image_id, "Download failed")
+            # Save metadata
+            if self.save_metadata:
+                meta_path = self.metadata_dir / f"{image_id}.json"
+                with open(meta_path, "w") as f:
+                    json.dump(metadata, f, indent=2)
 
         except RateLimitError:
             # Don't mark as failed, will retry later
-            logger.exception(f"Rate limit hit while downloading image {image_id}, will retry later")
+            logger.exception(
+                f"Rate limit hit while downloading image {image_id}, will retry later"
+            )
             await asyncio.sleep(60)
         except MapillaryAPIError as e:
             logger.exception(f"API error downloading image {image_id}")

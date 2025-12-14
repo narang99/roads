@@ -173,13 +173,12 @@ class TestDownloadImage:
             output_path = Path(tmpdir) / "test_image.jpg"
             
             async with httpx.AsyncClient() as client:
-                success = await download_image(
+                await download_image(
                     client,
                     "https://example.com/image.jpg",
                     output_path
                 )
             
-            assert success is True
             assert output_path.exists()
             assert output_path.read_bytes() == image_data
     
@@ -195,13 +194,13 @@ class TestDownloadImage:
             output_path = Path(tmpdir) / "test_image.jpg"
             
             async with httpx.AsyncClient() as client:
-                success = await download_image(
-                    client,
-                    "https://example.com/image.jpg",
-                    output_path
-                )
+                with pytest.raises(MapillaryAPIError):
+                    await download_image(
+                        client,
+                        "https://example.com/image.jpg",
+                        output_path
+                    )
             
-            assert success is False
             assert not output_path.exists()
     
     @respx.mock
@@ -218,13 +217,12 @@ class TestDownloadImage:
             output_path = Path(tmpdir) / "subdir" / "nested" / "image.jpg"
             
             async with httpx.AsyncClient() as client:
-                success = await download_image(
+                await download_image(
                     client,
                     "https://example.com/image.jpg",
                     output_path
                 )
             
-            assert success is True
             assert output_path.exists()
 
 
