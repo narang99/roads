@@ -19,10 +19,57 @@ COVERAGE_TILES_URL = f"{TILES_API_ROOT}/maps/vtp/mly1_public/2/{{z}}/{{x}}/{{y}}
 
 class MapillaryAPIError(Exception):
     """Error from Mapillary API."""
-    def __init__(self, message: str, status_code: Optional[int] = None, response_body: Optional[str] = None):
-        super().__init__(message)
+    def __init__(
+        self,
+        message: str,
+        status_code: Optional[int] = None,
+        response_body: Optional[str] = None,
+        request_url: Optional[str] = None,
+        request_params: Optional[dict] = None,
+    ):
         self.status_code = status_code
         self.response_body = response_body
+        self.request_url = request_url
+        self.request_params = request_params
+        
+        # Try to parse error details from JSON response
+        self.error_type = None
+        self.error_message = None
+        self.error_code = None
+        
+        if response_body:
+            try:
+                import json
+                error_data = json.loads(response_body)
+                if "error" in error_data:
+                    err = error_data["error"]
+                    self.error_type = err.get("type")
+                    self.error_message = err.get("message") or err.get("error_user_msg")
+                    self.error_code = err.get("code")
+            except (json.JSONDecodeError, KeyError, TypeError):
+                pass
+        
+        # Build detailed message
+        full_message = message
+        if self.error_message:
+            full_message = f"{message}: {self.error_message}"
+        if self.error_type:
+            full_message = f"{full_message} (type: {self.error_type})"
+        if self.error_code:
+            full_message = f"{full_message} [code: {self.error_code}]"
+        
+        super().__init__(full_message)
+    
+    def __str__(self):
+        parts = [super().__str__()]
+        if self.request_url:
+            parts.append(f"URL: {self.request_url}")
+        if self.request_params:
+            parts.append(f"Params: {self.request_params}")
+        if self.response_body and not self.error_message:
+            # Only show raw body if we couldn't parse it
+            parts.append(f"Response: {self.response_body[:500]}")
+        return " | ".join(parts)
 
 
 class RateLimitError(MapillaryAPIError):
@@ -64,13 +111,21 @@ async def fetch_coverage_tile(
     )
     
     if response.status_code == 429:
-        raise RateLimitError("Tile API rate limit exceeded", 429, response.text)
+        raise RateLimitError(
+            "Tile API rate limit exceeded",
+            status_code=429,
+            response_body=response.text,
+            request_url=url,
+            request_params={"z": z, "x": x, "y": y},
+        )
     
     if response.status_code >= 400:
         raise MapillaryAPIError(
             f"Tile API error: {response.status_code}",
-            response.status_code,
-            response.text
+            status_code=response.status_code,
+            response_body=response.text,
+            request_url=url,
+            request_params={"z": z, "x": x, "y": y},
         )
     
     return response.content
@@ -170,13 +225,21 @@ async def fetch_images_in_bbox(
     )
     
     if response.status_code == 429:
-        raise RateLimitError("Search API rate limit exceeded", 429, response.text)
+        raise RateLimitError(
+            "Search API rate limit exceeded",
+            status_code=429,
+            response_body=response.text,
+            request_url=url,
+            request_params={"bbox": bbox_str, "fields": fields, "limit": limit},
+        )
     
     if response.status_code >= 400:
         raise MapillaryAPIError(
             f"Search API error: {response.status_code}",
-            response.status_code,
-            response.text
+            status_code=response.status_code,
+            response_body=response.text,
+            request_url=url,
+            request_params={"bbox": bbox_str, "fields": fields, "limit": limit},
         )
     
     data = response.json()
@@ -220,13 +283,21 @@ async def fetch_image_metadata(
     )
     
     if response.status_code == 429:
-        raise RateLimitError("Entity API rate limit exceeded", 429, response.text)
+        raise RateLimitError(
+            "Entity API rate limit exceeded",
+            status_code=429,
+            response_body=response.text,
+            request_url=url,
+            request_params={"image_id": image_id, "fields": fields},
+        )
     
     if response.status_code >= 400:
         raise MapillaryAPIError(
             f"Entity API error for image {image_id}: {response.status_code}",
-            response.status_code,
-            response.text
+            status_code=response.status_code,
+            response_body=response.text,
+            request_url=url,
+            request_params={"image_id": image_id, "fields": fields},
         )
     
     return response.json()
