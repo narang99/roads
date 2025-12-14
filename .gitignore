@@ -11,3 +11,6 @@ wheels/
 
 # where we download datasets
 data/
+
+
+/mapillary_downloader.log

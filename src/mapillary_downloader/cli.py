@@ -4,6 +4,7 @@ Command-line interface for Mapillary city image downloader.
 
 import argparse
 import asyncio
+import logging
 import os
 import sys
 from pathlib import Path
@@ -233,6 +234,16 @@ def cmd_test_download(args):
 def main():
     """Main CLI entry point."""
     load_dotenv()
+    
+    # Configure logging - write to file with tracebacks
+    logging.basicConfig(
+        level=logging.WARNING,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[
+            logging.FileHandler("mapillary_downloader.log"),
+            logging.StreamHandler(sys.stderr),
+        ]
+    )
 
     parser = argparse.ArgumentParser(
         description="Download street-level images from Mapillary",

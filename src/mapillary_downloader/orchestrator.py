@@ -6,10 +6,14 @@ Coordinates all modules: geocoding, tiles, state, and API client.
 
 import asyncio
 import json
+import logging
 from pathlib import Path
 from typing import Callable, Optional
 
 import httpx
+
+# Configure logger for this module
+logger = logging.getLogger(__name__)
 
 from .api_client import (
     MapillaryAPIError,
@@ -83,6 +87,21 @@ class CityImageDownloader:
 
         return log
 
+    @staticmethod
+    def print_bbox_info(bbox: tuple[float, float, float, float]):
+        """
+        Print bounding box info with Google Maps URLs.
+        
+        Args:
+            bbox: Bounding box as (min_lon, min_lat, max_lon, max_lat)
+        """
+        min_lon, min_lat, max_lon, max_lat = bbox
+        
+        print(f"\n📍 Bounding box:")
+        print(f"   SW corner: https://www.google.com/maps/?q={min_lat:.6f},{min_lon:.6f}")
+        print(f"   NE corner: https://www.google.com/maps/?q={max_lat:.6f},{max_lon:.6f}")
+        print()
+
     async def download_city(
         self, city_name: str, progress_callback: ProgressCallback = None
     ):
@@ -118,6 +137,9 @@ class CityImageDownloader:
                 self.state.set_metadata("city_name", city_name)
                 self.state.set_metadata("bbox", ",".join(map(str, bbox)))
                 log("geocode", 1, 1, f"Bounding box: {bbox}")
+            
+            # Print bounding box info with Google Maps URL
+            self.print_bbox_info(bbox)
 
             # Use shared bbox download logic
             await self.download_bbox(
@@ -291,6 +313,9 @@ class CityImageDownloader:
 
                 except RateLimitError:
                     # Log error and wait before retrying same bbox
+                    logger.exception(
+                        f"Rate limit hit on bbox {idx + 1}/{total_bboxes}, waiting 60s before retry"
+                    )
                     print(f"\n    ⚠ Rate limit hit, waiting 60s before retrying bbox {idx + 1}/{total_bboxes}...")
                     await asyncio.sleep(60)
                     # Don't increment idx - will retry same bbox
@@ -309,6 +334,7 @@ class CityImageDownloader:
             self.state.mark_tile_completed(tile, len(unique_images))
 
         except Exception as e:
+            logger.exception(f"Failed to process tile {tile.z}/{tile.x}/{tile.y}")
             self.state.mark_tile_failed(tile, str(e))
             raise
 
@@ -361,10 +387,13 @@ class CityImageDownloader:
 
         except RateLimitError:
             # Don't mark as failed, will retry later
+            logger.exception(f"Rate limit hit while downloading image {image_id}, will retry later")
             await asyncio.sleep(60)
         except MapillaryAPIError as e:
+            logger.exception(f"API error downloading image {image_id}")
             self.state.mark_image_failed(image_id, str(e))
         except Exception as e:
+            logger.exception(f"Unexpected error downloading image {image_id}")
             self.state.mark_image_failed(image_id, str(e))
 
 
