@@ -9,11 +9,9 @@ import json
 import logging
 from pathlib import Path
 from typing import Callable, Optional
+import typing
 
 import httpx
-
-# Configure logger for this module
-logger = logging.getLogger(__name__)
 
 from .api_client import (
     MapillaryAPIError,
@@ -24,7 +22,10 @@ from .api_client import (
 )
 from .geocoder import get_city_bbox
 from .state import StateManager
-from .tiles import Tile, get_tiles_for_bbox, tile_to_bbox, tile_to_small_bboxes
+from .tiles import Tile, get_tiles_for_bbox, tile_to_small_bboxes
+
+# Configure logger for this module
+logger = logging.getLogger(__name__)
 
 # Type alias for progress callback
 ProgressCallback = Optional[Callable[[str, int, int, str], None]]
@@ -46,6 +47,22 @@ def print_bbox_progress(current: int, total: int, images_found: int):
     if current == total:
         print()  # Newline when complete
 
+async def _get_city_bbox_from_state(state, city_name, client) -> tuple[float, float, float, float]:
+    bbox_str = state.get_metadata("bbox")
+    if bbox_str:
+        bbox = typing.cast(
+            tuple[float, float, float, float],
+            tuple(map(float, bbox_str.split(",")))
+        )
+        logger.info(f"geocode 1, 1, Using cached bounding box for {city_name}")
+    else:
+        logger.info(f"geocode 0, 1, Geocoding {city_name}...")
+        bbox_obj = await get_city_bbox(client, city_name)
+        bbox = bbox_obj.as_tuple()
+        state.set_metadata("city_name", city_name)
+        state.set_metadata("bbox", ",".join(map(str, bbox)))
+        logger.info(f"geocode 1, 1, Bounding box: {bbox}")
+    return bbox
 
 class CityImageDownloader:
     """
@@ -114,7 +131,7 @@ class CityImageDownloader:
         """
         min_lon, min_lat, max_lon, max_lat = bbox
 
-        print(f"\n📍 Bounding box:")
+        print("\n📍 Bounding box:")
         print(
             f"   SW corner: https://www.google.com/maps/?q={min_lat:.6f},{min_lon:.6f}"
         )
@@ -133,8 +150,6 @@ class CityImageDownloader:
             city_name: Name of the city (e.g., "Palo Alto, CA")
             progress_callback: Optional callback(phase, current, total, message)
         """
-        log = self._make_logger(progress_callback)
-
         async with httpx.AsyncClient(timeout=30.0) as client:
             # Phase 1: Check if we're resuming or starting fresh
             saved_city = self.state.get_metadata("city_name")
@@ -146,23 +161,8 @@ class CityImageDownloader:
                     f"Use a different output directory or delete the state.db file."
                 )
 
-            # Phase 2: Geocode city (or use cached bbox)
-            bbox_str = self.state.get_metadata("bbox")
-            if bbox_str:
-                bbox = tuple(map(float, bbox_str.split(",")))
-                log("geocode", 1, 1, f"Using cached bounding box for {city_name}")
-            else:
-                log("geocode", 0, 1, f"Geocoding {city_name}...")
-                bbox_obj = await get_city_bbox(client, city_name)
-                bbox = bbox_obj.as_tuple()
-                self.state.set_metadata("city_name", city_name)
-                self.state.set_metadata("bbox", ",".join(map(str, bbox)))
-                log("geocode", 1, 1, f"Bounding box: {bbox}")
-
-            # Print bounding box info with Google Maps URL
+            bbox = await _get_city_bbox_from_state(self.state, city_name, client)
             self.print_bbox_info(bbox)
-
-            # Use shared bbox download logic
             await self.download_bbox(
                 client=client, bbox=bbox, progress_callback=progress_callback
             )
@@ -173,7 +173,6 @@ class CityImageDownloader:
         bbox: tuple[float, float, float, float],
         progress_callback: ProgressCallback = None,
         image_limit: Optional[int] = None,
-        skip_chunking: bool = False,
     ):
         """
         Download all images within a bounding box.
@@ -213,7 +212,7 @@ class CityImageDownloader:
             )
 
             await self._process_tile(
-                client, tile, original_bbox=bbox, progress_callback=progress_callback
+                client, tile, progress_callback=progress_callback
             )
 
             # Rate limiting
