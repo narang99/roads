@@ -186,7 +186,6 @@ class CityImageDownloader:
 
         await self._download_phase(image_limit, client)
 
-
     async def _download_phase(self, image_limit, client):
         total_images = self.state.get_total_images()
         if total_images == 0:
@@ -220,9 +219,10 @@ class CityImageDownloader:
         pending = self.state.get_pending_images(limit=batch_size)
         if not pending:
             return 0
-        for image_id in tqdm(pending):
-            await self._download_image(client, image_id)
-            # await asyncio.sleep(self.rate_limit_delay)
+
+        tasks = [self._download_image(client, image_id) for image_id in pending]
+        for f in tqdm(asyncio.as_completed(tasks), total=len(tasks)):
+            await f
         return len(pending)
 
     async def _download_image(self, client: httpx.AsyncClient, image_id: str):

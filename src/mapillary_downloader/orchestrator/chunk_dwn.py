@@ -20,29 +20,46 @@ def save_tiles_for_bbox_in_state(bbox, state):
     return total_tiles
 
 
+from tqdm import tqdm
+
 async def discover_phase(bbox, state, client, access_token, rate_limit_delay):
     total_tiles = save_tiles_for_bbox_in_state(bbox, state)
     state.reset_in_progress()
     pending_tiles = state.get_pending_tiles()
-    processed_tiles = total_tiles - len(pending_tiles)
-    for i, tile in enumerate(pending_tiles):
-        logger.info(f"discovery {processed_tiles + i + 1}/{total_tiles}, tile={tile}")
+    
+    if not pending_tiles:
+        logger.info("No pending tiles to discover.")
+        return
 
-        async def _save():
-            await save_images_metadata_for_single_tile(
-                tile, client, access_token, state, rate_limit_delay
-            )
+    logger.info(f"Starting discovery for {len(pending_tiles)} tiles")
+    
+    tasks = [
+        single_tile_discover(tile, state, client, access_token, rate_limit_delay)
+        for tile in pending_tiles
+    ]
+    
+    for f in tqdm(asyncio.as_completed(tasks), total=len(tasks), desc="Discovering tiles"):
+        await f
 
-        await retry_n_times(
-            _save,
-            5,
-            lambda *a,**kw: None,
-            lambda ex: logger.exception(
-                f"failure in getting metadata for tile={tile}, marking as failure"
-            ),
-        )
-        await asyncio.sleep(rate_limit_delay)
     logger.info(f"Discovered images from {total_tiles} tiles.")
+
+
+async def single_tile_discover(
+    tile, state, client, access_token, rate_limit_delay
+):
+    async def _save():
+        await save_images_metadata_for_single_tile(
+            tile, client, access_token, state, rate_limit_delay
+        )
+
+    await retry_n_times(
+        _save,
+        5,
+        lambda *a,**kw: None,
+        lambda ex: logger.exception(
+            f"failure in getting metadata for tile={tile}, marking as failure"
+        ),
+    )
 
 
 async def _delay_10_seconds(*args, **kwargs):
