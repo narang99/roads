@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 
 from mapillary_downloader.api_client import (

@@ -4,8 +4,9 @@ Geocoding module - Convert city names to bounding boxes.
 Uses OpenStreetMap Nominatim API (free, no API key required).
 """
 
-import httpx
 from dataclasses import dataclass
+
+import httpx
 
 
 @dataclass

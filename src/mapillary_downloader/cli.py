@@ -13,8 +13,8 @@ import httpx
 from dotenv import load_dotenv
 
 from .geocoder import get_city_bbox
-from .tiles import get_tiles_for_bbox, tile_to_bbox, Tile
 from .orchestrator import CityImageDownloader
+from .tiles import get_tiles_for_bbox, tile_to_bbox
 
 
 def cmd_download(args):
@@ -42,10 +42,10 @@ def cmd_download(args):
 
         print(f"City: {state.get_metadata('city_name')}")
         print(f"Bounding Box: {state.get_metadata('bbox')}")
-        print(f"\nTile Statistics:")
+        print("\nTile Statistics:")
         for status, data in tile_stats.items():
             print(f"  {status}: {data['count']} tiles, {data['images']} images")
-        print(f"\nImage Statistics:")
+        print("\nImage Statistics:")
         for status, count in image_stats.items():
             print(f"  {status}: {count}")
         return
@@ -91,7 +91,7 @@ def cmd_tiles(args):
     print(f"Geocoding: {args.city}")
     bbox = asyncio.run(get_tiles())
 
-    print(f"\nCity Bounding Box:")
+    print("\nCity Bounding Box:")
     print(f"  min_lon: {bbox.min_lon}")
     print(f"  min_lat: {bbox.min_lat}")
     print(f"  max_lon: {bbox.max_lon}")
@@ -135,7 +135,7 @@ def cmd_tiles(args):
                 {"z": t.z, "x": t.x, "y": t.y, "bbox": tile_to_bbox(t)} for t in tiles
             ],
         }
-        print(f"\nJSON output:")
+        print("\nJSON output:")
         print(json.dumps(output, indent=2))
 
 
@@ -175,7 +175,7 @@ def cmd_test_download(args):
     if existing_city:
         if existing_city == bbox_label:
             # It's a previous test_bbox, ask if user wants to wipe
-            print(f"Output directory already contains test data.")
+            print("Output directory already contains test data.")
             response = input(
                 "Do you want to wipe the existing test data and start fresh? [y/N]: "
             )

@@ -5,9 +5,9 @@ Calculate map tiles that cover a geographic bounding box.
 Uses mercantile for tile math.
 """
 
-import mercantile
 from dataclasses import dataclass
-from typing import Iterator
+
+import mercantile
 
 
 @dataclass(frozen=True)

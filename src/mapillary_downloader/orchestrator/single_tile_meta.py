@@ -1,6 +1,5 @@
 # download in chunks
 
-import asyncio
 import itertools
 import logging
 

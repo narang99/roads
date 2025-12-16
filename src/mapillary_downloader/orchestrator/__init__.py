@@ -17,23 +17,11 @@ from tqdm import tqdm
 from mapillary_downloader.orchestrator.chunk_dwn import (
     discover_phase,
     download_single_image_with_retry,
-    save_tiles_for_bbox_in_state,
 )
 from mapillary_downloader.orchestrator.pretty import print_bbox_info
-from mapillary_downloader.orchestrator.single_tile_meta import (
-    save_images_metadata_for_single_tile,
-)
 
-from ..api_client import (
-    MapillaryAPIError,
-    RateLimitError,
-    download_image,
-    fetch_image_metadata,
-    fetch_images_in_bbox,
-)
 from ..geocoder import get_city_bbox
 from ..state import StateManager
-from ..tiles import Tile, get_tiles_for_bbox, tile_to_small_bboxes
 
 # Configure logger for this module
 logger = logging.getLogger(__name__)

@@ -6,10 +6,10 @@ Each function makes exactly one API call and returns the raw/parsed response.
 """
 
 import asyncio
+import logging
 from pathlib import Path
 from typing import Optional
 
-import logging
 import httpx
 
 logger = logging.getLogger(__name__)

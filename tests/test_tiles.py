@@ -1,6 +1,5 @@
 """Tests for tile calculation module."""
 
-import pytest
 from mapillary_downloader.tiles import (
     Tile,
     get_tiles_for_bbox,
