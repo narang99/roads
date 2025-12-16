@@ -231,6 +231,80 @@ def cmd_test_download(args):
         sys.exit(1)
 
 
+
+
+def cmd_download_random_sample(args):
+    """Download a random sample of images for a city or list of cities."""
+    # Validate token
+    if not args.token:
+        print("Error: Mapillary access token required.", file=sys.stderr)
+        print("Set MAPILLARY_ACCESS_TOKEN env var or use --token", file=sys.stderr)
+        sys.exit(1)
+
+    base_output_dir = Path(args.output)
+    
+    # Process cities
+    cities = [c.strip() for c in args.city.split(",") if c.strip()]
+    
+    if not cities:
+        print("Error: No city specified", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"Processing {len(cities)} cities: {', '.join(cities)}")
+
+    for city in cities:
+        # Determine output directory for this city
+        if len(cities) > 1:
+            # Sanitize city name for folder usage (basic)
+            safe_name = city.replace("/", "_").replace("\\", "_")
+            output_dir = base_output_dir / safe_name
+        else:
+            output_dir = base_output_dir
+
+        print(f"\n--- Starting {city} ---")
+        
+        # Create downloader
+        downloader = CityImageDownloader(
+            access_token=args.token,
+            output_dir=output_dir,
+            image_size=args.size,
+            rate_limit_delay=args.delay,
+            save_metadata=not args.no_metadata,
+        )
+
+        # Progress callback
+        def progress(phase: str, current: int, total: int, message: str):
+            pct = (current / total * 100) if total > 0 else 0
+            print(f"[{city}][{phase:>10}] {pct:5.1f}% | {message}")
+
+        # Strategies
+        def selection_strategy(state):
+            print(f"\n[{city}] Selecting random sample of {args.sample_size} images from discovered set...")
+            state.mark_random_images_for_download(args.sample_size)
+    
+        # Run
+        print(f"[{city}] Output directory: {output_dir.absolute()}")
+        print(f"[{city}] Sample size: {args.sample_size}")
+
+        try:
+            asyncio.run(
+                downloader.download_city(
+                    city, 
+                    progress_callback=progress,
+                    post_discovery_hook=selection_strategy
+                )
+            )
+        except KeyboardInterrupt:
+            print(f"\n[{city}] Download interrupted.")
+            sys.exit(130) # Standard Ctrl-C exit code
+        except Exception as e:
+            print(f"\n[{city}] Error: {e}", file=sys.stderr)
+            # We continue to next city if one fails? 
+            # Usually CLI tools fail hard. But for batch processing, maybe logging failure is better?
+            # User request didn't specify. Failing hard is safer to notice errors.
+            sys.exit(1)
+
+
 def main():
     """Main CLI entry point."""
     load_dotenv()
@@ -297,6 +371,45 @@ Examples:
         help="Show statistics and exit",
     )
     download_parser.set_defaults(func=cmd_download)
+
+    # Random Sample Download command
+    random_parser = subparsers.add_parser(
+        "download_random_sample",
+        help="Download a random sample of images for a city",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    random_parser.add_argument(
+        "--city", "-c", required=True,
+        help="City name to download images for",
+    )
+    random_parser.add_argument(
+        "--sample-size", "-n", type=int, default=100,
+        help="Number of images to sample (default: 100)",
+    )
+    random_parser.add_argument(
+        "--output", "-o", default="./output",
+        help="Output directory (default: ./output)",
+    )
+    random_parser.add_argument(
+        "--size", "-s",
+        choices=["thumb_256_url", "thumb_1024_url", "thumb_2048_url", "thumb_original_url"],
+        default="thumb_1024_url",
+        help="Image size (default: thumb_1024_url)",
+    )
+    random_parser.add_argument(
+        "--token", "-t",
+        default=os.environ.get("MAPILLARY_ACCESS_TOKEN"),
+        help="Mapillary access token",
+    )
+    random_parser.add_argument(
+        "--delay", type=float, default=0.1,
+        help="Delay between API calls (default: 0.1s)",
+    )
+    random_parser.add_argument(
+        "--no-metadata", action="store_true",
+        help="Don't save JSON metadata",
+    )
+    random_parser.set_defaults(func=cmd_download_random_sample)
 
     # Tiles command
     tiles_parser = subparsers.add_parser(

@@ -119,7 +119,10 @@ class CityImageDownloader:
         return log
 
     async def download_city(
-        self, city_name: str, progress_callback: ProgressCallback = None
+        self,
+        city_name: str,
+        progress_callback: ProgressCallback = None,
+        post_discovery_hook: Optional[Callable[["StateManager"], None]] = None,
     ):
         """
         Download all images for a city.
@@ -127,6 +130,7 @@ class CityImageDownloader:
         Args:
             city_name: Name of the city (e.g., "Palo Alto, CA")
             progress_callback: Optional callback(phase, current, total, message)
+            post_discovery_hook: Optional callback to run after discovery but before download
         """
         async with httpx.AsyncClient(timeout=30.0) as client:
             # Phase 1: Check if we're resuming or starting fresh
@@ -142,7 +146,10 @@ class CityImageDownloader:
             bbox = await _get_city_bbox_from_state(self.state, city_name, client)
             print_bbox_info(bbox)
             await self.download_bbox(
-                client=client, bbox=bbox, progress_callback=progress_callback
+                client=client,
+                bbox=bbox,
+                progress_callback=progress_callback,
+                post_discovery_hook=post_discovery_hook,
             )
 
     async def download_bbox(
@@ -151,6 +158,7 @@ class CityImageDownloader:
         bbox: tuple[float, float, float, float],
         progress_callback: ProgressCallback = None,
         image_limit: Optional[int] = None,
+        post_discovery_hook: Optional[Callable[["StateManager"], None]] = None,
     ):
         """
         Download all images within a bounding box.
@@ -162,11 +170,20 @@ class CityImageDownloader:
             bbox: Bounding box as (min_lon, min_lat, max_lon, max_lat)
             progress_callback: Optional progress callback
             image_limit: Optional limit on number of images to download
+            post_discovery_hook: Optional callback to run after discovery
         """
         self.state.reset_in_progress()
         await discover_phase(
             bbox, self.state, client, self.access_token, self.rate_limit_delay
         )
+
+        # Selection Phase
+        if post_discovery_hook:
+            post_discovery_hook(self.state)
+        else:
+            # Default behavior: download everything discovered
+            self.state.mark_all_pending_images_for_download()
+
         await self._download_phase(image_limit, client)
 
 

@@ -9,7 +9,10 @@ import asyncio
 from pathlib import Path
 from typing import Optional
 
+import logging
 import httpx
+
+logger = logging.getLogger(__name__)
 
 # API Endpoints
 GRAPH_API_ROOT = "https://graph.mapillary.com"
@@ -362,6 +365,10 @@ async def download_image(
         MapillaryAPIError: If download fails (non-200 status)
         httpx.RequestError: If connection/timeout error occurs
     """
+    if output_path.exists() and output_path.is_file():
+        logger.info(f"skip downloading {image_url} because the output path={output_path} exists")
+        return
+
     response = await client.get(image_url, timeout=timeout)
 
     if response.status_code == 429:

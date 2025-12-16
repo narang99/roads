@@ -102,6 +102,13 @@ class TestStateManagerImages:
         ]
         state_manager.add_images(images, tile)
         
+        # Should be discovered but not pending download yet
+        assert state_manager.get_total_discovered_images() == 2
+        assert len(state_manager.get_pending_downloads()) == 0
+
+        # Mark for download
+        state_manager.mark_all_pending_images_for_download()
+        
         pending = state_manager.get_pending_images()
         assert len(pending) == 2
         assert "123" in pending
@@ -114,12 +121,16 @@ class TestStateManagerImages:
         state_manager.add_images(images, tile)
         state_manager.add_images(images, tile)
         
+        assert state_manager.get_total_discovered_images() == 1
+        
+        state_manager.mark_all_pending_images_for_download()
         pending = state_manager.get_pending_images()
         assert len(pending) == 1
     
     def test_image_lifecycle(self, state_manager):
         tile = Tile(14, 100, 200)
         state_manager.add_images([{"id": "123"}], tile)
+        state_manager.mark_all_pending_images_for_download() # Explicitly mark for download
         
         # Initially pending
         pending = state_manager.get_pending_images()
@@ -139,6 +150,8 @@ class TestStateManagerImages:
     def test_image_failure(self, state_manager):
         tile = Tile(14, 100, 200)
         state_manager.add_images([{"id": "123"}], tile)
+        state_manager.mark_all_pending_images_for_download() # Explicitly mark for download
+
         state_manager.mark_image_failed("123", "Download failed")
         
         stats = state_manager.get_image_stats()
@@ -148,6 +161,8 @@ class TestStateManagerImages:
         tile = Tile(14, 100, 200)
         images = [{"id": str(i)} for i in range(100)]
         state_manager.add_images(images, tile)
+        # Mark them
+        state_manager.mark_all_pending_images_for_download()
         
         pending = state_manager.get_pending_images(limit=10)
         assert len(pending) == 10
@@ -157,7 +172,34 @@ class TestStateManagerImages:
         images = [{"id": str(i)} for i in range(50)]
         state_manager.add_images(images, tile)
         
+        # Check discovery count
+        assert state_manager.get_total_discovered_images() == 50
+        
+        # Check download count (should be 0)
+        assert state_manager.get_total_images() == 0
+
+        # Mark for download
+        state_manager.mark_all_pending_images_for_download()
         assert state_manager.get_total_images() == 50
+    
+    def test_mark_random_images_for_download(self, state_manager):
+        tile = Tile(14, 100, 200)
+        # Create 100 images
+        images = [{"id": str(i)} for i in range(100)]
+        state_manager.add_images(images, tile)
+        
+        # Request 10 random images
+        state_manager.mark_random_images_for_download(10)
+        
+        pending = state_manager.get_pending_images()
+        assert len(pending) == 10
+        assert state_manager.get_total_discovered_images() == 100
+        
+        # Request 10 more (should be different ones if not exhausted, but here we just check total)
+        # Wait, the logic is "NOT IN download_requests". So subsequent calls add more.
+        state_manager.mark_random_images_for_download(10)
+        pending = state_manager.get_pending_images()
+        assert len(pending) == 20 
 
 
 class TestStateManagerRecovery:
@@ -178,6 +220,8 @@ class TestStateManagerRecovery:
     def test_reset_downloading_images(self, state_manager):
         tile = Tile(14, 100, 200)
         state_manager.add_images([{"id": "123"}], tile)
+        state_manager.mark_all_pending_images_for_download() # Explicitly mark for download
+
         state_manager.mark_image_downloading("123", "https://example.com/img.jpg")
         
         # Simulate crash recovery

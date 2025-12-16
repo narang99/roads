@@ -52,10 +52,6 @@ class StateManager:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
 
-    def get_num_downloaded_images(self):
-        image_stats = self.get_image_stats()
-        return image_stats.get("downloaded", 0)
-
     @contextmanager
     def _get_connection(self):
         """Get a database connection with proper cleanup."""
@@ -90,21 +86,29 @@ class StateManager:
                 )
             """)
 
-            # Images table
+            # Images table - Metadata ONLY
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS images (
                     image_id TEXT PRIMARY KEY,
                     tile_z INTEGER,
                     tile_x INTEGER,
                     tile_y INTEGER,
-                    thumb_url TEXT,
-                    status TEXT DEFAULT 'pending',
-                    downloaded_at TEXT,
-                    local_path TEXT,
-                    error_message TEXT,
                     captured_at INTEGER,
                     lat REAL,
                     lon REAL
+                )
+            """)
+
+            # Download Requests table - For tracking downloads
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS download_requests (
+                    image_id TEXT PRIMARY KEY,
+                    status TEXT DEFAULT 'pending',
+                    thumb_url TEXT,
+                    downloaded_at TEXT,
+                    local_path TEXT,
+                    error_message TEXT,
+                    FOREIGN KEY(image_id) REFERENCES images(image_id)
                 )
             """)
 
@@ -122,8 +126,8 @@ class StateManager:
                 ON tiles(status)
             """)
             cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_images_status
-                ON images(status)
+                CREATE INDEX IF NOT EXISTS idx_downloads_status
+                ON download_requests(status)
             """)
 
     # --- Metadata methods ---
@@ -220,7 +224,7 @@ class StateManager:
 
     def add_images(self, images: list[dict], tile: Tile):
         """
-        Add discovered images to the database.
+        Add discovered images to the database (metadata only).
 
         Args:
             images: List of image dicts with at least 'id' key
@@ -231,8 +235,8 @@ class StateManager:
                 conn.execute(
                     """
                     INSERT OR IGNORE INTO images
-                    (image_id, tile_z, tile_x, tile_y, status, captured_at, lat, lon)
-                    VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)
+                    (image_id, tile_z, tile_x, tile_y, captured_at, lat, lon)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         str(img.get("id")),
@@ -243,20 +247,44 @@ class StateManager:
                     )
                 )
 
-    def get_pending_images(self, limit: int = 100) -> list[str]:
-        """Get image IDs that haven't been downloaded yet."""
+    def mark_all_pending_images_for_download(self):
+        """Mark all discovered images that are not yet in download_requests as pending downloads."""
+        with self._get_connection() as conn:
+            conn.execute("""
+                INSERT OR IGNORE INTO download_requests (image_id, status)
+                SELECT image_id, 'pending' FROM images
+            """)
+
+    def mark_random_images_for_download(self, count: int):
+        """Mark a random sample of images for download."""
+        with self._get_connection() as conn:
+            # Only select images that aren't already in download requests
+            conn.execute("""
+                INSERT OR IGNORE INTO download_requests (image_id, status)
+                SELECT image_id, 'pending' FROM images
+                WHERE image_id NOT IN (SELECT image_id FROM download_requests)
+                ORDER BY RANDOM()
+                LIMIT ?
+            """, (count,))
+
+    def get_pending_downloads(self, limit: int = 100) -> list[str]:
+        """Get image IDs that are marked for download but not started."""
         with self._get_connection() as conn:
             rows = conn.execute(
-                "SELECT image_id FROM images WHERE status = 'pending' LIMIT ?",
+                "SELECT image_id FROM download_requests WHERE status = 'pending' LIMIT ?",
                 (limit,)
             ).fetchall()
             return [r["image_id"] for r in rows]
+
+    # helper for compatibility
+    def get_pending_images(self, limit: int = 100) -> list[str]:
+        return self.get_pending_downloads(limit)
 
     def mark_image_downloading(self, image_id: str, thumb_url: str):
         """Mark an image as being downloaded."""
         with self._get_connection() as conn:
             conn.execute(
-                "UPDATE images SET status = 'downloading', thumb_url = ? WHERE image_id = ?",
+                "UPDATE download_requests SET status = 'downloading', thumb_url = ? WHERE image_id = ?",
                 (thumb_url, image_id)
             )
 
@@ -265,7 +293,7 @@ class StateManager:
         with self._get_connection() as conn:
             conn.execute(
                 """
-                UPDATE images
+                UPDATE download_requests
                 SET status = 'downloaded', downloaded_at = ?, local_path = ?
                 WHERE image_id = ?
                 """,
@@ -276,26 +304,44 @@ class StateManager:
         """Mark an image download as failed."""
         with self._get_connection() as conn:
             conn.execute(
-                "UPDATE images SET status = 'failed', error_message = ? WHERE image_id = ?",
+                "UPDATE download_requests SET status = 'failed', error_message = ? WHERE image_id = ?",
                 (error, image_id)
             )
 
-    def get_image_stats(self) -> dict:
+    def get_download_stats(self) -> dict:
         """Get statistics about image downloads."""
         with self._get_connection() as conn:
             rows = conn.execute(
-                "SELECT status, COUNT(*) as count FROM images GROUP BY status"
+                "SELECT status, COUNT(*) as count FROM download_requests GROUP BY status"
             ).fetchall()
             return {r["status"]: r["count"] for r in rows}
 
-    def get_total_images(self) -> int:
+    # helper for compatibility
+    def get_image_stats(self) -> dict:
+        return self.get_download_stats()
+
+    def get_total_discovered_images(self) -> int:
         """Get total number of discovered images."""
         with self._get_connection() as conn:
             row = conn.execute("SELECT COUNT(*) as count FROM images").fetchone()
             return row["count"]
 
+    def get_total_downloads(self) -> int:
+        """Get total number of download requests."""
+        with self._get_connection() as conn:
+            row = conn.execute("SELECT COUNT(*) as count FROM download_requests").fetchone()
+            return row["count"]
+
+    # helper for compatibility - we assume we care about download task size
+    def get_total_images(self) -> int:
+        return self.get_total_downloads()
+
+    def get_num_downloaded_images(self):
+        stats = self.get_download_stats()
+        return stats.get("downloaded", 0)
+
     def reset_in_progress(self):
         """Reset any in-progress items to pending (for crash recovery)."""
         with self._get_connection() as conn:
             conn.execute("UPDATE tiles SET status = 'pending' WHERE status = 'in_progress'")
-            conn.execute("UPDATE images SET status = 'pending' WHERE status = 'downloading'")
+            conn.execute("UPDATE download_requests SET status = 'pending' WHERE status = 'downloading'")
