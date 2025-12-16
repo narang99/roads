@@ -39,3 +39,7 @@ async def retry_n_times(runner, times, on_retry, on_failure):
         return await runner()
     except Exception as ex:
         return await on_failure(ex)
+
+
+async def id_async_fn(*a, **kw):
+    return None

@@ -26,18 +26,18 @@ async def discover_phase(bbox, state, client, access_token, rate_limit_delay):
     total_tiles = save_tiles_for_bbox_in_state(bbox, state)
     state.reset_in_progress()
     pending_tiles = state.get_pending_tiles()
-    
+
     if not pending_tiles:
         logger.info("No pending tiles to discover.")
         return
 
     logger.info(f"Starting discovery for {len(pending_tiles)} tiles")
-    
+
     tasks = [
         single_tile_discover(tile, state, client, access_token, rate_limit_delay)
         for tile in pending_tiles
     ]
-    
+
     for f in tqdm(asyncio.as_completed(tasks), total=len(tasks), desc="Discovering tiles"):
         await f
 
@@ -55,7 +55,7 @@ async def single_tile_discover(
     await retry_n_times(
         _save,
         5,
-        lambda *a,**kw: None,
+        _delay_10_seconds,
         lambda ex: logger.exception(
             f"failure in getting metadata for tile={tile}, marking as failure"
         ),

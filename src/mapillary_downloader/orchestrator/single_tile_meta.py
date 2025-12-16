@@ -37,10 +37,8 @@ async def save_images_metadata_for_single_tile(
 async def _get_all_bboxes_metadata(bboxes, client, access_token, rate_limit_delay):
     async def _runner(bbox):
         return await _single_bbox_metadata(client, access_token, bbox)
-    async def do_not_sleep(*a, **kw):
-        pass
     list_of_list_of_images = await run_and_retry_on_exc(
-        _runner, [RateLimitError], bboxes, sleep_func=do_not_sleep,
+        _runner, [RateLimitError], bboxes,
     )
     return itertools.chain.from_iterable(list_of_list_of_images)
 
