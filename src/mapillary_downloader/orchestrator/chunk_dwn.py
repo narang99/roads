@@ -6,11 +6,16 @@ from mapillary_downloader.api_client import (
     download_image,
     fetch_image_metadata,
 )
-from mapillary_downloader.iterators import retry_n_times, run_and_retry_on_exc
+from mapillary_downloader.iterators import (
+    get_async_failure_logger,
+    retry_n_times,
+    run_and_retry_on_exc,
+)
 from mapillary_downloader.orchestrator.single_tile_meta import (
     save_images_metadata_for_single_tile,
 )
 from mapillary_downloader.tiles import get_tiles_for_bbox
+from tqdm.gui import tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +26,6 @@ def save_tiles_for_bbox_in_state(bbox, state):
     total_tiles = len(tiles)
     logger.info(f"Need to process {total_tiles} tiles")
     return total_tiles
-
-
-from tqdm import tqdm
 
 
 async def discover_phase(bbox, state, client, access_token, rate_limit_delay):
@@ -60,7 +62,7 @@ async def single_tile_discover(tile, state, client, access_token, rate_limit_del
         _save,
         5,
         _delay_10_seconds,
-        lambda ex: logger.exception(
+        get_async_failure_logger(
             f"failure in getting metadata for tile={tile}, marking as failure"
         ),
     )
@@ -87,7 +89,7 @@ FIELDS_TO_DOWNLOAD = [
 async def download_single_image_with_retry(
     image_id, image_size, state, images_dir, client, access_token
 ):
-    def _on_failure(e):
+    async def _on_failure(e):
         logger.exception(f"Unexpected error downloading image {image_id}")
         state.mark_image_failed(image_id, str(e))
 
