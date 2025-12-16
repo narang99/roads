@@ -366,7 +366,9 @@ async def download_image(
         httpx.RequestError: If connection/timeout error occurs
     """
     if output_path.exists() and output_path.is_file():
-        logger.info(f"skip downloading {image_url} because the output path={output_path} exists")
+        logger.info(
+            f"skip downloading {image_url} because the output path={output_path} exists"
+        )
         return
 
     response = await client.get(image_url, timeout=timeout)
@@ -376,7 +378,7 @@ async def download_image(
             "Image download rate limit exceeded",
             status_code=429,
             response_body=response.text,
-            request_url=image_url
+            request_url=image_url,
         )
 
     if response.status_code != 200:
@@ -384,7 +386,7 @@ async def download_image(
             f"Failed to download image: {response.status_code}",
             status_code=response.status_code,
             response_body=response.text,
-            request_url=image_url
+            request_url=image_url,
         )
 
     # Ensure parent directory exists

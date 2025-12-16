@@ -102,7 +102,9 @@ def cmd_tiles(args):
     print(f"\nTiles at zoom {args.zoom}: {len(tiles)} total")
 
     if args.verbose or len(tiles) <= 20:
-        print(f"\n{'Tile (z/x/y)':<20} {'min_lon':<12} {'min_lat':<12} {'max_lon':<12} {'max_lat':<12}")
+        print(
+            f"\n{'Tile (z/x/y)':<20} {'min_lon':<12} {'min_lat':<12} {'max_lon':<12} {'max_lat':<12}"
+        )
         print("-" * 80)
         for tile in tiles:
             tile_bbox = tile_to_bbox(tile)
@@ -124,17 +126,14 @@ def cmd_tiles(args):
     # Output as copyable format
     if args.output_format == "json":
         import json
+
         output = {
             "city": args.city,
             "city_bbox": bbox.as_tuple(),
             "zoom": args.zoom,
             "tiles": [
-                {
-                    "z": t.z, "x": t.x, "y": t.y,
-                    "bbox": tile_to_bbox(t)
-                }
-                for t in tiles
-            ]
+                {"z": t.z, "x": t.x, "y": t.y, "bbox": tile_to_bbox(t)} for t in tiles
+            ],
         }
         print(f"\nJSON output:")
         print(json.dumps(output, indent=2))
@@ -177,10 +176,13 @@ def cmd_test_download(args):
         if existing_city == bbox_label:
             # It's a previous test_bbox, ask if user wants to wipe
             print(f"Output directory already contains test data.")
-            response = input("Do you want to wipe the existing test data and start fresh? [y/N]: ")
+            response = input(
+                "Do you want to wipe the existing test data and start fresh? [y/N]: "
+            )
             if response.lower() in ("y", "yes"):
                 # Wipe the state database
                 import os
+
                 state_db = output_dir / "state.db"
                 if state_db.exists():
                     os.remove(state_db)
@@ -197,8 +199,14 @@ def cmd_test_download(args):
                 print("Resuming existing test download...")
         else:
             # It's a real city dataset, don't allow overwrite
-            print(f"Error: Output directory already contains data for '{existing_city}'.", file=sys.stderr)
-            print("Use a different --output directory to avoid corrupting existing dataset.", file=sys.stderr)
+            print(
+                f"Error: Output directory already contains data for '{existing_city}'.",
+                file=sys.stderr,
+            )
+            print(
+                "Use a different --output directory to avoid corrupting existing dataset.",
+                file=sys.stderr,
+            )
             sys.exit(1)
 
     # Set metadata for this test download
@@ -219,7 +227,7 @@ def cmd_test_download(args):
                 client=client,
                 bbox=bbox,
                 progress_callback=progress,
-                image_limit=args.limit
+                image_limit=args.limit,
             )
 
     try:
@@ -231,8 +239,6 @@ def cmd_test_download(args):
         sys.exit(1)
 
 
-
-
 def cmd_download_random_sample(args):
     """Download a random sample of images for a city or list of cities."""
     # Validate token
@@ -242,10 +248,10 @@ def cmd_download_random_sample(args):
         sys.exit(1)
 
     base_output_dir = Path(args.output)
-    
+
     # Process cities
     cities = [c.strip() for c in args.city.split(",") if c.strip()]
-    
+
     if not cities:
         print("Error: No city specified", file=sys.stderr)
         sys.exit(1)
@@ -262,7 +268,7 @@ def cmd_download_random_sample(args):
             output_dir = base_output_dir
 
         print(f"\n--- Starting {city} ---")
-        
+
         # Create downloader
         downloader = CityImageDownloader(
             access_token=args.token,
@@ -279,9 +285,11 @@ def cmd_download_random_sample(args):
 
         # Strategies
         def selection_strategy(state):
-            print(f"\n[{city}] Selecting random sample of {args.sample_size} images from discovered set...")
+            print(
+                f"\n[{city}] Selecting random sample of {args.sample_size} images from discovered set..."
+            )
             state.mark_random_images_for_download(args.sample_size)
-    
+
         # Run
         print(f"[{city}] Output directory: {output_dir.absolute()}")
         print(f"[{city}] Sample size: {args.sample_size}")
@@ -289,17 +297,17 @@ def cmd_download_random_sample(args):
         try:
             asyncio.run(
                 downloader.download_city(
-                    city, 
+                    city,
                     progress_callback=progress,
-                    post_discovery_hook=selection_strategy
+                    post_discovery_hook=selection_strategy,
                 )
             )
         except KeyboardInterrupt:
             print(f"\n[{city}] Download interrupted.")
-            sys.exit(130) # Standard Ctrl-C exit code
+            sys.exit(130)  # Standard Ctrl-C exit code
         except Exception as e:
             print(f"\n[{city}] Error: {e}", file=sys.stderr)
-            # We continue to next city if one fails? 
+            # We continue to next city if one fails?
             # Usually CLI tools fail hard. But for batch processing, maybe logging failure is better?
             # User request didn't specify. Failing hard is safer to notice errors.
             sys.exit(1)
@@ -316,7 +324,7 @@ def main():
         handlers=[
             logging.FileHandler("mapillary_downloader.log"),
             logging.StreamHandler(sys.stderr),
-        ]
+        ],
     )
     # Enable INFO logs only for our application code
     logging.getLogger("mapillary_downloader").setLevel(logging.INFO)
@@ -340,34 +348,49 @@ Examples:
         """,
     )
     download_parser.add_argument(
-        "--city", "-c", required=True,
+        "--city",
+        "-c",
+        required=True,
         help="City name to download images for",
     )
     download_parser.add_argument(
-        "--output", "-o", default="./output",
+        "--output",
+        "-o",
+        default="./output",
         help="Output directory (default: ./output)",
     )
     download_parser.add_argument(
-        "--size", "-s",
-        choices=["thumb_256_url", "thumb_1024_url", "thumb_2048_url", "thumb_original_url"],
+        "--size",
+        "-s",
+        choices=[
+            "thumb_256_url",
+            "thumb_1024_url",
+            "thumb_2048_url",
+            "thumb_original_url",
+        ],
         default="thumb_1024_url",
         help="Image size (default: thumb_1024_url)",
     )
     download_parser.add_argument(
-        "--token", "-t",
+        "--token",
+        "-t",
         default=os.environ.get("MAPILLARY_ACCESS_TOKEN"),
         help="Mapillary access token",
     )
     download_parser.add_argument(
-        "--delay", type=float, default=0.1,
+        "--delay",
+        type=float,
+        default=0.1,
         help="Delay between API calls (default: 0.1s)",
     )
     download_parser.add_argument(
-        "--no-metadata", action="store_true",
+        "--no-metadata",
+        action="store_true",
         help="Don't save JSON metadata",
     )
     download_parser.add_argument(
-        "--stats", action="store_true",
+        "--stats",
+        action="store_true",
         help="Show statistics and exit",
     )
     download_parser.set_defaults(func=cmd_download)
@@ -379,34 +402,51 @@ Examples:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     random_parser.add_argument(
-        "--city", "-c", required=True,
+        "--city",
+        "-c",
+        required=True,
         help="City name to download images for",
     )
     random_parser.add_argument(
-        "--sample-size", "-n", type=int, default=100,
+        "--sample-size",
+        "-n",
+        type=int,
+        default=100,
         help="Number of images to sample (default: 100)",
     )
     random_parser.add_argument(
-        "--output", "-o", default="./output",
+        "--output",
+        "-o",
+        default="./output",
         help="Output directory (default: ./output)",
     )
     random_parser.add_argument(
-        "--size", "-s",
-        choices=["thumb_256_url", "thumb_1024_url", "thumb_2048_url", "thumb_original_url"],
+        "--size",
+        "-s",
+        choices=[
+            "thumb_256_url",
+            "thumb_1024_url",
+            "thumb_2048_url",
+            "thumb_original_url",
+        ],
         default="thumb_1024_url",
         help="Image size (default: thumb_1024_url)",
     )
     random_parser.add_argument(
-        "--token", "-t",
+        "--token",
+        "-t",
         default=os.environ.get("MAPILLARY_ACCESS_TOKEN"),
         help="Mapillary access token",
     )
     random_parser.add_argument(
-        "--delay", type=float, default=0.1,
+        "--delay",
+        type=float,
+        default=0.1,
         help="Delay between API calls (default: 0.1s)",
     )
     random_parser.add_argument(
-        "--no-metadata", action="store_true",
+        "--no-metadata",
+        action="store_true",
         help="Don't save JSON metadata",
     )
     random_parser.set_defaults(func=cmd_download_random_sample)
@@ -417,20 +457,29 @@ Examples:
         help="Show tile coordinates and bboxes for a city",
     )
     tiles_parser.add_argument(
-        "--city", "-c", required=True,
+        "--city",
+        "-c",
+        required=True,
         help="City name to get tiles for",
     )
     tiles_parser.add_argument(
-        "--zoom", "-z", type=int, default=14,
+        "--zoom",
+        "-z",
+        type=int,
+        default=14,
         help="Zoom level (default: 14)",
     )
     tiles_parser.add_argument(
-        "--verbose", "-v", action="store_true",
+        "--verbose",
+        "-v",
+        action="store_true",
         help="Show all tiles (even if many)",
     )
     tiles_parser.add_argument(
-        "--output-format", "-f",
-        choices=["text", "json"], default="text",
+        "--output-format",
+        "-f",
+        choices=["text", "json"],
+        default="text",
         help="Output format (default: text)",
     )
     tiles_parser.set_defaults(func=cmd_tiles)
@@ -447,34 +496,50 @@ Examples:
         """,
     )
     test_parser.add_argument(
-        "--bbox", "-b", required=True,
+        "--bbox",
+        "-b",
+        required=True,
         help="Bounding box: min_lon,min_lat,max_lon,max_lat",
     )
     test_parser.add_argument(
-        "--output", "-o", default="./test_output",
+        "--output",
+        "-o",
+        default="./test_output",
         help="Output directory (default: ./test_output)",
     )
     test_parser.add_argument(
-        "--size", "-s",
-        choices=["thumb_256_url", "thumb_1024_url", "thumb_2048_url", "thumb_original_url"],
+        "--size",
+        "-s",
+        choices=[
+            "thumb_256_url",
+            "thumb_1024_url",
+            "thumb_2048_url",
+            "thumb_original_url",
+        ],
         default="thumb_1024_url",
         help="Image size (default: thumb_1024_url)",
     )
     test_parser.add_argument(
-        "--token", "-t",
+        "--token",
+        "-t",
         default=os.environ.get("MAPILLARY_ACCESS_TOKEN"),
         help="Mapillary access token",
     )
     test_parser.add_argument(
-        "--delay", type=float, default=0.1,
+        "--delay",
+        type=float,
+        default=0.1,
         help="Delay between API calls (default: 0.1s)",
     )
     test_parser.add_argument(
-        "--no-metadata", action="store_true",
+        "--no-metadata",
+        action="store_true",
         help="Don't save JSON metadata",
     )
     test_parser.add_argument(
-        "--limit", "-l", type=int,
+        "--limit",
+        "-l",
+        type=int,
         help="Limit number of images to download",
     )
     test_parser.set_defaults(func=cmd_test_download)

@@ -20,6 +20,7 @@ from .tiles import Tile
 @dataclass
 class ImageRecord:
     """Record of an image in the state database."""
+
     image_id: str
     tile_z: int
     tile_x: int
@@ -137,15 +138,14 @@ class StateManager:
         with self._get_connection() as conn:
             conn.execute(
                 "INSERT OR REPLACE INTO metadata (key, value) VALUES (?, ?)",
-                (key, value)
+                (key, value),
             )
 
     def get_metadata(self, key: str) -> Optional[str]:
         """Get a metadata value."""
         with self._get_connection() as conn:
             row = conn.execute(
-                "SELECT value FROM metadata WHERE key = ?",
-                (key,)
+                "SELECT value FROM metadata WHERE key = ?", (key,)
             ).fetchone()
             return row["value"] if row else None
 
@@ -159,7 +159,7 @@ class StateManager:
                 INSERT OR IGNORE INTO tiles (z, x, y, status)
                 VALUES (?, ?, ?, 'pending')
                 """,
-                [(t.z, t.x, t.y) for t in tiles]
+                [(t.z, t.x, t.y) for t in tiles],
             )
 
     def get_pending_tiles(self) -> list[Tile]:
@@ -179,7 +179,7 @@ class StateManager:
                 SET status = 'in_progress', started_at = ?
                 WHERE z = ? AND x = ? AND y = ?
                 """,
-                (datetime.utcnow().isoformat(), tile.z, tile.x, tile.y)
+                (datetime.utcnow().isoformat(), tile.z, tile.x, tile.y),
             )
 
     def mark_tile_completed(self, tile: Tile, image_count: int):
@@ -191,7 +191,7 @@ class StateManager:
                 SET status = 'completed', completed_at = ?, image_count = ?
                 WHERE z = ? AND x = ? AND y = ?
                 """,
-                (datetime.utcnow().isoformat(), image_count, tile.z, tile.x, tile.y)
+                (datetime.utcnow().isoformat(), image_count, tile.z, tile.x, tile.y),
             )
 
     def mark_tile_failed(self, tile: Tile, error: str):
@@ -203,7 +203,7 @@ class StateManager:
                 SET status = 'failed', error_message = ?
                 WHERE z = ? AND x = ? AND y = ?
                 """,
-                (error, tile.z, tile.x, tile.y)
+                (error, tile.z, tile.x, tile.y),
             )
 
     def get_tile_stats(self) -> dict:
@@ -240,11 +240,13 @@ class StateManager:
                     """,
                     (
                         str(img.get("id")),
-                        tile.z, tile.x, tile.y,
+                        tile.z,
+                        tile.x,
+                        tile.y,
                         img.get("captured_at"),
                         img.get("lat"),
-                        img.get("lon")
-                    )
+                        img.get("lon"),
+                    ),
                 )
 
     def mark_all_pending_images_for_download(self):
@@ -259,20 +261,23 @@ class StateManager:
         """Mark a random sample of images for download."""
         with self._get_connection() as conn:
             # Only select images that aren't already in download requests
-            conn.execute("""
+            conn.execute(
+                """
                 INSERT OR IGNORE INTO download_requests (image_id, status)
                 SELECT image_id, 'pending' FROM images
                 WHERE image_id NOT IN (SELECT image_id FROM download_requests)
                 ORDER BY RANDOM()
                 LIMIT ?
-            """, (count,))
+            """,
+                (count,),
+            )
 
     def get_pending_downloads(self, limit: int = 100) -> list[str]:
         """Get image IDs that are marked for download but not started."""
         with self._get_connection() as conn:
             rows = conn.execute(
                 "SELECT image_id FROM download_requests WHERE status = 'pending' LIMIT ?",
-                (limit,)
+                (limit,),
             ).fetchall()
             return [r["image_id"] for r in rows]
 
@@ -285,7 +290,7 @@ class StateManager:
         with self._get_connection() as conn:
             conn.execute(
                 "UPDATE download_requests SET status = 'downloading', thumb_url = ? WHERE image_id = ?",
-                (thumb_url, image_id)
+                (thumb_url, image_id),
             )
 
     def mark_image_downloaded(self, image_id: str, local_path: str):
@@ -297,7 +302,7 @@ class StateManager:
                 SET status = 'downloaded', downloaded_at = ?, local_path = ?
                 WHERE image_id = ?
                 """,
-                (datetime.utcnow().isoformat(), local_path, image_id)
+                (datetime.utcnow().isoformat(), local_path, image_id),
             )
 
     def mark_image_failed(self, image_id: str, error: str):
@@ -305,7 +310,7 @@ class StateManager:
         with self._get_connection() as conn:
             conn.execute(
                 "UPDATE download_requests SET status = 'failed', error_message = ? WHERE image_id = ?",
-                (error, image_id)
+                (error, image_id),
             )
 
     def get_download_stats(self) -> dict:
@@ -329,7 +334,9 @@ class StateManager:
     def get_total_downloads(self) -> int:
         """Get total number of download requests."""
         with self._get_connection() as conn:
-            row = conn.execute("SELECT COUNT(*) as count FROM download_requests").fetchone()
+            row = conn.execute(
+                "SELECT COUNT(*) as count FROM download_requests"
+            ).fetchone()
             return row["count"]
 
     # helper for compatibility - we assume we care about download task size
@@ -343,5 +350,9 @@ class StateManager:
     def reset_in_progress(self):
         """Reset any in-progress items to pending (for crash recovery)."""
         with self._get_connection() as conn:
-            conn.execute("UPDATE tiles SET status = 'pending' WHERE status = 'in_progress'")
-            conn.execute("UPDATE download_requests SET status = 'pending' WHERE status = 'downloading'")
+            conn.execute(
+                "UPDATE tiles SET status = 'pending' WHERE status = 'in_progress'"
+            )
+            conn.execute(
+                "UPDATE download_requests SET status = 'pending' WHERE status = 'downloading'"
+            )

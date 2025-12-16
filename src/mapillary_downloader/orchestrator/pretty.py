@@ -8,13 +8,10 @@ def print_bbox_info(bbox: tuple[float, float, float, float]):
     min_lon, min_lat, max_lon, max_lat = bbox
 
     print("\n📍 Bounding box:")
-    print(
-        f"   SW corner: https://www.google.com/maps/?q={min_lat:.6f},{min_lon:.6f}"
-    )
-    print(
-        f"   NE corner: https://www.google.com/maps/?q={max_lat:.6f},{max_lon:.6f}"
-    )
+    print(f"   SW corner: https://www.google.com/maps/?q={min_lat:.6f},{min_lon:.6f}")
+    print(f"   NE corner: https://www.google.com/maps/?q={max_lat:.6f},{max_lon:.6f}")
     print()
+
 
 def print_bbox_progress(current: int, total: int, images_found: int):
     """Print progress bar for bbox processing."""

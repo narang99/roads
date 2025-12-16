@@ -2,7 +2,11 @@ import asyncio
 import json
 import logging
 
-from mapillary_downloader.api_client import RateLimitError, download_image, fetch_image_metadata
+from mapillary_downloader.api_client import (
+    RateLimitError,
+    download_image,
+    fetch_image_metadata,
+)
 from mapillary_downloader.iterators import retry_n_times, run_and_retry_on_exc
 from mapillary_downloader.orchestrator.single_tile_meta import (
     save_images_metadata_for_single_tile,
@@ -22,6 +26,7 @@ def save_tiles_for_bbox_in_state(bbox, state):
 
 from tqdm import tqdm
 
+
 async def discover_phase(bbox, state, client, access_token, rate_limit_delay):
     total_tiles = save_tiles_for_bbox_in_state(bbox, state)
     state.reset_in_progress()
@@ -38,15 +43,15 @@ async def discover_phase(bbox, state, client, access_token, rate_limit_delay):
         for tile in pending_tiles
     ]
 
-    for f in tqdm(asyncio.as_completed(tasks), total=len(tasks), desc="Discovering tiles"):
+    for f in tqdm(
+        asyncio.as_completed(tasks), total=len(tasks), desc="Discovering tiles"
+    ):
         await f
 
     logger.info(f"Discovered images from {total_tiles} tiles.")
 
 
-async def single_tile_discover(
-    tile, state, client, access_token, rate_limit_delay
-):
+async def single_tile_discover(tile, state, client, access_token, rate_limit_delay):
     async def _save():
         await save_images_metadata_for_single_tile(
             tile, client, access_token, state, rate_limit_delay
@@ -86,23 +91,26 @@ async def download_single_image_with_retry(
     def _on_failure(e):
         logger.exception(f"Unexpected error downloading image {image_id}")
         state.mark_image_failed(image_id, str(e))
+
     async def _download():
         return await _download_single_image_rate_limited(
             image_id, image_size, state, images_dir, client, access_token
         )
 
-    return await retry_n_times(
-        _download, 5, _delay_10_seconds, _on_failure
-    )
-
+    return await retry_n_times(_download, 5, _delay_10_seconds, _on_failure)
 
 
 async def _download_single_image_rate_limited(
     image_id, image_size, state, images_dir, client, access_token
 ):
     async def _single_save(i_id):
-        return await _save_single_image(i_id, image_size, state, images_dir, client, access_token)
-    metadatas = await run_and_retry_on_exc(_single_save, [RateLimitError], [image_id], leave_tqdm_progress=False)
+        return await _save_single_image(
+            i_id, image_size, state, images_dir, client, access_token
+        )
+
+    metadatas = await run_and_retry_on_exc(
+        _single_save, [RateLimitError], [image_id], leave_tqdm_progress=False
+    )
     return metadatas[0]
 
 

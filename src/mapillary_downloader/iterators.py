@@ -5,8 +5,13 @@ from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
+
 async def run_and_retry_on_exc(
-    runner, retry_on, data: list, sleep_func=asyncio.sleep, leave_tqdm_progress=True,
+    runner,
+    retry_on,
+    data: list,
+    sleep_func=asyncio.sleep,
+    leave_tqdm_progress=True,
 ) -> list:
     idx = 0
     total = len(data)
@@ -30,7 +35,7 @@ async def run_and_retry_on_exc(
 
 async def retry_n_times(runner, times, on_retry, on_failure):
     # swallows exceptions on full failure. make sure you mark it somewhere
-    for _ in range(times-1):
+    for _ in range(times - 1):
         try:
             return await runner()
         except Exception as ex:
