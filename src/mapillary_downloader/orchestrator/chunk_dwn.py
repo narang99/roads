@@ -36,7 +36,7 @@ async def discover_phase(bbox, state, client, access_token, rate_limit_delay):
         await retry_n_times(
             _save,
             5,
-            _delay_10_seconds,
+            lambda *a,**kw: None,
             lambda ex: logger.exception(
                 f"failure in getting metadata for tile={tile}, marking as failure"
             ),

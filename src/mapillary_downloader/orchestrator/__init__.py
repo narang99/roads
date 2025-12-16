@@ -222,7 +222,7 @@ class CityImageDownloader:
             return 0
         for image_id in tqdm(pending):
             await self._download_image(client, image_id)
-            await asyncio.sleep(self.rate_limit_delay)
+            # await asyncio.sleep(self.rate_limit_delay)
         return len(pending)
 
     async def _download_image(self, client: httpx.AsyncClient, image_id: str):
