@@ -234,16 +234,18 @@ def cmd_test_download(args):
 def main():
     """Main CLI entry point."""
     load_dotenv()
-    
+
     # Configure logging - write to file with tracebacks
     logging.basicConfig(
-        level=logging.WARNING,
+        level=logging.WARNING,  # Default for external libs
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         handlers=[
             logging.FileHandler("mapillary_downloader.log"),
             logging.StreamHandler(sys.stderr),
         ]
     )
+    # Enable INFO logs only for our application code
+    logging.getLogger("mapillary_downloader").setLevel(logging.INFO)
 
     parser = argparse.ArgumentParser(
         description="Download street-level images from Mapillary",

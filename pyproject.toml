@@ -9,6 +9,7 @@ dependencies = [
     "httpx>=0.28.1",
     "mercantile>=1.2.1",
     "python-dotenv>=1.2.1",
+    "tqdm>=4.67.1",
 ]
 
 [project.scripts]

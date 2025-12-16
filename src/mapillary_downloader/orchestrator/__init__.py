@@ -7,22 +7,33 @@ Coordinates all modules: geocoding, tiles, state, and API client.
 import asyncio
 import json
 import logging
+import typing
 from pathlib import Path
 from typing import Callable, Optional
-import typing
 
 import httpx
+from tqdm import tqdm
 
-from .api_client import (
+from mapillary_downloader.orchestrator.chunk_dwn import (
+    discover_phase,
+    download_single_image_with_retry,
+    save_tiles_for_bbox_in_state,
+)
+from mapillary_downloader.orchestrator.pretty import print_bbox_info
+from mapillary_downloader.orchestrator.single_tile_meta import (
+    save_images_metadata_for_single_tile,
+)
+
+from ..api_client import (
     MapillaryAPIError,
     RateLimitError,
     download_image,
     fetch_image_metadata,
     fetch_images_in_bbox,
 )
-from .geocoder import get_city_bbox
-from .state import StateManager
-from .tiles import Tile, get_tiles_for_bbox, tile_to_small_bboxes
+from ..geocoder import get_city_bbox
+from ..state import StateManager
+from ..tiles import Tile, get_tiles_for_bbox, tile_to_small_bboxes
 
 # Configure logger for this module
 logger = logging.getLogger(__name__)
@@ -31,28 +42,13 @@ logger = logging.getLogger(__name__)
 ProgressCallback = Optional[Callable[[str, int, int, str], None]]
 
 
-def print_bbox_progress(current: int, total: int, images_found: int):
-    """Print progress bar for bbox processing."""
-    if total <= 1:
-        return  # No progress bar needed for single bbox
-    bar_width = 30
-    filled = int(bar_width * current / total)
-    bar = "█" * filled + "░" * (bar_width - filled)
-    pct = current / total * 100
-    print(
-        f"\r    Bbox [{bar}] {pct:5.1f}% ({current}/{total}) - {images_found} images",
-        end="",
-        flush=True,
-    )
-    if current == total:
-        print()  # Newline when complete
-
-async def _get_city_bbox_from_state(state, city_name, client) -> tuple[float, float, float, float]:
+async def _get_city_bbox_from_state(
+    state, city_name, client
+) -> tuple[float, float, float, float]:
     bbox_str = state.get_metadata("bbox")
     if bbox_str:
         bbox = typing.cast(
-            tuple[float, float, float, float],
-            tuple(map(float, bbox_str.split(",")))
+            tuple[float, float, float, float], tuple(map(float, bbox_str.split(",")))
         )
         logger.info(f"geocode 1, 1, Using cached bounding box for {city_name}")
     else:
@@ -63,6 +59,7 @@ async def _get_city_bbox_from_state(state, city_name, client) -> tuple[float, fl
         state.set_metadata("bbox", ",".join(map(str, bbox)))
         logger.info(f"geocode 1, 1, Bounding box: {bbox}")
     return bbox
+
 
 class CityImageDownloader:
     """
@@ -121,25 +118,6 @@ class CityImageDownloader:
 
         return log
 
-    @staticmethod
-    def print_bbox_info(bbox: tuple[float, float, float, float]):
-        """
-        Print bounding box info with Google Maps URLs.
-
-        Args:
-            bbox: Bounding box as (min_lon, min_lat, max_lon, max_lat)
-        """
-        min_lon, min_lat, max_lon, max_lat = bbox
-
-        print("\n📍 Bounding box:")
-        print(
-            f"   SW corner: https://www.google.com/maps/?q={min_lat:.6f},{min_lon:.6f}"
-        )
-        print(
-            f"   NE corner: https://www.google.com/maps/?q={max_lat:.6f},{max_lon:.6f}"
-        )
-        print()
-
     async def download_city(
         self, city_name: str, progress_callback: ProgressCallback = None
     ):
@@ -162,7 +140,7 @@ class CityImageDownloader:
                 )
 
             bbox = await _get_city_bbox_from_state(self.state, city_name, client)
-            self.print_bbox_info(bbox)
+            print_bbox_info(bbox)
             await self.download_bbox(
                 client=client, bbox=bbox, progress_callback=progress_callback
             )
@@ -185,222 +163,65 @@ class CityImageDownloader:
             progress_callback: Optional progress callback
             image_limit: Optional limit on number of images to download
         """
-        log = self._make_logger(progress_callback)
-
-        # Store original bbox for optimization in _process_tile
-        self._original_bbox = bbox
-
-        # Phase 1: Calculate and register tiles
-        tiles = get_tiles_for_bbox(*bbox)
-        self.state.add_tiles(tiles)
-        total_tiles = len(tiles)
-        log("tiles", 0, total_tiles, f"Need to process {total_tiles} tiles")
-
-        # Reset any in-progress items from crashed runs
         self.state.reset_in_progress()
+        await discover_phase(
+            bbox, self.state, client, self.access_token, self.rate_limit_delay
+        )
+        await self._download_phase(image_limit, client)
 
-        # Phase 2: Process tiles to discover images
-        pending_tiles = self.state.get_pending_tiles()
-        processed_tiles = total_tiles - len(pending_tiles)
 
-        for i, tile in enumerate(pending_tiles):
-            log(
-                "discover",
-                processed_tiles + i,
-                total_tiles,
-                f"Processing tile {tile.z}/{tile.x}/{tile.y}",
-            )
-
-            await self._process_tile(
-                client, tile, progress_callback=progress_callback
-            )
-
-            # Rate limiting
-            await asyncio.sleep(self.rate_limit_delay)
-
-        log("discover", total_tiles, total_tiles, "Tile processing complete")
-
-        # Phase 3: Download images
+    async def _download_phase(self, image_limit, client):
         total_images = self.state.get_total_images()
         if total_images == 0:
-            log("complete", 0, 0, "No images found in this area")
+            logger.info("nothing to download for the given bbox. exiting.")
             return
-
-        image_stats = self.state.get_image_stats()
-        downloaded = image_stats.get("downloaded", 0)
-
+        downloaded = self.state.get_num_downloaded_images()
         effective_total = (
             min(image_limit, total_images) if image_limit else total_images
         )
-
-        log(
-            "download",
-            downloaded,
-            effective_total,
-            f"Starting image download ({downloaded} already done)",
+        logger.info(
+            f"starting image download at {downloaded} / {effective_total} (total={total_images}, limit={image_limit})"
         )
 
-        images_downloaded = downloaded
-        while True:
-            if image_limit and images_downloaded >= image_limit:
+        images_processed = downloaded
+        while images_processed < effective_total:
+            batch_size = max(0, min(50, effective_total - images_processed))
+            logger.info(f"downloading batch, size={batch_size}")
+            tried_downloading = await self._download_batch(client, batch_size)
+            images_processed += tried_downloading
+            logger.info(f"download: {images_processed} / {effective_total}")
+            if tried_downloading == 0:
+                # done everything
                 break
 
-            pending = self.state.get_pending_images(limit=50)
-            if not pending:
-                break
-
-            for image_id in pending:
-                if image_limit and images_downloaded >= image_limit:
-                    break
-
-                log(
-                    "download",
-                    images_downloaded,
-                    effective_total,
-                    f"Downloading {image_id}",
-                )
-
-                await self._download_image(client, image_id)
-                await asyncio.sleep(self.rate_limit_delay)
-                images_downloaded += 1
-
-        # Final stats
-        final_stats = self.state.get_image_stats()
-        log(
-            "complete",
-            final_stats.get("downloaded", 0),
-            effective_total,
-            f"Download complete! {final_stats}",
+        final_downloaded = self.state.get_num_downloaded_images()
+        logger.info(
+            f"finished image download: {final_downloaded} / {effective_total} (total={total_images}, limit={image_limit})"
         )
 
-    async def _process_tile(
-        self,
-        client: httpx.AsyncClient,
-        tile: Tile,
-        progress_callback: ProgressCallback = None,
-    ):
-        """Process a single tile to discover images."""
-        self.state.mark_tile_started(tile)
-
-        try:
-            # Split tile into smaller bboxes for API compliance
-            bboxes = tile_to_small_bboxes(tile)
-
-            # Optimization: if original bbox is smaller than tile, use it directly
-            # This avoids fetching images outside the requested area
-            all_images = []
-            total_bboxes = len(bboxes)
-            idx = 0
-
-            while idx < total_bboxes:
-                bbox = bboxes[idx]
-                try:
-                    images = await fetch_images_in_bbox(
-                        client,
-                        self.access_token,
-                        *bbox,
-                        fields=["id", "captured_at", "computed_geometry"],
-                    )
-
-                    # Parse geometry to get lat/lon
-                    for img in images:
-                        geom = img.get("computed_geometry", {})
-                        coords = geom.get("coordinates", [None, None])
-                        img["lon"] = coords[0] if coords else None
-                        img["lat"] = coords[1] if len(coords) > 1 else None
-
-                    all_images.extend(images)
-
-                    # Success - update progress and move to next bbox
-                    idx += 1
-                    print_bbox_progress(idx, total_bboxes, len(all_images))
-                    await asyncio.sleep(self.rate_limit_delay)
-
-                except RateLimitError:
-                    # Log error and wait before retrying same bbox
-                    logger.exception(
-                        f"Rate limit hit on bbox {idx + 1}/{total_bboxes}, waiting 60s before retry"
-                    )
-                    print(
-                        f"\n    ⚠ Rate limit hit, waiting 60s before retrying bbox {idx + 1}/{total_bboxes}..."
-                    )
-                    await asyncio.sleep(60)
-                    # Don't increment idx - will retry same bbox
-
-            # Deduplicate by image ID
-            seen = set()
-            unique_images = []
-            for img in all_images:
-                img_id = str(img.get("id"))
-                if img_id not in seen:
-                    seen.add(img_id)
-                    unique_images.append(img)
-
-            # Save to state
-            self.state.add_images(unique_images, tile)
-            self.state.mark_tile_completed(tile, len(unique_images))
-
-        except Exception as e:
-            logger.exception(f"Failed to process tile {tile.z}/{tile.x}/{tile.y}")
-            self.state.mark_tile_failed(tile, str(e))
-            raise
+    async def _download_batch(self, client, batch_size) -> int:
+        pending = self.state.get_pending_images(limit=batch_size)
+        if not pending:
+            return 0
+        for image_id in tqdm(pending):
+            await self._download_image(client, image_id)
+            await asyncio.sleep(self.rate_limit_delay)
+        return len(pending)
 
     async def _download_image(self, client: httpx.AsyncClient, image_id: str):
         """Download a single image."""
-        try:
-            # Fetch metadata
-            metadata = await fetch_image_metadata(
-                client,
-                self.access_token,
-                image_id,
-                fields=[
-                    "id",
-                    "captured_at",
-                    "computed_geometry",
-                    "computed_compass_angle",
-                    self.image_size,
-                    "is_pano",
-                    "camera_type",
-                    "make",
-                    "model",
-                    "height",
-                    "width",
-                ],
-            )
-
-            image_url = metadata.get(self.image_size)
-            if not image_url:
-                self.state.mark_image_failed(
-                    image_id, f"No {self.image_size} available"
-                )
-                return
-
-            self.state.mark_image_downloading(image_id, image_url)
-
-            # Download image
-            output_path = self.images_dir / f"{image_id}.jpg"
-            await download_image(client, image_url, output_path)
-
-            self.state.mark_image_downloaded(image_id, str(output_path))
-
-            # Save metadata
-            if self.save_metadata:
-                meta_path = self.metadata_dir / f"{image_id}.json"
-                with open(meta_path, "w") as f:
-                    json.dump(metadata, f, indent=2)
-
-        except RateLimitError:
-            # Don't mark as failed, will retry later
-            logger.exception(
-                f"Rate limit hit while downloading image {image_id}, will retry later"
-            )
-            await asyncio.sleep(60)
-        except MapillaryAPIError as e:
-            logger.exception(f"API error downloading image {image_id}")
-            self.state.mark_image_failed(image_id, str(e))
-        except Exception as e:
-            logger.exception(f"Unexpected error downloading image {image_id}")
-            self.state.mark_image_failed(image_id, str(e))
+        metadata = await download_single_image_with_retry(
+            image_id,
+            self.image_size,
+            self.state,
+            self.images_dir,
+            client,
+            self.access_token,
+        )
+        if self.save_metadata:
+            meta_path = self.metadata_dir / f"{image_id}.json"
+            with open(meta_path, "w") as f:
+                json.dump(metadata, f, indent=2)
 
 
 async def download_city_images(
