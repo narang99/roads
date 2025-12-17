@@ -28,3 +28,8 @@ uv run python -m mapillary_downloader --city "Palo Alto, CA" --output ./images
 - `--output`: Output directory for images (default: `./output`)
 - `--size`: Image size: `thumb_256_url`, `thumb_1024_url`, `thumb_2048_url`, `thumb_original_url` (default: `thumb_1024_url`)
 - `--state-db`: Path to SQLite state database (default: `<output>/state.db`)
+
+
+
+# Labelling
+- label-studio, i can also deploy on railway: https://railway.com/deploy/label-studio
