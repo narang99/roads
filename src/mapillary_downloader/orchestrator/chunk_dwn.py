@@ -15,7 +15,7 @@ from mapillary_downloader.orchestrator.single_tile_meta import (
     save_images_metadata_for_single_tile,
 )
 from mapillary_downloader.tiles import get_tiles_for_bbox
-from tqdm.gui import tqdm
+from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
