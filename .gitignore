@@ -14,3 +14,21 @@ data/
 
 
 /mapillary_downloader.log
+best.pt
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# where we download datasets
+data/
+
+
+/mapillary_downloader.log
