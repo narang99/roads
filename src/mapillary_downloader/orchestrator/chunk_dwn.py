@@ -7,6 +7,7 @@ from mapillary_downloader.api_client import (
     fetch_image_metadata,
 )
 from mapillary_downloader.iterators import (
+    batched_async_gather,
     get_async_failure_logger,
     retry_n_times,
     run_and_retry_on_exc,
@@ -43,11 +44,8 @@ async def discover_phase(bbox, state, client, access_token, rate_limit_delay):
         single_tile_discover(tile, state, client, access_token, rate_limit_delay)
         for tile in pending_tiles
     ]
+    await batched_async_gather(tasks)
 
-    for f in tqdm(
-        asyncio.as_completed(tasks), total=len(tasks), desc="Discovering tiles"
-    ):
-        await f
 
     logger.info(f"Discovered images from {total_tiles} tiles.")
 

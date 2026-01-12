@@ -1,6 +1,7 @@
 import asyncio
+from asyncio.futures import Future
 import logging
-from typing import Any, Callable, Coroutine, List, Tuple, Type, Union
+from typing import Any, Callable, Coroutine, Iterable, List, Tuple, Type, Union
 
 from tqdm import tqdm
 
@@ -64,3 +65,18 @@ def get_async_failure_logger(
         return None
 
     return inner
+
+
+async def batched_async_gather(futures, batch_size=10):
+    res = []
+    batches = batched(futures, batch_size)
+    for batch in tqdm(batches):
+        for f in tqdm(
+            asyncio.as_completed(batch), total=len(futures), leave=False
+        ):
+            res.append(await f)
+
+def batched(iterable, n=1):
+    length = len(iterable)
+    for ndx in range(0, length, n):
+        yield iterable[ndx:min(ndx + n, length)]
