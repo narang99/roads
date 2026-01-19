@@ -38,7 +38,7 @@ services:
       # Use prefix 'http://' or 'https://' for the URL always.
       # Determine the actual IP using 'ifconfig' (Linux/Mac) or 'ipconfig' (Windows).
       - LABEL_STUDIO_HOST=http://host.docker.internal:8080
-      - LABEL_STUDIO_ACCESS_TOKEN='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA3NTMzMzMxMywiaWF0IjoxNzY4MTMzMzEzLCJqdGkiOiI0Yjk3OTAwOGE1ZjU0MDA1YTk4NGZmYTBmYTlkMTM1YSIsInVzZXJfaWQiOjF9.YImcD4oQs8XIWgu_4PvxdKnuwl9vokRY6czn0khTaEE'
+      - LABEL_STUDIO_ACCESS_TOKEN=33e240c4c8dbb0d73e3ad7c108dd8c70dcf58006
 
     ports:
       - 9090:9090

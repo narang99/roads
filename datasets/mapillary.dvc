@@ -1,0 +1,6 @@
+outs:
+- md5: 41778e97584efb4d218d77f698d01260.dir
+  size: 53188260
+  nfiles: 302
+  hash: md5
+  path: mapillary

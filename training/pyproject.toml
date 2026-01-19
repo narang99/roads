@@ -1,0 +1,15 @@
+[project]
+name = "training"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "fastai>=2.8.6",
+    "ipykernel>=7.1.0",
+    "segment-anything",
+    "ultralytics>=8.3.252",
+]
+
+[tool.uv.sources]
+segment-anything = { git = "https://github.com/facebookresearch/segment-anything.git" }

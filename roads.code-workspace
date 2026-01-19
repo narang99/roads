@@ -1,0 +1,19 @@
+{
+  "folders": [
+    {
+      "path": "label_studio_backends"
+    },
+    {
+      "path": "mapillary_downloader"
+    },
+    {
+      "path": "training"
+    },
+    {
+      "path": "mtrain"
+    },
+    {
+      "path": "datasets",
+    }
+  ]
+}

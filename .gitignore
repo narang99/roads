@@ -9,10 +9,6 @@ wheels/
 # Virtual environments
 .venv
 
-# where we download datasets
-data/
-
-
 /mapillary_downloader.log
 best.pt
 
@@ -27,8 +23,10 @@ wheels/
 # Virtual environments
 .venv
 
-# where we download datasets
-data/
-
-
 /mapillary_downloader.log
+*sam*pt
+*sam*pth
+best.pt
+last.pt
+*yolo*pt
+*yolo*pth
