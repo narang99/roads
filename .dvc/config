@@ -1,0 +1,4 @@
+[core]
+    remote = mys3
+['remote "mys3"']
+    url = s3://narang-public-s3/roads-dvc
