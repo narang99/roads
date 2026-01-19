@@ -1,6 +1,6 @@
 outs:
-- md5: 3a6e73a02af39bb1b13ca81b441569e0.dir
-  size: 984990049
-  nfiles: 6824
+- md5: f33e908ef68918308dcabcd82adb402e.dir
+  size: 482924385
+  nfiles: 6823
   hash: md5
   path: samples_mapillary
