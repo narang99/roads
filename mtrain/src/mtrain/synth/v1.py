@@ -1,16 +1,29 @@
 import random
 import numpy as np
 from mtrain.yolo.tfms import mk_yolo_label_from_numpy_coords
+from mtrain.random import random_start_points
 from mtrain.synth.tfms import (
     merge_overlapping_boxes,
     random_blur,
     random_luminosity_scale,
 )
 
+class SkipImage(Exception):
+    pass
 
-def random_copy(background, frag):
-    max0, max1 = background[:, :, 0].shape
-    start0, start1 = random.randint(0, max0), random.randint(0, max1)
+
+def random_copy(background, frag, pos_fn=None):
+    if pos_fn is None:
+        start0, start1 = random_start_points(background)
+    else:
+        try:
+            start0, start1 = pos_fn(background, frag)
+        except Exception as ex:
+            raise SkipImage("position function failure") from ex
+
+    return copy_at(background, frag, start0, start1)
+
+def copy_at(background, frag, start0, start1):
     mask = np.any(frag != 0, axis=-1)
     end0 = start0 + mask.shape[0]
     end1 = start1 + mask.shape[1]
@@ -21,7 +34,6 @@ def random_copy(background, frag):
     frag = frag[:roi_row_len, :roi_col_len]
     roi[mask] = frag[mask]
     return start0, start0 + roi_row_len, start1, start1 + roi_col_len
-
 
 def random_multiset_total(objects, max_total=20):
     total = random.randint(0, max_total)
@@ -46,8 +58,8 @@ def _get_image_splice_for_clustering_coords(image, flist):
     return start0, end0, start1, end1
 
 
-def random_spimpose(image, flist):
-    return [random_copy(image, frag) for frag in flist]
+def random_spimpose(image, flist, pos_fn=None):
+    return [random_copy(image, frag, pos_fn) for frag in flist]
 
 
 def random_spimpose_with_cluster(
@@ -58,6 +70,7 @@ def random_spimpose_with_cluster(
     total_count=30,
     max_per_cluster=20,
     apply_tfms=False,
+    pos_fn=None,
 ):
     clusters = random.randint(0, max_clusters)
     flist = random_multiset_total(frags, total_count)
@@ -76,13 +89,13 @@ def random_spimpose_with_cluster(
         )
         subset_image = image[ss_s0:ss_e0, ss_s1:ss_e1]
 
-        rel_box_coords = random_spimpose(subset_image, frags_to_add)
+        rel_box_coords = random_spimpose(subset_image, frags_to_add, pos_fn=pos_fn)
         abs_box_coords = [
             (s0 + ss_s0, e0 + ss_s0, s1 + ss_s1, e1 + ss_s1)
             for (s0, e0, s1, e1) in rel_box_coords
         ]
         boxes.extend(abs_box_coords)
-    boxes.extend(random_spimpose(image, flist))
+    boxes.extend(random_spimpose(image, flist, pos_fn=pos_fn))
     if apply_tfms:
         blurred = random_blur(image)
         for box in boxes:
@@ -103,3 +116,9 @@ def random_spimpose_with_cluster(
     ]
     return "\n".join(labels)
 
+
+def random_pos_in_bottom_portion(background, frag):
+    h = background.shape[0]
+    upper_bound = h//2
+    s0, s1 = random_start_points(background[upper_bound:, :])
+    return s0 + upper_bound, s1

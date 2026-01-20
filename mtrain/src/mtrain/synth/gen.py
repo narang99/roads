@@ -1,34 +1,52 @@
 from pathlib import Path
 from tqdm import tqdm
 import random
-from mtrain.synth.v1 import random_spimpose_with_cluster
+from mtrain.synth.v1 import (
+    random_spimpose_with_cluster,
+    SkipImage,
+    random_pos_in_bottom_portion,
+)
+from mtrain.synth.v2 import FragmentSuperpositionPipeline
 import cv2
 
 
 class RandomSamplerV1:
     def __init__(self, images_base: Path, frags_base: Path, yolo_cls_label_id: int = 0):
-        self.images = list(images_base.rglob("*.jpg"))
+        self.images_iter = images_base.rglob("*.jpg")
         self.frags = [cv2.imread(p) for p in frags_base.glob("*")]
         self._label_id = yolo_cls_label_id
+        self.pipel = FragmentSuperpositionPipeline()
 
     def __iter__(self):
-        for p in self.images:
-            yield self._apply_impose(p, False)
+        for p in self.images_iter:
+            res = self._apply_impose(p, False)
+            if res is None:
+                continue
+            yield res
+
             max_copies = random.randint(1, 5)
             for _ in range(max_copies):
-                yield self._apply_impose(p, True)
+                res = self._apply_impose(p, False)
+                if res is None:
+                    continue
+                yield res
 
     def _apply_impose(self, p, apply_tfms):
-        img = cv2.imread(p)
-        total_count = random.randint(0, 60)
-        labels = random_spimpose_with_cluster(
-            img,
-            self.frags,
-            self._label_id,
-            total_count=total_count,
-            apply_tfms=apply_tfms,
-        )
-        return img, labels
+        try:
+            img = cv2.imread(p)
+            total_count = random.randint(0, 60)
+            labels = random_spimpose_with_cluster(
+                img,
+                self.frags,
+                self._label_id,
+                total_count=total_count,
+                apply_tfms=apply_tfms,
+                pos_fn=random_pos_in_bottom_portion,
+            )
+            return img, labels
+        except SkipImage as ex:
+            print("skipping image:", p, "reason:", ex)
+            return None
 
 
 def _write_img_and_lbl(i, img, lbl, dest_folder):
@@ -48,7 +66,6 @@ def generate_data(
     image_base = Path(image_base)
     frags_base = Path(frags_base)
     dest_folder = Path(dest_folder)
-    num_samples = Path(num_samples)
 
     dest_folder.mkdir(parents=True, exist_ok=True)
     (dest_folder / "images").mkdir(parents=True, exist_ok=True)

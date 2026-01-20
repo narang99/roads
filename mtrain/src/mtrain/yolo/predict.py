@@ -3,8 +3,6 @@ from pathlib import Path
 from ultralytics import YOLO
 import cv2
 
-model = YOLO("best.pt")
-
 def predict_image(model: YOLO, image_or_path, conf_threshold=0.1):
     # if not path, assume bgr cv2 image
     results = model(image_or_path, conf=conf_threshold, verbose=False)[0]
@@ -12,7 +10,7 @@ def predict_image(model: YOLO, image_or_path, conf_threshold=0.1):
     # Visualize
     if isinstance(image_or_path, str) or isinstance(image_or_path, Path):
         img = cv2.imread(str(image_or_path))
-        # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     else:
         img = image_or_path
 

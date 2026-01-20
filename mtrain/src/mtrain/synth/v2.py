@@ -1227,12 +1227,10 @@ class FragmentSuperpositionPipeline:
         # Exclude sky from placement
         placement_mask = cv2.bitwise_and(placement_mask, cv2.bitwise_not(sky_mask))
 
-        print("🎨 Step 2: Processing fragment...")
         clean_fragment, alpha_mask = self.fragment_processor.simple_background_removal(
             fragment, method="grabcut", visualize=visualize_steps
         )
 
-        print("📐 Step 3: Geometric alignment...")
 
         # Auto-find position if not provided
         if position is None:
@@ -1241,8 +1239,9 @@ class FragmentSuperpositionPipeline:
                 placement_mask, (fh, fw), num_points=1, visualize=visualize_steps
             )
             if not valid_points:
-                print("❌ No valid placement points found!")
-                return background
+                raise Exception("no valid placement points found!")
+                # print("❌ No valid placement points found!")
+                # return background
             position = valid_points[0]
 
         if scale is None:
@@ -1288,7 +1287,6 @@ class FragmentSuperpositionPipeline:
         Returns:
             Final composited image
         """
-        print("🔍 Step 1: Analyzing background...")
         placement_mask = self.bg_analyzer.simple_color_segmentation(
             background, visualize_steps
         )
@@ -1297,14 +1295,12 @@ class FragmentSuperpositionPipeline:
         # Exclude sky from placement
         placement_mask = cv2.bitwise_and(placement_mask, cv2.bitwise_not(sky_mask))
 
-        print("🎨 Step 2: Processing fragment...")
         clean_fragment, alpha_mask = self.fragment_processor.simple_background_removal(
             fragment, method="grabcut", visualize=visualize_steps
         )
         # clean_fragment, alpha_mask = self.fragment_processor.refine_fragment_edges(
         #     clean_fragment, alpha_mask, visualize=visualize_steps, blur_radius=2)
 
-        print("📐 Step 3: Geometric alignment...")
 
         # Auto-find position if not provided
         if position is None:
@@ -1334,7 +1330,6 @@ class FragmentSuperpositionPipeline:
             )
         )
 
-        print("💡 Step 4: Photometric matching...")
 
         # Analyze lighting in placement region
         x, y = position
@@ -1358,7 +1353,6 @@ class FragmentSuperpositionPipeline:
             transformed_mask, shadow_offset=(3, 3), visualize=visualize_steps
         )
 
-        print("🎭 Step 5: Blending...")
 
         # Apply shadow first
         result = background.copy()
@@ -1394,7 +1388,6 @@ class FragmentSuperpositionPipeline:
                 visualize=visualize_steps,
             )
 
-        print("✅ Pipeline complete!")
         return final_result
 
 

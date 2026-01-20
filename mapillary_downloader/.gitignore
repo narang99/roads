@@ -10,3 +10,4 @@ wheels/
 .venv
 
 mapillary_downloader.log
+/data
