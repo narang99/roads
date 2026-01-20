@@ -74,13 +74,14 @@ def generate_data(
     sampler = RandomSamplerV1(image_base, frags_base)
 
     i = 0
+    next_pct = 10
+
     while i < num_samples:
         sampler = RandomSamplerV1(image_base, frags_base)
         for img, lbl in iter(sampler):
             _write_img_and_lbl(i, img, lbl, dest_folder)
             i += 1
-            percent = ( num_samples * 100 ) // i
-            if percent % 10 == 0:
-                print(f"progress: {percent}%")
-            if i >= num_samples:
-                break
+            pct = (i * 100) // num_samples
+            if pct >= next_pct:
+                print(f"{next_pct}% done")
+                next_pct += 10
