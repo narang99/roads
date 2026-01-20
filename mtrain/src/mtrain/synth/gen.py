@@ -73,13 +73,14 @@ def generate_data(
 
     sampler = RandomSamplerV1(image_base, frags_base)
 
-    with tqdm(total=num_samples) as pbar:
-        i = 0
-        while i < num_samples:
-            sampler = RandomSamplerV1(image_base, frags_base)
-            for img, lbl in iter(sampler):
-                _write_img_and_lbl(i, img, lbl, dest_folder)
-                i += 1
-                pbar.update(i)
-                if i >= num_samples:
-                    break
+    i = 0
+    while i < num_samples:
+        sampler = RandomSamplerV1(image_base, frags_base)
+        for img, lbl in iter(sampler):
+            _write_img_and_lbl(i, img, lbl, dest_folder)
+            i += 1
+            percent = ( num_samples * 100 ) // i
+            if percent % 10 == 0:
+                print(f"progress: {percent}%")
+            if i >= num_samples:
+                break
