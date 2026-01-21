@@ -1,4 +1,5 @@
 "k means step code"
+import json
 
 import cv2
 import numpy as np
@@ -205,8 +206,12 @@ class KMeansDatasetExplorer:
             return
 
         crop = extract_kmeans_label(self.img_bgr, self.labels, include_cls)
+        mask = get_include_class(self.labels, include_cls)
 
         out_path = self.images[self.idx].parent / "proc.png"
+        mask_path = self.images[self.idx].parent / "mask.json"
+        with open(mask_path, "w") as f:
+            json.dump(mask.tolist(), f)
 
         cv2.imwrite(str(out_path), crop)
 

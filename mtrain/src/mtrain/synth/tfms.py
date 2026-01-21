@@ -1,7 +1,7 @@
-
 import random
 import numpy as np
 import cv2
+
 
 def merge_overlapping_boxes(boxes):
     """
@@ -112,5 +112,28 @@ def random_luminosity_scale(img):
 
 
 def random_blur(img):
-    kernel_size = random.randint(2,7)
+    kernel_size = random.randint(2, 7)
     return cv2.blur(img, kernel_size)
+
+
+def resize_fragment_with_manual_horizon(
+    fragment_img,
+    fragment_base_y,
+    fragment_horizon_y,
+    target_base_y,
+    target_horizon_y,
+):
+    """
+    Resizes fragment so it matches perspective between two images
+    using manually provided horizon lines.
+    """
+    if fragment_base_y <= fragment_horizon_y:
+        raise ValueError("Fragment base must be below fragment horizon")
+    if target_base_y <= target_horizon_y:
+        raise ValueError("Target base must be below target horizon")
+    scale = (target_base_y - target_horizon_y) / (fragment_base_y - fragment_horizon_y)
+    if scale <= 0:
+        raise ValueError("Invalid scale computed")
+    new_w = int(fragment_img.shape[1] * scale)
+    new_h = int(fragment_img.shape[0] * scale)
+    return new_w, new_h, scale

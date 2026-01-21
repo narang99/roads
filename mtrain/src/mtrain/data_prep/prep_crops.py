@@ -3,11 +3,25 @@
 # then provide the user a function for processing these
 import cv2
 import json
-from typing import Iterator
+from typing import Iterator, Optional
+from dataclasses import dataclass
 from pathlib import Path
 from mtrain.label_studio.crops import extract_from_single_result, KMeansDatasetExplorer
 from mtrain.utils import mkdir, json_to_content
 
+@dataclass
+class SingleCrop:
+    raw: Optional[Path]
+    proc: Optional[Path]
+    meta: Optional[Path]
+    mask: Optional[Path]
+
+
+def _p_if_exists_else_none(p):
+    if p.exists():
+        return p
+    else:
+        None
 
 class PrepareCrops:
     def __init__(self, out_dir: Path):
@@ -15,16 +29,24 @@ class PrepareCrops:
         mkdir(self._o)
 
     def get_kmeans_explorer(self):
-        raws = list(self.get_all_existing_raw_crops())
+        raws = [
+            c.raw
+            for c in self.get_all_existing_crops()
+        ]
         # the explorer maintains the directory structure correctly
         return KMeansDatasetExplorer(raws)
 
-    def get_all_existing_raw_crops(self) -> Iterator[Path]:
+    def get_all_existing_crops(self) -> Iterator[SingleCrop]:
         for d in self._o.glob("*"):
             if d.is_dir():
-                cand = d / "raw.png"
-                if cand.exists():
-                    yield cand
+                if not (d / "raw.png").exists():
+                    continue
+                yield SingleCrop(
+                    raw=_p_if_exists_else_none(d / "raw.png"),
+                    proc=_p_if_exists_else_none(d / "proc.png"),
+                    meta=_p_if_exists_else_none(d / "meta.json"),
+                    mask=_p_if_exists_else_none(d / "mask.json"),
+                )
 
     def dump_raw_all(self, json_path_or_content):
         content = json_to_content(json_path_or_content)
