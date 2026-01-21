@@ -15,7 +15,7 @@ class PrepareCrops:
         mkdir(self._o)
 
     def get_kmeans_explorer(self):
-        raws = list(self.get_all_raw_crops())
+        raws = list(self.get_all_existing_raw_crops())
         # the explorer maintains the directory structure correctly
         return KMeansDatasetExplorer(raws)
 
@@ -35,7 +35,7 @@ class PrepareCrops:
         content = json_to_content(json_path_or_content)
         fragments = extract_from_single_result(content)
         for i, frag in enumerate(fragments):
-            self._dump_single_fragment(frag, self._o / i)
+            self._dump_single_fragment(frag, self._o / str(i))
 
     def _dump_single_fragment(self, frag, out_dir):
         out_dir = mkdir(out_dir)
@@ -43,7 +43,16 @@ class PrepareCrops:
         with open(out_dir / "meta.json", "w") as f:
             json.dump(
                 {
-                    "bounding_box": frag.bounding_box,
+                    "bounding_box": {
+                        "r": frag.bounding_box.r,
+                        "c": frag.bounding_box.c,
+                        "r_len": frag.bounding_box.r_len,
+                        "c_len": frag.bounding_box.c_len,
+                    },
+                    "original": {
+                        "r_len": frag.original.r_len,
+                        "c_len": frag.original.c_len,
+                    }
                 },
                 f,
             )
