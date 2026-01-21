@@ -14,11 +14,10 @@ def predict_image(model: YOLO, image_or_path, conf_threshold=0.1):
     else:
         img = image_or_path
 
-    print(len(results.boxes))
     for box in results.boxes:
         x1, y1, x2, y2 = map(int, box.xyxy[0].cpu().numpy())
         cls = int(box.cls[0])
         color = plt.cm.tab10(cls % 10)[:3]
         color = tuple(int(c * 255) for c in color)
         cv2.rectangle(img, (x1, y1), (x2, y2), color, 5)
-    return img
+    return img, len(results.boxes)

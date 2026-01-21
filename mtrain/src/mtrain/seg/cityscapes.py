@@ -1,0 +1,72 @@
+# code to generate segmentation using cityscapes pretrained modelsplt
+
+import numpy as np
+from PIL import Image
+import torch
+import functools
+from enum import Enum
+
+class CityScapesCls(Enum):
+    ROAD = 0
+    SIDEWALK = 1
+    BUILDING = 2
+    WALL = 3
+    FENCE = 4
+    POLE = 5
+    TRAFFIC_LIGHT = 6
+    TRAFFIC_SIGN = 7
+    VEGETATION = 8
+    TERRAIN = 9
+    SKY = 10
+    PERSON = 11
+    RIDER = 12
+    CAR = 13
+    TRUCK = 14
+    BUS = 15
+    TRAIN = 16
+    MOTORCYCLE = 17
+    BICYCLE = 18
+
+
+class SegFormerCityScapes:
+    """
+    example usage:
+        model = SegFormerCityScapes()
+        pred = model.predict(<image-path>)
+        road = model.get_mask(pred, CityScapesCls.ROAD)
+
+        # simple numpy mask, you can overlay now
+        orig = cv2.imread(<image-path>)
+        # mark road as red, bgr
+        orig[road] = [0, 0, 255]
+        cv2.imshow(orig)
+    """
+    def __init__(self):
+        from transformers import SegformerFeatureExtractor, SegformerForSemanticSegmentation
+        model_name = "nvidia/segformer-b0-finetuned-cityscapes-1024-1024"
+        feat = SegformerFeatureExtractor.from_pretrained(model_name)
+        model = SegformerForSemanticSegmentation.from_pretrained(model_name)
+        self.model = model
+        self.feat = feat
+    
+    def predict(self, img_path):
+        img = Image.open(img_path).convert("RGB")
+        orig = np.array(img)
+        h, w, _ = orig.shape
+
+        inputs = self.feat(images=img, return_tensors="pt")
+
+        with torch.no_grad():
+            outputs = self.model(**inputs)
+
+        logits = torch.nn.functional.interpolate(
+            outputs.logits,
+            size=(h, w),
+            mode="bilinear",
+            align_corners=False
+        )
+
+        return torch.argmax(logits, dim=1)[0].cpu().numpy()
+
+    def get_mask(self, pred, lbl: CityScapesCls):
+        return (pred == lbl.value)
