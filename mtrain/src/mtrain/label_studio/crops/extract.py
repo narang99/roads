@@ -117,6 +117,8 @@ class BoundingBox:
 class OriginalStats:
     r_len: int
     c_len: int
+    path: str
+
 
 @dataclass
 class ExtractedFragment:
@@ -146,8 +148,7 @@ def extract_from_single_result(content) -> list[ExtractedFragment]:
                     mask=mask,
                     crop=crop,
                     bounding_box=BoundingBox(r=y, c=x, r_len=h, c_len=w),
-                    original=OriginalStats(img.shape[0], img.shape[1])
+                    original=OriginalStats(img.shape[0], img.shape[1], path=str(p)),
                 )
             )
     return result
-

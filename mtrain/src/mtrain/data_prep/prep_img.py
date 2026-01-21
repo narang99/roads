@@ -20,8 +20,15 @@ class PrepareImages:
             raise Exception(
                 f"the data passed to add_raw_all should be either a direct load of the full export file or the full export file path itself. Expected a list, got a dict. did you accidentally pass a single image's crop content? data={in_json_path_or_content}"
             )
-        iids = [d["id"] for d in content]
+        iids = [d["id"] for d in content if self._has_annotation(d)]
         return [self.add_raw_single(iid, in_json_path_or_content) for iid in iids]
+
+    def _has_annotation(self, content):
+        res = []
+        for annot in content["annotations"]:
+            for r in annot["result"]:
+                res.append(r)
+        return len(res) > 0
 
     def add_raw_single(self, iid: int, in_json_path_or_content) -> Path:
         # given the (main json file) json and iid, find and plce the image in out-dir

@@ -1,4 +1,5 @@
 "k means step code"
+
 import json
 
 import cv2
@@ -86,10 +87,11 @@ class KMeansDatasetExplorer:
         if len(self.images) == 0:
             raise ValueError("No images found.")
 
-
         # Dataset state
         self.idx = 0
         self.img_bgr = None
+        self.original_img = None
+        self.meta_data = None
         self.labels = None
         self.current_K = None
 
@@ -111,6 +113,16 @@ class KMeansDatasetExplorer:
 
         self.class_input = widgets.Text(
             value="0", description="Label(s)", placeholder="e.g. 0 or 1,2"
+        )
+
+        self.perspective_checkbox = widgets.Checkbox(
+            value=False, description="Perspective?"
+        )
+
+        self.kind_dropdown = widgets.Dropdown(
+            options=["scatter_small_white", "scatter_small_color", "big", "cluster"],
+            value="scatter_small_white",
+            description="Kind",
         )
 
         self.prev_button = widgets.Button(description="◀ Prev")
@@ -142,6 +154,30 @@ class KMeansDatasetExplorer:
         self.img_bgr = cv2.imread(str(img_path))
         if self.img_bgr is None:
             raise ValueError(f"Could not load image: {img_path}")
+
+        # Load meta.json and original image if available
+        meta_path = img_path.parent / "meta.json"
+        self.meta_data = None
+        self.original_img = None
+
+        if meta_path.exists():
+            with open(meta_path, "r") as f:
+                self.meta_data = json.load(f)
+
+            # Load original image if path exists
+            if "original" in self.meta_data and "path" in self.meta_data["original"]:
+                original_path = Path(self.meta_data["original"]["path"])
+                if original_path.exists():
+                    self.original_img = cv2.imread(str(original_path))
+
+            # Load existing perspective and kind values if present
+            if self.meta_data:
+                self.perspective_checkbox.value = self.meta_data.get(
+                    "perspective", False
+                )
+                self.kind_dropdown.value = self.meta_data.get(
+                    "kind", "scatter_small_white"
+                )
 
         # Reset per-image state
         self.labels = None
@@ -176,16 +212,42 @@ class KMeansDatasetExplorer:
     # Plot original + labels
     # --------------------------------------------------------
     def _plot_current(self):
-        fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+        # Determine number of subplots based on available images
+        num_plots = 3 if self.original_img is not None else 2
+        fig, axes = plt.subplots(1, num_plots, figsize=(5 * num_plots, 4))
 
-        # Original
-        axes[0].imshow(cv2.cvtColor(self.img_bgr, cv2.COLOR_BGR2RGB))
-        axes[0].set_title("Original")
-        axes[0].axis("off")
+        # axes[0].imshow(cv2.cvtColor(self.original_img, cv2.COLOR_BGR2RGB))
+        # axes[1].imshow(cv2.cvtColor(self.img_bgr, cv2.COLOR_BGR2RGB))
+        # plot_kmeans_labels(
+        #     self.labels, ax=axes[2], title=f"KMeans (K={self.current_K})"
+        # )
+        # Original image from meta.json if available
+        plot_idx = 0
+        if self.original_img is not None:
+            img = cv2.cvtColor(self.original_img, cv2.COLOR_BGR2RGB)
+            if self.meta_data:
+                bb = self.meta_data["bounding_box"]
+                img = cv2.rectangle(
+                    img,
+                    (bb["c"], bb["r"]),
+                    (bb["c"] + bb["c_len"], bb["r"] + bb["r_len"]),
+                    color=(255,0,0),
+                    thickness=5,
+                )
+            axes[plot_idx].imshow(img)
+            axes[plot_idx].set_title("Original Image")
+            axes[plot_idx].axis("off")
+            plot_idx += 1
+
+        # Crop fragment
+        axes[plot_idx].imshow(cv2.cvtColor(self.img_bgr, cv2.COLOR_BGR2RGB))
+        axes[plot_idx].set_title("Crop Fragment")
+        axes[plot_idx].axis("off")
+        plot_idx += 1
 
         # Labels
         plot_kmeans_labels(
-            self.labels, ax=axes[1], title=f"KMeans (K={self.current_K})"
+            self.labels, ax=axes[plot_idx], title=f"KMeans (K={self.current_K})"
         )
 
         plt.tight_layout()
@@ -210,13 +272,28 @@ class KMeansDatasetExplorer:
 
         out_path = self.images[self.idx].parent / "proc.png"
         mask_path = self.images[self.idx].parent / "mask.json"
+        meta_path = self.images[self.idx].parent / "meta.json"
+
+        # Save mask
         with open(mask_path, "w") as f:
             json.dump(mask.tolist(), f)
 
+        # Save processed image
         cv2.imwrite(str(out_path), crop)
+
+        # Update meta.json with perspective and kind values
+        if self.meta_data is not None:
+            self.meta_data["perspective"] = self.perspective_checkbox.value
+            self.meta_data["kind"] = self.kind_dropdown.value
+
+            with open(meta_path, "w") as f:
+                json.dump(self.meta_data, f)
 
         with self.out:
             print(f"Saved → {out_path}")
+            print(
+                f"Updated meta.json with perspective={self.perspective_checkbox.value}, kind={self.kind_dropdown.value}"
+            )
 
     # --------------------------------------------------------
     # Display UI
@@ -233,6 +310,8 @@ class KMeansDatasetExplorer:
                 nav,
                 self.k_slider,
                 self.class_input,
+                self.perspective_checkbox,
+                self.kind_dropdown,
                 self.save_button,
                 self.out,
             ]

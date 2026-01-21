@@ -49,9 +49,13 @@ class PrepareCrops:
                 )
 
     def dump_raw_all(self, json_path_or_content):
+        i = 0
         content = json_to_content(json_path_or_content)
         for c in content:
-            self.add_raw_single(c)
+            fragments = extract_from_single_result(c)
+            for _, frag in enumerate(fragments):
+                self._dump_single_fragment(frag, self._o / str(i))
+                i += 1
 
     def dump_raw_single(self, json_path_or_content):
         content = json_to_content(json_path_or_content)
@@ -74,6 +78,7 @@ class PrepareCrops:
                     "original": {
                         "r_len": frag.original.r_len,
                         "c_len": frag.original.c_len,
+                        "path": frag.original.path,
                     }
                 },
                 f,
