@@ -14,6 +14,7 @@ from mtrain.label_studio.crops.kmeans import (
     extract_kmeans_label,
     get_include_class,
 )
+from mtrain import luminosity
 import functools
 from mtrain import horizon
 from mtrain import superpose
@@ -32,7 +33,7 @@ class KMeansDatasetExplorer:
     - Save result per image
     """
 
-    def __init__(self, images, backdrop):
+    def __init__(self, images, backdrop, idx=0):
         self.images = self._load_images(images)
         if len(self.images) == 0:
             raise ValueError("No images found.")
@@ -41,7 +42,7 @@ class KMeansDatasetExplorer:
         if self.backdrop_bgr is None:
             raise ValueError(f"Could not load backdrop image: {backdrop}")
 
-        self.idx = 0
+        self.idx = idx
         self.orig_crop_bgr = None
         self.original_img_bgr = None
         self.meta_data = None
@@ -92,9 +93,11 @@ class KMeansDatasetExplorer:
         )
 
         self.use_blur = widgets.Text(
-            value="0", description="Blur Kernel size (0 for no blur)",
+            value="0",
+            description="Blur Kernel size (0 for no blur)",
         )
-        
+
+        self.use_luminosity = widgets.Text(value="1.0", description="Brightness")
 
         self.prev_button = widgets.Button(description="◀ Prev")
         self.next_button = widgets.Button(description="Next ▶")
@@ -108,6 +111,7 @@ class KMeansDatasetExplorer:
         self.show_padded_fragments.observe(self._on_padding_toggle, names="value")
         self.use_morphology.observe(self._on_morphology_toggle, names="value")
         self.use_blur.observe(self._redraw, names="value")
+        self.use_luminosity.observe(self._redraw, names="value")
 
         self.refresh_button.on_click(lambda _: self._redraw())
         self.save_button.on_click(self._on_save)
@@ -196,6 +200,26 @@ class KMeansDatasetExplorer:
         ax.add_patch(rect)
         _draw_horizon_line(img_rgb, ax)
 
+    def _get_luminosity(self):
+        try:
+            val = float(self.use_luminosity.value)
+            return val
+        except:
+            return 1.0
+
+    def _auto_brighten_fragment(self, proc_frag, proc_mask, pos_r, pos_c):
+        h, w = proc_frag.shape[0], proc_frag.shape[1]
+        p = luminosity.get_std_matcher_params(
+            self.orig_crop_bgr,
+            self.backdrop_bgr[pos_r:pos_r+h, pos_c:pos_c+w]
+        )
+        # garbage is generally brighter than background, we cant make luminosity the same as background
+        # its best to increase the target mean a bit before matching
+        # we would mostly need to randomize between 1.2 to 1.5 for good dataset
+        p.scale_target_mean(1.5)
+        
+        return luminosity.do_std_matching(proc_frag, proc_mask, p)
+
     def _get_processed_frag(self):
         # Get processed fragment with current selected labels
         include_cls = [int(x.strip()) for x in self.class_input.value.split(",")]
@@ -208,6 +232,7 @@ class KMeansDatasetExplorer:
         # Apply the processed mask to the fragment
         processed_fragment_bgr = self.orig_crop_bgr.copy()
         processed_fragment_bgr[~mask] = 0
+        
         return processed_fragment_bgr, mask
 
     def _scale_fragment(self, pos_r, processed_fragment_bgr, mask):
@@ -240,12 +265,14 @@ class KMeansDatasetExplorer:
     def _plot_backdrop(self, scaled_fragment_bgr, pos_r, pos_c, scale_factor, ax):
         # Place scaled fragment on backdrop and get actual coordinates
         backdrop_with_frag_bgr = self.backdrop_bgr.copy()
-        
+
         start0, end0, start1, end1 = superpose.direct_copy(
             backdrop_with_frag_bgr, scaled_fragment_bgr, pos_r, pos_c
         )
         blurred = self._blur(backdrop_with_frag_bgr)
-        backdrop_with_frag_bgr[start0:end0, start1:end1] = blurred[start0:end0, start1:end1]
+        backdrop_with_frag_bgr[start0:end0, start1:end1] = blurred[
+            start0:end0, start1:end1
+        ]
 
         backdrop_rgb = cv2.cvtColor(backdrop_with_frag_bgr, cv2.COLOR_BGR2RGB)
         ax.imshow(backdrop_rgb)
@@ -276,7 +303,7 @@ class KMeansDatasetExplorer:
             ksize = 0
 
         if ksize > 0:
-            return cv2.blur(img, (ksize,ksize))
+            return cv2.blur(img, (ksize, ksize))
         else:
             return img
 
@@ -344,14 +371,31 @@ class KMeansDatasetExplorer:
             title = "Processed Fragment (Selected Labels)"
             if self.use_morphology.value:
                 title += " + Morphology"
+            if self.use_luminosity.value:
+                title += " + Luminosity " + self.use_luminosity.value
             ax.set_title(title)
             ax.axis("off")
         else:
             ax.axis("off")
             ax.set_title("Invalid Labels")
 
+    def _scale_luminosity(self, processed_fragment_bgr, processed_mask, pos_r, pos_c):
+        if self.use_luminosity.value == "0":
+            processed_fragment_bgr = self._auto_brighten_fragment(
+                processed_fragment_bgr, processed_mask, pos_r, pos_c
+            )
+        else:
+            lum = self._get_luminosity()
+            processed_fragment_bgr = luminosity.alter_using_lab(
+                processed_fragment_bgr, lum
+            )
+        return processed_fragment_bgr
+
     def _plot_current(self):
         # 2x3 grid: top row (original + backdrop), bottom row (labels + crop + superposed crop)
+        # after safe_process_fragment, this function should only do
+        # augmentations we will do while synthesizing (only safe_process_fragment result is directly stored)
+        
         processed_fragment_bgr, processed_mask = self._safe_process_fragment()
         pos_r, pos_c = self._parse_positions()
         processed_fragment_bgr, processed_mask, pos_r, pos_c = (
@@ -359,6 +403,9 @@ class KMeansDatasetExplorer:
                 processed_fragment_bgr, processed_mask, pos_r, pos_c
             )
         )
+        if processed_fragment_bgr is not None:
+            processed_fragment_bgr = self._scale_luminosity(processed_fragment_bgr, processed_mask, pos_r, pos_c)
+
 
         # start plotting
         _, axes = plt.subplots(2, 3, figsize=(18, 12))
@@ -370,7 +417,7 @@ class KMeansDatasetExplorer:
         # 0,2: 0,1 but zoomed
         if processed_fragment_bgr is not None:
             # Parse backdrop position
-            scaled_fragment_bgr, scale_factor, _ = self._scale_fragment(
+            scaled_fragment_bgr, scale_factor, scale_mask = self._scale_fragment(
                 pos_r, processed_fragment_bgr, processed_mask
             )
             backdrop_rgb, start0, start1, end0, end1 = self._plot_backdrop(
@@ -403,19 +450,7 @@ class KMeansDatasetExplorer:
             print("Nothing to save.")
             return
 
-        try:
-            include_cls = [int(x.strip()) for x in self.class_input.value.split(",")]
-        except ValueError:
-            print("Invalid label input.")
-            return
-
-        mask = get_include_class(self.labels, include_cls)
-
-        if self.use_morphology.value:
-            mask = _apply_morphology_closing(mask)
-
-        crop = self.orig_crop_bgr.copy()
-        crop[~mask] = 0
+        crop, mask = self._safe_process_fragment()
 
         out_path = self.images[self.idx].parent / "proc.png"
         mask_path = self.images[self.idx].parent / "mask.json"
@@ -441,21 +476,38 @@ class KMeansDatasetExplorer:
         from IPython.display import display
         import ipywidgets as widgets
 
-        nav = widgets.HBox([self.prev_button, self.next_button, self.refresh_button])
-        footer = widgets.HBox([self.save_button, self.refresh_button])
+        nav = widgets.HBox(
+            [self.prev_button, self.next_button, self.refresh_button, self.save_button]
+        )
+        row1 = widgets.HBox(
+            [
+                self.k_slider,
+                self.class_input,
+                self.kind_dropdown,
+                self.backdrop_position,
+            ]
+        )
+
+        row2 = widgets.HBox(
+            [
+                self.use_blur,
+                self.use_luminosity,
+            ]
+        )
+        row3 = widgets.HBox(
+            [
+                self.perspective_checkbox,
+                self.show_padded_fragments,
+                self.use_morphology,
+            ]
+        )
         ui = widgets.VBox(
             [
                 self.status,
                 nav,
-                self.k_slider,
-                self.class_input,
-                self.perspective_checkbox,
-                self.kind_dropdown,
-                self.backdrop_position,
-                self.show_padded_fragments,
-                self.use_morphology,
-                self.use_blur,
-                footer,
+                row1,
+                row2,
+                row3,
                 self.out,
             ]
         )

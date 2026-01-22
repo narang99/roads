@@ -28,13 +28,13 @@ class PrepareCrops:
         self._o = out_dir
         mkdir(self._o)
 
-    def get_kmeans_explorer(self, backdrop):
+    def get_kmeans_explorer(self, backdrop, idx=0):
         raws = [
             c.raw
             for c in self.get_all_existing_crops()
         ]
         # the explorer maintains the directory structure correctly
-        return KMeansDatasetExplorer(raws, backdrop)
+        return KMeansDatasetExplorer(raws, backdrop, idx)
 
     def get_all_existing_crops(self) -> Iterator[SingleCrop]:
         for d in self._o.glob("*"):
