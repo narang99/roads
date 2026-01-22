@@ -1,0 +1,6 @@
+outs:
+- md5: 344e49cded94091b20cc23088fd4248a.dir
+  size: 295626111
+  nfiles: 127
+  hash: md5
+  path: clean_samples_segs
