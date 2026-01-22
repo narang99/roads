@@ -164,7 +164,7 @@ def _calculate_lum_params(img_bgr, raw_path, r, c, lum_scale):
 
 
 def _calculate_scale(img_bgr, meta, r, seg: Optional[np.ndarray]):
-    should_scale = random.randint(0, 1)
+    should_scale = random.randint(0, 3)
     if should_scale == 0:
         return 1
 
