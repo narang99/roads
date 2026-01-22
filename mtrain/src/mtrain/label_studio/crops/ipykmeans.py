@@ -11,7 +11,6 @@ from mtrain.scale import calculate_perspective_scale_factor, scale_fragment_with
 from mtrain.label_studio.crops.kmeans import (
     run_kmeans,
     plot_kmeans_labels,
-    extract_kmeans_label,
     get_include_class,
 )
 from mtrain import luminosity
@@ -61,7 +60,7 @@ class KMeansDatasetExplorer:
         import ipywidgets as widgets
 
         self.k_slider = widgets.IntSlider(
-            value=3, min=2, max=15, step=1, description="K", continuous_update=False
+            value=3, min=1, max=15, step=1, description="K", continuous_update=False
         )
 
         self.class_input = widgets.Text(
@@ -363,16 +362,18 @@ class KMeansDatasetExplorer:
         else:
             return a, b, c, d
 
-    def _plot_processed_fragment(self, processed_fragment, ax):
-        # Bottom row, right: Processed crop fragment (with selected labels only)
-        if processed_fragment is not None:
-            # ax.imshow(processed_fragment)
-            ax.imshow(cv2.cvtColor(processed_fragment, cv2.COLOR_BGR2RGB))
-            title = "Processed Fragment (Selected Labels)"
+    def _plot_processed_fragment(self, processed_fragment, ax, raw=True):
+        title = "Processed Fragment:"
+        if raw:
+            title += " (Will be Saved)"
+        else:
             if self.use_morphology.value:
                 title += " + Morphology"
             if self.use_luminosity.value:
                 title += " + Luminosity " + self.use_luminosity.value
+
+        if processed_fragment is not None:
+            ax.imshow(cv2.cvtColor(processed_fragment, cv2.COLOR_BGR2RGB))
             ax.set_title(title)
             ax.axis("off")
         else:
@@ -391,12 +392,40 @@ class KMeansDatasetExplorer:
             )
         return processed_fragment_bgr
 
+    def _prepare_plot(self):
+        # fig = plt.figure(figsize=(16, 8))
+
+        # gs = GridSpec(2, 4, figure=fig)
+
+        # # First row: 4 plots
+        # ax1 = fig.add_subplot(gs[0, 0])
+        # ax2 = fig.add_subplot(gs[0, 1])
+        # ax3 = fig.add_subplot(gs[0, 2])
+        # ax4 = fig.add_subplot(gs[0, 3])
+
+        # # Second row: 3 plots (each spans ~4/3 columns)
+        # ax5 = fig.add_subplot(gs[1, 0:1])
+        # ax6 = fig.add_subplot(gs[1, 1:3])
+
+        _, axes = plt.subplots(2, 3, figsize=(18, 12))
+        return axes.flatten()
+        # return fig, gs, [
+        #     ax1, ax2, ax3, ax4, ax5, ax6
+        # ]
+
+
     def _plot_current(self):
         # 2x3 grid: top row (original + backdrop), bottom row (labels + crop + superposed crop)
         # after safe_process_fragment, this function should only do
         # augmentations we will do while synthesizing (only safe_process_fragment result is directly stored)
+        axes = self._prepare_plot()
         
         processed_fragment_bgr, processed_mask = self._safe_process_fragment()
+        # since processed_fragment_bgr is actually pushed in save, we first plot it
+        self._plot_processed_fragment(processed_fragment_bgr, axes[0], True)
+        
+
+        # further processing
         pos_r, pos_c = self._parse_positions()
         processed_fragment_bgr, processed_mask, pos_r, pos_c = (
             self._all_none_if_one_none(
@@ -406,12 +435,9 @@ class KMeansDatasetExplorer:
         if processed_fragment_bgr is not None:
             processed_fragment_bgr = self._scale_luminosity(processed_fragment_bgr, processed_mask, pos_r, pos_c)
 
-
-        # start plotting
-        _, axes = plt.subplots(2, 3, figsize=(18, 12))
-
+        
         # 0,0: original image with superposed fragment
-        self._plot_original_img_with_box_on_frag(axes[0, 0])
+        self._plot_original_img_with_box_on_frag(axes[1])
 
         # 0,1: backdrop with superposed fragment
         # 0,2: 0,1 but zoomed
@@ -421,27 +447,27 @@ class KMeansDatasetExplorer:
                 pos_r, processed_fragment_bgr, processed_mask
             )
             backdrop_rgb, start0, start1, end0, end1 = self._plot_backdrop(
-                scaled_fragment_bgr, pos_r, pos_c, scale_factor, axes[0, 1]
+                scaled_fragment_bgr, pos_r, pos_c, scale_factor, axes[2]
             )
             self._plot_superposed_fragment(
-                backdrop_rgb, start0, start1, end0, end1, axes[0, 2]
+                backdrop_rgb, start0, start1, end0, end1, axes[3]
             )
         else:
             # parsing error in scale or scaling error
             self._plot_only_backdrop_and_notice_invalid_superpose_frag(
-                axes[0, 1], axes[0, 2]
+                axes[2], axes[3]
             )
 
         # 1,0: kmeans output
         plot_kmeans_labels(
-            self.labels, ax=axes[1, 0], title=f"KMeans (K={self.current_K})"
+            self.labels, ax=axes[4], title=f"KMeans (K={self.current_K})"
         )
+        
+        
         # 1,1: kmeans processed crop given user input
-        self._plot_original_cropped_fragment(axes[1, 1])
+        self._plot_original_cropped_fragment(axes[5])
 
-        # 1:2: Processed fragment, raw
-        self._plot_processed_fragment(processed_fragment_bgr, axes[1, 2])
-
+        
         plt.tight_layout()
         plt.show()
 

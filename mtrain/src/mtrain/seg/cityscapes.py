@@ -82,5 +82,8 @@ class SegFormerCityScapes:
         img = Image.open(img_path).convert("RGB")
         return self._predict(img)
 
-    def get_mask(self, pred, lbl: CityScapesCls):
+    def get_mask(pred, lbl: CityScapesCls):
         return (pred == lbl.value)
+
+def get_mask(pred, lbl: CityScapesCls):
+    return (pred == lbl.value)

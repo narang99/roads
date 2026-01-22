@@ -6,8 +6,13 @@ import json
 from typing import Iterator, Optional
 from dataclasses import dataclass
 from pathlib import Path
-from mtrain.label_studio.crops import extract_from_single_result, KMeansDatasetExplorer
+from mtrain.label_studio.crops import (
+    extract_from_single_result,
+    KMeansDatasetExplorer,
+)
 from mtrain.utils import mkdir, json_to_content
+
+
 
 @dataclass
 class SingleCrop:
@@ -16,6 +21,12 @@ class SingleCrop:
     meta: Optional[Path]
     mask: Optional[Path]
 
+    def parse_meta(self) -> Optional[dict]:
+        if not self.meta.exists():
+            return None
+        with open(self.meta) as f:
+            return json.load(f)
+
 
 def _p_if_exists_else_none(p):
     if p.exists():
@@ -23,16 +34,14 @@ def _p_if_exists_else_none(p):
     else:
         None
 
+
 class PrepareCrops:
     def __init__(self, out_dir: Path):
         self._o = out_dir
         mkdir(self._o)
 
     def get_kmeans_explorer(self, backdrop, idx=0):
-        raws = [
-            c.raw
-            for c in self.get_all_existing_crops()
-        ]
+        raws = [c.raw for c in self.get_all_existing_crops()]
         # the explorer maintains the directory structure correctly
         return KMeansDatasetExplorer(raws, backdrop, idx)
 
@@ -79,7 +88,7 @@ class PrepareCrops:
                         "r_len": frag.original.r_len,
                         "c_len": frag.original.c_len,
                         "path": frag.original.path,
-                    }
+                    },
                 },
                 f,
             )

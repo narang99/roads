@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 import cv2
 import numpy as np
-import logging
 
 
 def alter_using_lab(img_bgr, factor):
@@ -45,6 +44,13 @@ def get_std_matcher_params(src_bgr, tgt_bgr):
     )
 
 
+def do_std_matching_without_mask(
+    img_bgr: np.ndarray, p: StdLumMatcherParams, eps: float = 1e-6
+):
+    mask = np.any(img_bgr != 0, axis=2)
+    return do_std_matching(img_bgr, mask, p, eps)
+
+
 def do_std_matching(
     img_bgr: np.ndarray, mask: np.ndarray, p: StdLumMatcherParams, eps: float = 1e-6
 ):
@@ -60,27 +66,6 @@ def do_std_matching(
 
     return cv2.cvtColor(lab.astype(np.uint8), cv2.COLOR_LAB2BGR)
 
-
-# def get_luminosity_matcher(src_bgr, tgt_bgr, eps=1e-6):
-#     # Convert to LAB
-#     src_lab = cv2.cvtColor(src_bgr, cv2.COLOR_BGR2LAB).astype(np.float32)
-#     tgt_lab = cv2.cvtColor(tgt_bgr, cv2.COLOR_BGR2LAB).astype(np.float32)
-
-#     # Extract L values
-#     src_L = src_lab[..., 0]
-#     tgt_L = tgt_lab[..., 0].reshape(-1)
-
-#     # Stats
-#     src_mean, src_std = src_L.mean(), src_L.std()
-#     tgt_mean, tgt_std = tgt_L.mean(), tgt_L.std()
-
-#     # Apply only on source object
-#     L = src_lab[..., 0]
-#     L_new = (L - src_mean) * (tgt_std / (src_std + eps)) + tgt_mean
-#     L = np.clip(L_new, 0, 255)
-
-#     src_lab[..., 0] = L
-#     return cv2.cvtColor(src_lab.astype(np.uint8), cv2.COLOR_LAB2BGR)
 
 
 def match_luminosity(src_bgr, src_mask, tgt_bgr, tgt_mask, eps=1e-6):

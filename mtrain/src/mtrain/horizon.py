@@ -45,10 +45,10 @@ def using_road_mask(img):
     model = get_cached_seg_former()
     pred = model.predict_bgr_image(img)
     road_mask = model.get_mask(pred, CityScapesCls.ROAD)
-    return _calculate_horizon_road_edges(img, road_mask)
+    return highest_point_in_road_mask(img, road_mask)
 
 
-def _calculate_horizon_road_edges(img, road_mask):
+def highest_point_in_road_mask(img, road_mask):
     # vibe coded
     # Find all road pixels
     road_coords = np.where(road_mask)
