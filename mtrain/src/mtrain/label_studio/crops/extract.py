@@ -131,7 +131,6 @@ class ExtractedFragment:
 def extract_from_single_result(content) -> list[ExtractedFragment]:
     p = get_image_path(content)
     img = cv2.imread(p)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     result = []
     for i, annot in enumerate(content["annotations"]):
         for res in annot["result"]:
