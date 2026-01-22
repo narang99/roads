@@ -54,7 +54,6 @@ def do_std_matching_without_mask(
 def do_std_matching(
     img_bgr: np.ndarray, mask: np.ndarray, p: StdLumMatcherParams, eps: float = 1e-6
 ):
-    print("params", p)
     # change luminosity of img_bgr at mask
     lab = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2LAB).astype(np.float32)
     mask = mask.astype(bool)
