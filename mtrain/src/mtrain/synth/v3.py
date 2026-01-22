@@ -164,6 +164,10 @@ def _calculate_lum_params(img_bgr, raw_path, r, c, lum_scale):
 
 
 def _calculate_scale(img_bgr, meta, r, seg: Optional[np.ndarray]):
+    should_scale = random.randint(0, 1)
+    if should_scale == 0:
+        return 1
+
     fbox = meta["bounding_box"]
 
     hrz_curr = horizon.highest_point_in_road_mask(img_bgr, cityscapes.get_mask(seg, CityScapesCls.ROAD))
