@@ -1,5 +1,6 @@
 # code to generate segmentation using cityscapes pretrained modelsplt
 
+import cv2
 import numpy as np
 from PIL import Image
 import torch
@@ -28,6 +29,11 @@ class CityScapesCls(Enum):
     BICYCLE = 18
 
 
+@functools.lru_cache(maxsize=1)
+def get_cached_seg_former() -> "SegFormerCityScapes":
+    return SegFormerCityScapes()
+
+
 class SegFormerCityScapes:
     """
     example usage:
@@ -48,9 +54,9 @@ class SegFormerCityScapes:
         model = SegformerForSemanticSegmentation.from_pretrained(model_name)
         self.model = model
         self.feat = feat
-    
-    def predict(self, img_path):
-        img = Image.open(img_path).convert("RGB")
+
+    def _predict(self, pil_image):
+        img = pil_image
         orig = np.array(img)
         h, w, _ = orig.shape
 
@@ -67,6 +73,14 @@ class SegFormerCityScapes:
         )
 
         return torch.argmax(logits, dim=1)[0].cpu().numpy()
+    
+    def predict_bgr_image(self, img):
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        return self._predict(Image.fromarray(img))
+
+    def predict(self, img_path):
+        img = Image.open(img_path).convert("RGB")
+        return self._predict(img)
 
     def get_mask(self, pred, lbl: CityScapesCls):
         return (pred == lbl.value)
