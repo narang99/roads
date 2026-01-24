@@ -32,8 +32,8 @@ def extract_all(
 
     pbar = tqdm(total=total_samples, desc="Generating samples", unit="iteration")
     i = 0
+    total_cycles = 0
     while i < total_samples:
-
         for img in images:
             n_dumped = _single_image_dump(img, coco_ann, box_size, empty_samples_ratio, pos, negs)
             i += n_dumped
@@ -41,6 +41,8 @@ def extract_all(
 
             if i >= total_samples:
                 break
+        total_cycles += 1
+    print("total cycles:", total_cycles)
 
 
 
@@ -77,6 +79,7 @@ def extract_crops_from_image(
     box_size: int,
     empty_samples_ratio: int = 1,
 ) -> Optional[tuple[np.ndarray, np.ndarray]]:
+    max_box_size = 3000
     # empty_samples_ratio: if there are n positive boxes, n*ratio negative boxes are returned
     boxes = coco_ann.extract_bboxes_with_path(image_path)
     if not boxes:
@@ -86,11 +89,11 @@ def extract_crops_from_image(
 
     resizer = PaddedResize(box_size)
 
-    crops = [crop_with_bbox(image, b, 1000)[0] for b in boxes]
+    crops = [crop_with_bbox(image, b, max_box_size)[0] for b in boxes]
     crops = [resizer(c) for c in crops]
 
     num_non_trash = empty_samples_ratio * len(crops)
-    non_trash = get_non_trash_boxes(image, boxes, 1000, num_non_trash)
+    non_trash = get_non_trash_boxes(image, boxes, max_box_size, num_non_trash)
     non_trash = [resizer(n) for n in non_trash]
 
 
