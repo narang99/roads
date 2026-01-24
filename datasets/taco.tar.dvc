@@ -1,0 +1,5 @@
+outs:
+- md5: 6cb324a07ab778605e1c471e51a991e4
+  size: 2632243712
+  hash: md5
+  path: taco.tar
