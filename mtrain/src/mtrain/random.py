@@ -11,3 +11,16 @@ def many_random_start_points(background, n=50):
         random_start_points(background)
         for _ in range(n)
     ]
+
+
+def random_bool():
+    return bool(random.getrandbits(1))
+
+def random_true_one_sixth_times():
+    is_true = random.randint(0, 5) == 5
+    return is_true
+
+
+def random_true_one_three_times():
+    is_true = random.randint(0, 2) == 2
+    return is_true

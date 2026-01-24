@@ -45,6 +45,9 @@ class PrepareCrops:
         # the explorer maintains the directory structure correctly
         return KMeansDatasetExplorer(raws, backdrop, idx)
 
+    def get_all_existing_crops_with_proc(self) -> Iterator[SingleCrop]:
+        return filter(lambda crp: crp.proc is not None, self.get_all_existing_crops())
+
     def get_all_existing_crops(self) -> Iterator[SingleCrop]:
         for d in self._o.glob("*"):
             if d.is_dir():

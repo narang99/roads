@@ -16,6 +16,8 @@ import random
 import cv2
 from tqdm import tqdm
 from mtrain.yolo.tfms import mk_yolo_label_from_numpy_coords
+from mtrain.color import random_color_shift
+from mtrain.distort import random_warp
 from typing import Optional
 from dataclasses import dataclass
 
@@ -67,7 +69,7 @@ def generate(image_and_segs: list[ImageAndSeg], frag_root: Path, out_dir: Path, 
 
 
 def generate_single(
-    p: Path, frags: list[SingleCrop], seg_path: Optional[Path], max_num_objects: int = 10
+    p: Path, frags: list[SingleCrop], seg_path: Optional[Path], max_num_objects: int = 50
 ) -> tuple[np.ndarray, tuple]:
     frags = random_multiset_total(frags, max_total=max_num_objects)
 
@@ -79,7 +81,7 @@ def generate_single(
         seg = None
 
     mask = _get_placement_mask(p, seg)
-    sps = [sp for sp in many_random_start_points(img_bgr, 30) if mask[*sp]]
+    sps = [sp for sp in many_random_start_points(img_bgr, 2*max_num_objects) if mask[*sp]]
 
     points = []
     for frag, sp in zip(frags, sps):
@@ -112,12 +114,15 @@ def _copy_at(img_bgr: np.ndarray, frag: SingleCrop, r: int, c: int, seg: Optiona
 
     tparams = _calculate_tfms(img_bgr, frag_bgr, meta, r, c, seg)
 
+    frag_bgr = random_warp(frag_bgr)
+    frag_bgr = random_color_shift(frag_bgr)
+
     frag_bgr = _scale_fragment(frag_bgr, tparams["scale"])
     if tparams["luminosity"] != -1:
         frag_bgr = _scale_luminosity(
             img_bgr, frag.raw, frag_bgr, r, c, tparams["luminosity"]
         )
-
+    
     s0, e0, s1, e1 = superpose.direct_copy(img_bgr, frag_bgr, r, c)
 
     if tparams["blur"] > 0:
