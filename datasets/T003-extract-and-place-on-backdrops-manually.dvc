@@ -1,0 +1,6 @@
+outs:
+- md5: faa14823a3f73dbd5ebd2e498a4eda91.dir
+  size: 4439518
+  nfiles: 1943
+  hash: md5
+  path: T003-extract-and-place-on-backdrops-manually
