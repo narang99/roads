@@ -3,10 +3,10 @@ import numpy as np
 from typing import List, Tuple
 from tqdm import tqdm
 
-def tile_image_and_predict(image_path, learner):
+def tile_image_and_predict(image_path, learner, tile_size):
     img = cv2.imread(image_path)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    tiles = split_image_into_tiles(img)
+    tiles = split_image_into_tiles(img, tile_size)
 
     result = []
     for tile in tqdm(tiles):
@@ -16,7 +16,7 @@ def tile_image_and_predict(image_path, learner):
         else:
             result.append(False)
 
-    return highlight_tiles_bbox_with_index(img, tiles, result)
+    return highlight_tiles_bbox_with_index(img, tiles, result, tile_size)
 
 def split_image_into_tiles(
     img: np.ndarray,

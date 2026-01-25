@@ -24,6 +24,11 @@ def extract_all(
     pos = out_dir / "pos"
     negs.mkdir(parents=True, exist_ok=True)
     pos.mkdir(parents=True, exist_ok=True)
+    existing = len(list(pos.glob("*.png"))) + len(list(negs.glob("*.png")))
+    print("existing samples:", existing)
+    total_samples -= existing
+    total_samples = max(total_samples, 0)
+    print("remaining (will generate):", total_samples)
 
     coco_ann = CocoAnnotationFile(ann_file)
 
@@ -79,7 +84,7 @@ def extract_crops_from_image(
     box_size: int,
     empty_samples_ratio: int = 1,
 ) -> Optional[tuple[np.ndarray, np.ndarray]]:
-    max_box_size = 3000
+    max_box_size = 1000
     # empty_samples_ratio: if there are n positive boxes, n*ratio negative boxes are returned
     boxes = coco_ann.extract_bboxes_with_path(image_path)
     if not boxes:

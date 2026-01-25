@@ -1,0 +1,134 @@
+# ---
+# jupyter:
+#   jupytext:
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.19.0
+#   kernelspec:
+#     display_name: mtrain
+#     language: python
+#     name: python3
+# ---
+
+# %%
+# %load_ext autoreload
+# %autoreload 2
+
+# %%
+from pathlib import Path
+import matplotlib.pyplot as plt
+import os
+
+# %%
+PROJECT_CODE = os.environ["PROJECT_CODE"]
+FILE_SIZE = int(os.environ["FILE_SIZE"])
+FINE_TUNE_EPOCHS = int(os.environ["FINE_TUNE_EPOCHS"])
+NUM_SAMPLES = int(os.environ["NUM_SAMPLES"])
+FIT_ONE_CYCLE_EPOCHS = int(os.environ["FIT_ONE_CYCLE_EPOCHS"])
+MODEL = os.environ.get("MODEL", "mobilenet_v3_small")
+LOSS = os.environ.get("LOSS", None)
+
+params = {
+    "PROJECT_CODE": PROJECT_CODE,
+    "FILE_SIZE": FILE_SIZE,
+    "FINE_TUNE_EPOCHS": FINE_TUNE_EPOCHS,
+}
+
+
+TFMS = {
+    "do_flip": True,
+    "flip_vert": True,
+    "max_rotate": 360,
+    "max_zoom": 1.4,
+    "max_lighting": 0.4,
+    "max_warp": 0.2,
+}
+
+DS = Path("../../datasets/")
+BASE_DS_DIR = DS / "T004-taco-crops"
+EXP_BASE = BASE_DS_DIR / PROJECT_CODE
+OUTS = BASE_DS_DIR / "synth"
+LOG_BASE = EXP_BASE / "log"
+TACO_BASE_DIR = Path("/Users/hariomnarang/Desktop/personal/TACO/data/")
+ANN_FILE = TACO_BASE_DIR / "annotations.json"
+TEST_BIG_IMG = BASE_DS_DIR / "14325.jpeg"
+
+LOG_BASE.mkdir(parents=True, exist_ok=True)
+DS.exists(), TACO_BASE_DIR.exists(), ANN_FILE.exists()
+
+# %% [markdown]
+# # Generate Data
+
+# %%
+# generate data first
+
+from mtrain.smallnet import extract_all
+
+# %%
+extract_all(TACO_BASE_DIR, ANN_FILE, OUTS, FILE_SIZE, NUM_SAMPLES)
+
+# %% [markdown]
+# # Training
+
+# %%
+from fastai.vision.all import (
+    DataBlock,
+    CategoryBlock,
+    ImageBlock,
+    get_image_files,
+    RandomSplitter,
+    parent_label,
+    aug_transforms,
+    Resize,
+)
+
+dbl = DataBlock(
+    blocks=(ImageBlock, CategoryBlock),
+    get_items=get_image_files,
+    splitter=RandomSplitter(valid_pct=0.2, seed=42),
+    get_y=parent_label,
+    batch_tfms=aug_transforms(**TFMS),
+    item_tfms=Resize(FILE_SIZE),
+)
+
+
+dls = dbl.dataloaders(OUTS, path=LOG_BASE)
+dls.valid.show_batch(max_n=4, nrows=1)
+
+# %%
+from fastai.vision.all import (
+    vision_learner,
+    mobilenet_v3_small,
+    mobilenet_v3_large,
+    CrossEntropyLossFlat,
+)
+from fastai.callback.progress import CSVLogger, Recorder, ProgressCallback
+
+# %%
+ModelCls = mobilenet_v3_small if MODEL == "mobilenet_v3_small" else mobilenet_v3_large
+if LOSS == "CrossEntropyLossFlat":
+    kw = {"loss_func": CrossEntropyLossFlat()}
+else:
+    kw = {}
+learner = vision_learner(dls, mobilenet_v3_small, normalize=True, pretrained=True, **kw)
+learner = learner.remove_cbs([ProgressCallback])
+learner = learner.add_cb(CSVLogger)
+
+# %%
+learner.fine_tune(FINE_TUNE_EPOCHS)
+
+# %%
+learner.unfreeze()
+learner.fit_one_cycle(FIT_ONE_CYCLE_EPOCHS, lr_max=slice(1e-6, 1e-4))
+
+# %%
+learner.remove_cb(CSVLogger)
+learner.export()
+
+# %%
+from mtrain.smallnet.predict import tile_image_and_predict
+
+res = tile_image_and_predict(TEST_BIG_IMG, learner, FILE_SIZE)
+plt.imsave(EXP_BASE / "res.png", res)
