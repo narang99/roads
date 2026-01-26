@@ -4,6 +4,7 @@ from pathlib import Path
 from mtrain.utils import random_filename
 from PIL import Image
 import itertools
+from tqdm import tqdm
 
 
 def generate_dataset(ann_file, taco_dir, output_path, tile_size, num_samples):
@@ -19,7 +20,7 @@ def generate_dataset(ann_file, taco_dir, output_path, tile_size, num_samples):
 
     random.shuffle(imgs)
     it = itertools.islice(itertools.cycle(imgs), num_samples)
-    for img_info in it:
+    for img_info in tqdm(it, total=num_samples):
         im, mask, bbox = generate_random_crops_with_masks(
             coco, taco_dir, img_info, tile_size, 1000, num_crops=1
         )
