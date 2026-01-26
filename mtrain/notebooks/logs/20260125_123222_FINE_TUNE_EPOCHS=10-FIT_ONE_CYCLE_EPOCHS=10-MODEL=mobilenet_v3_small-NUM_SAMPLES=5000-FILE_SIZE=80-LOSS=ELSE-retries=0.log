@@ -1,0 +1,59 @@
+
+=== FINE_TUNE_EPOCHS=10-FIT_ONE_CYCLE_EPOCHS=10-MODEL=mobilenet_v3_small-NUM_SAMPLES=5000-FILE_SIZE=80-LOSS=ELSE-retries=0 | attempt 1 | start: 2026-01-25 12:32:22.376115 ===
+existing samples: 5001
+remaining (will generate): 0
+loading annotations into memory...
+Done (t=0.03s)
+creating index...
+index created!
+total cycles: 0
+[0, 0.5937734842300415, 1.312927007675171, '00:09']
+[0, 0.46830007433891296, 0.3093639016151428, '00:09']
+[1, 0.3994901180267334, 0.30965062975883484, '00:08']
+[2, 0.3667612373828888, 0.24229496717453003, '00:08']
+[3, 0.33573558926582336, 0.19074155390262604, '00:08']
+[4, 0.31004124879837036, 0.19842959940433502, '00:08']
+[5, 0.2768296003341675, 0.17080220580101013, '00:08']
+[6, 0.2691541314125061, 0.17839083075523376, '00:08']
+[7, 0.26222798228263855, 0.1756148636341095, '00:08']
+[8, 0.24663503468036652, 0.17855535447597504, '00:08']
+[9, 0.25772958993911743, 0.17440380156040192, '00:08']
+[0, 0.24025030434131622, 0.1705411970615387, '00:08']
+[1, 0.2560487985610962, 0.16665954887866974, '00:08']
+[2, 0.2526639997959137, 0.15999054908752441, '00:08']
+[3, 0.25607046484947205, 0.16396963596343994, '00:08']
+[4, 0.24575041234493256, 0.16044634580612183, '00:08']
+[5, 0.2378225177526474, 0.1590745747089386, '00:08']
+[6, 0.24213767051696777, 0.15789741277694702, '00:08']
+[7, 0.2523437440395355, 0.15640869736671448, '00:08']
+[8, 0.23330329358577728, 0.15544962882995605, '00:08']
+[9, 0.240956112742424, 0.15668457746505737, '00:08']
+
+Generating samples: 0iteration [00:00, ?iteration/s]
+Generating samples: 0iteration [00:00, ?iteration/s]
+/Users/hariomnarang/Desktop/personal/roads/mtrain/.venv/lib/python3.12/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/Users/hariomnarang/Desktop/personal/roads/mtrain/.venv/lib/python3.12/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=MobileNet_V3_Small_Weights.IMAGENET1K_V1`. You can also use `weights=MobileNet_V3_Small_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
+
+  0%|          | 0/130 [00:00<?, ?it/s]
+  1%|          | 1/130 [00:00<01:17,  1.66it/s]
+  6%|▌         | 8/130 [00:00<00:08, 14.69it/s]
+ 12%|█▏        | 16/130 [00:00<00:04, 27.94it/s]
+ 18%|█▊        | 24/130 [00:00<00:02, 38.73it/s]
+ 25%|██▍       | 32/130 [00:01<00:02, 47.24it/s]
+ 30%|███       | 39/130 [00:01<00:01, 52.33it/s]
+ 35%|███▌      | 46/130 [00:01<00:01, 56.74it/s]
+ 42%|████▏     | 54/130 [00:01<00:01, 61.37it/s]
+ 48%|████▊     | 62/130 [00:01<00:01, 64.03it/s]
+ 54%|█████▍    | 70/130 [00:01<00:00, 66.03it/s]
+ 59%|█████▉    | 77/130 [00:01<00:00, 67.11it/s]
+ 65%|██████▍   | 84/130 [00:01<00:00, 67.72it/s]
+ 71%|███████   | 92/130 [00:01<00:00, 68.67it/s]
+ 77%|███████▋  | 100/130 [00:02<00:00, 69.52it/s]
+ 83%|████████▎ | 108/130 [00:02<00:00, 70.04it/s]
+ 89%|████████▉ | 116/130 [00:02<00:00, 70.09it/s]
+ 95%|█████████▌| 124/130 [00:02<00:00, 70.39it/s]
+100%|██████████| 130/130 [00:02<00:00, 53.38it/s]
+
+=== SUCCESS | attempt_time: 0:03:11.817916 ===

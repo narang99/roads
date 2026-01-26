@@ -47,13 +47,15 @@ TFMS = {
 }
 
 DS = Path("../../datasets/")
-BASE_DS_DIR = DS / "T004-taco-crops"
-EXP_BASE = BASE_DS_DIR / PROJECT_CODE
-OUTS = BASE_DS_DIR / "synth"
+T004_DIR = DS / "T004-taco-crops"
+T005_DIR = DS / "T005-with-taco-and-ddg"
+EXP_BASE = T005_DIR / PROJECT_CODE
+OUTS = EXP_BASE / "synth"
 LOG_BASE = EXP_BASE / "log"
 TACO_BASE_DIR = Path("/Users/hariomnarang/Desktop/personal/TACO/data/")
+DDG_BASE_DIR = DS / "T006-ddg-garbage"
 ANN_FILE = TACO_BASE_DIR / "annotations.json"
-TEST_BIG_IMG = BASE_DS_DIR / "14325.jpeg"
+TEST_BIG_IMG = T004_DIR / "14325.jpeg"
 
 LOG_BASE.mkdir(parents=True, exist_ok=True)
 DS.exists(), TACO_BASE_DIR.exists(), ANN_FILE.exists()
@@ -64,10 +66,20 @@ DS.exists(), TACO_BASE_DIR.exists(), ANN_FILE.exists()
 # %%
 # generate data first
 
-from mtrain.smallnet import extract_all
+from mtrain.smallnet import extract_all_taco, dump_ddg_images
 
 # %%
-extract_all(TACO_BASE_DIR, ANN_FILE, OUTS, FILE_SIZE, NUM_SAMPLES)
+extract_all_taco(
+    images_root=TACO_BASE_DIR,
+    ann_file=ANN_FILE,
+    out_dir=OUTS,
+    box_size=FILE_SIZE,
+    total_samples=NUM_SAMPLES,
+    empty_samples_ratio=1,
+)
+dump_ddg_images(
+    ddg_base_dir=DDG_BASE_DIR, out_pos_dir=OUTS/"pos", box_size=FILE_SIZE, max_samples=NUM_SAMPLES
+)
 
 # %% [markdown]
 # # Training
@@ -130,5 +142,5 @@ learner.export()
 # %%
 from mtrain.smallnet.predict import tile_image_and_predict
 
-res = tile_image_and_predict(TEST_BIG_IMG, learner, FILE_SIZE)
+res = tile_image_and_predict(TEST_BIG_IMG, learner, FILE_SIZE, add_labels=False)
 plt.imsave(EXP_BASE / "res.png", res)

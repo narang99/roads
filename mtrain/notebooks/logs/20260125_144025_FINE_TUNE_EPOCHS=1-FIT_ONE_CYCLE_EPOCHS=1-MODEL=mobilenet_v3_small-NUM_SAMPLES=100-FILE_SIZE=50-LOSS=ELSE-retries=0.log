@@ -1,0 +1,83 @@
+
+=== FINE_TUNE_EPOCHS=1-FIT_ONE_CYCLE_EPOCHS=1-MODEL=mobilenet_v3_small-NUM_SAMPLES=100-FILE_SIZE=50-LOSS=ELSE-retries=0 | attempt 1 | start: 2026-01-25 14:40:25.538350 ===
+samples already exist in cache, will copy to /Users/hariomnarang/.mtrain_synth_cache/extract_all_taco_bce0ea685ebb0e13 -> ../../datasets/T005-with-taco-and-ddg/FINE_TUNE_EPOCHS=1-FIT_ONE_CYCLE_EPOCHS=1-MODEL=mobilenet_v3_small-NUM_SAMPLES=100-FILE_SIZE=50-LOSS=ELSE-retries=0/synth
+copied files: 101
+existing samples: 102
+remaining (will generate): 0
+loading annotations into memory...
+Done (t=0.03s)
+creating index...
+index created!
+total cycles: 0
+samples already exist in cache, will copy to /Users/hariomnarang/.mtrain_synth_cache/dump_ddg_images_8e3358608d0f4a4f -> ../../datasets/T005-with-taco-and-ddg/FINE_TUNE_EPOCHS=1-FIT_ONE_CYCLE_EPOCHS=1-MODEL=mobilenet_v3_small-NUM_SAMPLES=100-FILE_SIZE=50-LOSS=ELSE-retries=0/synth/pos
+copied files: 101
+[0, 1.3295528888702393, 0.8600507378578186, '00:02']
+[0, 0.9480907320976257, 0.4479984641075134, '00:01']
+[0, 0.9344850182533264, 0.7016878128051758, '00:00']
+
+Generating samples: 0iteration [00:00, ?iteration/s]
+Generating samples: 0iteration [00:00, ?iteration/s]
+
+  0%|          | 0/100 [00:00<?, ?it/s]
+  7%|▋         | 7/100 [00:00<00:01, 67.62it/s]
+ 19%|█▉        | 19/100 [00:00<00:00, 84.74it/s]
+ 30%|███       | 30/100 [00:00<00:00, 95.24it/s]
+ 42%|████▏     | 42/100 [00:00<00:00, 101.20it/s]
+ 55%|█████▌    | 55/100 [00:00<00:00, 107.60it/s]
+ 66%|██████▌   | 66/100 [00:00<00:00, 102.16it/s]
+ 77%|███████▋  | 77/100 [00:00<00:00, 95.64it/s] 
+ 87%|████████▋ | 87/100 [00:00<00:00, 94.31it/s]
+ 97%|█████████▋| 97/100 [00:01<00:00, 94.53it/s]
+100%|██████████| 100/100 [00:01<00:00, 96.60it/s]
+/Users/hariomnarang/Desktop/personal/roads/mtrain/.venv/lib/python3.12/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/Users/hariomnarang/Desktop/personal/roads/mtrain/.venv/lib/python3.12/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=MobileNet_V3_Small_Weights.IMAGENET1K_V1`. You can also use `weights=MobileNet_V3_Small_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
+
+  0%|          | 0/336 [00:00<?, ?it/s]
+  0%|          | 1/336 [00:00<01:30,  3.70it/s]
+  3%|▎         | 9/336 [00:00<00:11, 29.38it/s]
+  5%|▌         | 17/336 [00:00<00:07, 44.64it/s]
+  7%|▋         | 25/336 [00:00<00:05, 54.28it/s]
+ 10%|▉         | 33/336 [00:00<00:04, 60.64it/s]
+ 12%|█▏        | 41/336 [00:00<00:04, 64.85it/s]
+ 15%|█▍        | 49/336 [00:00<00:04, 67.78it/s]
+ 17%|█▋        | 57/336 [00:01<00:04, 69.74it/s]
+ 19%|█▉        | 65/336 [00:01<00:03, 71.01it/s]
+ 22%|██▏       | 73/336 [00:01<00:03, 72.69it/s]
+ 24%|██▍       | 81/336 [00:01<00:03, 73.69it/s]
+ 26%|██▋       | 89/336 [00:01<00:03, 74.52it/s]
+ 29%|██▉       | 97/336 [00:01<00:03, 75.02it/s]
+ 31%|███▏      | 105/336 [00:01<00:03, 75.25it/s]
+ 34%|███▎      | 113/336 [00:01<00:02, 75.39it/s]
+ 36%|███▌      | 121/336 [00:01<00:02, 75.24it/s]
+ 38%|███▊      | 129/336 [00:01<00:02, 75.25it/s]
+ 41%|████      | 137/336 [00:02<00:02, 74.65it/s]
+ 43%|████▎     | 145/336 [00:02<00:02, 74.82it/s]
+ 46%|████▌     | 153/336 [00:02<00:02, 67.41it/s]
+ 48%|████▊     | 160/336 [00:02<00:02, 67.86it/s]
+ 50%|████▉     | 167/336 [00:02<00:02, 66.68it/s]
+ 52%|█████▏    | 174/336 [00:02<00:02, 67.05it/s]
+ 54%|█████▍    | 181/336 [00:02<00:02, 63.18it/s]
+ 56%|█████▋    | 189/336 [00:02<00:02, 66.07it/s]
+ 59%|█████▊    | 197/336 [00:02<00:02, 68.41it/s]
+ 61%|██████    | 205/336 [00:03<00:01, 70.07it/s]
+ 63%|██████▎   | 213/336 [00:03<00:01, 71.16it/s]
+ 66%|██████▌   | 221/336 [00:03<00:01, 72.27it/s]
+ 68%|██████▊   | 229/336 [00:03<00:01, 73.15it/s]
+ 71%|███████   | 237/336 [00:03<00:01, 73.69it/s]
+ 73%|███████▎  | 245/336 [00:03<00:01, 74.06it/s]
+ 75%|███████▌  | 253/336 [00:03<00:01, 74.33it/s]
+ 78%|███████▊  | 261/336 [00:03<00:01, 74.33it/s]
+ 80%|████████  | 269/336 [00:03<00:00, 74.70it/s]
+ 82%|████████▏ | 277/336 [00:04<00:00, 74.56it/s]
+ 85%|████████▍ | 285/336 [00:04<00:00, 74.39it/s]
+ 87%|████████▋ | 293/336 [00:04<00:00, 74.36it/s]
+ 90%|████████▉ | 301/336 [00:04<00:00, 74.35it/s]
+ 92%|█████████▏| 309/336 [00:04<00:00, 74.33it/s]
+ 94%|█████████▍| 317/336 [00:04<00:00, 74.51it/s]
+ 97%|█████████▋| 325/336 [00:04<00:00, 74.92it/s]
+ 99%|█████████▉| 333/336 [00:04<00:00, 75.09it/s]
+100%|██████████| 336/336 [00:04<00:00, 69.19it/s]
+
+=== SUCCESS | attempt_time: 0:00:16.753033 ===

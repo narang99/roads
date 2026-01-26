@@ -1,0 +1,28 @@
+
+=== FINE_TUNE_EPOCHS=1-FIT_ONE_CYCLE_EPOCHS=1-MODEL=mobilenet_v3_small-NUM_SAMPLES=100-FILE_SIZE=50-LOSS=ELSE-retries=0 | attempt 1 | start: 2026-01-25 14:35:48.583550 ===
+existing samples: 0
+remaining (will generate): 100
+loading annotations into memory...
+Done (t=0.03s)
+creating index...
+index created!
+total cycles: 1
+
+Generating samples:   0%|          | 0/100 [00:00<?, ?iteration/s]
+Generating samples:  12%|█▏        | 12/100 [00:00<00:01, 81.35iteration/s]
+Generating samples:  26%|██▌       | 26/100 [00:00<00:00, 78.01iteration/s]
+Generating samples:  34%|███▍      | 34/100 [00:00<00:00, 73.05iteration/s]
+Generating samples:  46%|████▌     | 46/100 [00:00<00:00, 82.35iteration/s]
+Generating samples:  58%|█████▊    | 58/100 [00:00<00:00, 83.32iteration/s]
+Generating samples:  68%|██████▊   | 68/100 [00:00<00:00, 75.56iteration/s]
+Generating samples:  82%|████████▏ | 82/100 [00:01<00:00, 78.56iteration/s]
+Generating samples:  96%|█████████▌| 96/100 [00:01<00:00, 74.33iteration/s]
+Generating samples: 100%|██████████| 100/100 [00:01<00:00, 73.62iteration/s]
+Traceback (most recent call last):
+  File "/Users/hariomnarang/Desktop/personal/roads/mtrain/notebooks/SmallNet.py", line 73, in <module>
+    dump_ddg_images(DDG_BASE_DIR, OUTS / "pos", FILE_SIZE, NUM_SAMPLES)
+  File "/Users/hariomnarang/Desktop/personal/roads/mtrain/src/mtrain/cache.py", line 39, in inner
+    raise ValueError(f"{output_arg} must be passed as kwarg")
+ValueError: out_pos_dir must be passed as kwarg
+
+=== FAILED | attempt_time: 0:00:02.190541 ===

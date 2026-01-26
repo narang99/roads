@@ -7,3 +7,8 @@
 /taco.tar
 /T003-extract-and-place-on-backdrops-manually
 /T004-taco-crops
+/T005-with-taco-and-ddg
+/T006-ddg-garbage
+/T006-morphed
+/T007-morph-before-resize
+/T008-unet

@@ -9,17 +9,17 @@ from itertools import product
 # CONFIG
 # ============================================================
 
-SCRIPT = "SmallNet.py"
+SCRIPT = "SmallUNet.py"
 LOG_DIR = Path("logs")
 LOG_DIR.mkdir(exist_ok=True)
 
 EXP_CONF = {
-    "FINE_TUNE_EPOCHS": [10, 20],
-    "FIT_ONE_CYCLE_EPOCHS": [5, 10],
-    "MODEL": ["mobilenet_v3_large", "mobilenet_v3_small"],
-    "NUM_SAMPLES": [1000, 2000, 5000, 10000],
-    "FILE_SIZE": [25, 35, 50, 75, 100],
-    "LOSS": ["ELSE", "CrossEntropyLossFlat"],
+    "FINE_TUNE_EPOCHS": [1],
+    "FIT_ONE_CYCLE_EPOCHS": [1],
+    "MODEL": ["resnet18"],
+    "NUM_SAMPLES": [100],
+    "FILE_SIZE": [35],
+    "LOSS": ["ELSE"],
     "retries": [0],
 }
 def cartesian_dict(param_grid):
@@ -69,6 +69,7 @@ def run_experiment(cfg):
     while attempt <= retries:
         attempt += 1
         print(f"\n🚀 Running [{name}] (attempt {attempt}/{retries+1})")
+        print(f"log file: {log_file}")
 
         attempt_start = datetime.now()
 
@@ -78,8 +79,11 @@ def run_experiment(cfg):
             )
 
         try:
+            command = ["uv", "run", SCRIPT]
+            env_string = " ".join([f"{k}='{str(v)}'" for k,v in cfg.items()])
+            print("running command: ", env_string, " ".join(command))
             proc = subprocess.Popen(
-                ["python", SCRIPT],
+                command,
                 env=env,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,

@@ -1,0 +1,56 @@
+
+=== FINE_TUNE_EPOCHS=10-FIT_ONE_CYCLE_EPOCHS=10-MODEL=mobilenet_v3_small-NUM_SAMPLES=5000-FILE_SIZE=110-LOSS=ELSE-retries=0 | attempt 1 | start: 2026-01-25 12:39:10.812740 ===
+existing samples: 5001
+remaining (will generate): 0
+loading annotations into memory...
+Done (t=0.02s)
+creating index...
+index created!
+total cycles: 0
+[0, 0.5497196912765503, 3.747762441635132, '00:12']
+[0, 0.37163156270980835, 1.064583420753479, '00:12']
+[1, 0.35962623357772827, 1.0815894603729248, '00:11']
+[2, 0.3342292904853821, 0.32978519797325134, '00:12']
+[3, 0.28166311979293823, 0.2704697847366333, '00:14']
+[4, 0.25376883149147034, 0.20968466997146606, '00:15']
+[5, 0.24468755722045898, 0.18092745542526245, '00:14']
+[6, 0.23318110406398773, 0.1722179800271988, '00:14']
+[7, 0.22225238382816315, 0.15841077268123627, '00:14']
+[8, 0.21727094054222107, 0.1448335349559784, '00:14']
+[9, 0.21573203802108765, 0.1409447193145752, '00:14']
+[0, 0.2232106775045395, 0.13787758350372314, '00:15']
+[1, 0.2167981117963791, 0.136497363448143, '00:16']
+[2, 0.2111901193857193, 0.13431496918201447, '00:19']
+[3, 0.20368142426013947, 0.13090182840824127, '00:16']
+[4, 0.20991051197052002, 0.13111035525798798, '00:16']
+[5, 0.21728825569152832, 0.12927328050136566, '00:16']
+[6, 0.20617851614952087, 0.12942247092723846, '00:15']
+[7, 0.21470318734645844, 0.12815511226654053, '00:16']
+[8, 0.20986934006214142, 0.12904465198516846, '00:15']
+[9, 0.20249535143375397, 0.12831057608127594, '00:15']
+
+Generating samples: 0iteration [00:00, ?iteration/s]
+Generating samples: 0iteration [00:00, ?iteration/s]
+/Users/hariomnarang/Desktop/personal/roads/mtrain/.venv/lib/python3.12/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/Users/hariomnarang/Desktop/personal/roads/mtrain/.venv/lib/python3.12/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=MobileNet_V3_Small_Weights.IMAGENET1K_V1`. You can also use `weights=MobileNet_V3_Small_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
+
+  0%|          | 0/70 [00:00<?, ?it/s]
+  1%|▏         | 1/70 [00:01<01:15,  1.09s/it]
+  9%|▊         | 6/70 [00:01<00:09,  6.43it/s]
+ 16%|█▌        | 11/70 [00:01<00:04, 12.35it/s]
+ 23%|██▎       | 16/70 [00:01<00:02, 18.33it/s]
+ 30%|███       | 21/70 [00:01<00:02, 24.00it/s]
+ 37%|███▋      | 26/70 [00:01<00:01, 29.30it/s]
+ 44%|████▍     | 31/70 [00:01<00:01, 33.37it/s]
+ 51%|█████▏    | 36/70 [00:01<00:00, 36.16it/s]
+ 59%|█████▊    | 41/70 [00:01<00:00, 39.04it/s]
+ 66%|██████▌   | 46/70 [00:02<00:00, 41.56it/s]
+ 73%|███████▎  | 51/70 [00:02<00:00, 42.98it/s]
+ 80%|████████  | 56/70 [00:02<00:00, 43.93it/s]
+ 87%|████████▋ | 61/70 [00:02<00:00, 44.76it/s]
+ 94%|█████████▍| 66/70 [00:02<00:00, 45.05it/s]
+100%|██████████| 70/70 [00:02<00:00, 27.05it/s]
+
+=== SUCCESS | attempt_time: 0:05:26.786443 ===

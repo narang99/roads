@@ -1,0 +1,12 @@
+
+=== FINE_TUNE_EPOCHS=20-FIT_ONE_CYCLE_EPOCHS=10-MODEL=mobilenet_v3_small-NUM_SAMPLES=5000-FILE_SIZE=30-LOSS=ELSE-retries=0 | attempt 1 | start: 2026-01-25 15:14:01.371775 ===
+CACHE: finding existing file count
+CACHE: existing count: 0
+TACO Extraction: samples=5000 size=30 out_dir=/Users/hariomnarang/.mtrain_synth_cache/extract_all_taco_63580f06d35c5e29
+existing samples: 0
+remaining (will generate): 5000
+loading annotations into memory...
+Done (t=0.03s)
+creating index...
+index created!
+20% done

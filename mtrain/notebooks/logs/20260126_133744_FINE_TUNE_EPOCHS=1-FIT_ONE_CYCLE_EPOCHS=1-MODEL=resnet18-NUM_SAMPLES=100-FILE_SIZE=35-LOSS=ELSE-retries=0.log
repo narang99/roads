@@ -1,0 +1,10 @@
+
+=== FINE_TUNE_EPOCHS=1-FIT_ONE_CYCLE_EPOCHS=1-MODEL=resnet18-NUM_SAMPLES=100-FILE_SIZE=35-LOSS=ELSE-retries=0 | attempt 1 | start: 2026-01-26 13:37:44.666156 ===
+CACHE: finding existing file count
+CACHE: existing count: 5018
+samples already exist in cache, will copy to /Users/hariomnarang/.mtrain_synth_cache/extract_all_taco_ca57f852052e6772 -> ../../datasets/T008-unet/FINE_TUNE_EPOCHS=1-FIT_ONE_CYCLE_EPOCHS=1-MODEL=resnet18-NUM_SAMPLES=100-FILE_SIZE=35-LOSS=ELSE-retries=0/synth
+copied files: 100
+DDG Dumping: samples=100 size=35 out_dir=../../datasets/T008-unet/FINE_TUNE_EPOCHS=1-FIT_ONE_CYCLE_EPOCHS=1-MODEL=resnet18-NUM_SAMPLES=100-FILE_SIZE=35-LOSS=ELSE-retries=0/synth/pos
+shuffled set size 158
+after samples size 100
+10% done

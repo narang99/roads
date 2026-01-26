@@ -33,6 +33,10 @@ class CityScapesCls(Enum):
 def get_cached_seg_former() -> "SegFormerCityScapes":
     return SegFormerCityScapes()
 
+@functools.lru_cache(maxsize=40)
+def cached_predict(img_path) -> np.ndarray:
+    model = get_cached_seg_former()
+    return model.predict(img_path)
 
 class SegFormerCityScapes:
     """
@@ -87,3 +91,10 @@ class SegFormerCityScapes:
 
 def get_mask(pred, lbl: CityScapesCls):
     return (pred == lbl.value)
+
+
+def get_mask_with_labels(pred, lbls: list[CityScapesCls]):
+    mask = np.zeros_like(pred, dtype=bool)
+    for lbl in lbls:
+        mask |= (pred == lbl.value)
+    return mask

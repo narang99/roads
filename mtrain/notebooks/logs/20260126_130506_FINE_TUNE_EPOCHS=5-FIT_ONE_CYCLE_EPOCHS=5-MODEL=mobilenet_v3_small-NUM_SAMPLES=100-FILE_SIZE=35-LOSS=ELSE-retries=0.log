@@ -1,0 +1,19 @@
+
+=== FINE_TUNE_EPOCHS=5-FIT_ONE_CYCLE_EPOCHS=5-MODEL=mobilenet_v3_small-NUM_SAMPLES=100-FILE_SIZE=35-LOSS=ELSE-retries=0 | attempt 1 | start: 2026-01-26 13:05:06.158825 ===
+CACHE: finding existing file count
+CACHE: existing count: 5018
+samples already exist in cache, will copy to /Users/hariomnarang/.mtrain_synth_cache/extract_all_taco_ca57f852052e6772 -> ../../datasets/T005-with-taco-and-ddg/FINE_TUNE_EPOCHS=5-FIT_ONE_CYCLE_EPOCHS=5-MODEL=mobilenet_v3_small-NUM_SAMPLES=100-FILE_SIZE=35-LOSS=ELSE-retries=0/synth
+copied files: 100
+DDG Dumping: samples=100 size=35 out_dir=../../datasets/T005-with-taco-and-ddg/FINE_TUNE_EPOCHS=5-FIT_ONE_CYCLE_EPOCHS=5-MODEL=mobilenet_v3_small-NUM_SAMPLES=100-FILE_SIZE=35-LOSS=ELSE-retries=0/synth/pos
+shuffled set size 158
+after samples size 100
+10% done
+20% done
+30% done
+40% done
+50% done
+60% done
+70% done
+80% done
+90% done
+100% done

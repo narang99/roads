@@ -1,0 +1,15 @@
+
+=== FINE_TUNE_EPOCHS=5-FIT_ONE_CYCLE_EPOCHS=5-MODEL=mobilenet_v3_small-NUM_SAMPLES=100-FILE_SIZE=35-LOSS=ELSE-retries=0 | attempt 1 | start: 2026-01-26 13:04:56.049940 ===
+CACHE: finding existing file count
+CACHE: existing count: 5018
+samples already exist in cache, will copy to /Users/hariomnarang/.mtrain_synth_cache/extract_all_taco_ca57f852052e6772 -> ../../datasets/T005-with-taco-and-ddg/FINE_TUNE_EPOCHS=5-FIT_ONE_CYCLE_EPOCHS=5-MODEL=mobilenet_v3_small-NUM_SAMPLES=100-FILE_SIZE=35-LOSS=ELSE-retries=0/synth
+copied files: 100
+DDG Dumping: samples=100 size=35 out_dir=../../datasets/T005-with-taco-and-ddg/FINE_TUNE_EPOCHS=5-FIT_ONE_CYCLE_EPOCHS=5-MODEL=mobilenet_v3_small-NUM_SAMPLES=100-FILE_SIZE=35-LOSS=ELSE-retries=0/synth/pos
+Traceback (most recent call last):
+  File "/Users/hariomnarang/Desktop/personal/roads/mtrain/notebooks/SmallNet.py", line 80, in <module>
+    dump_ddg_images(
+  File "/Users/hariomnarang/Desktop/personal/roads/mtrain/src/mtrain/smallnet/extract.py", line 32, in dump_ddg_images
+    dump_all_images_as_pos_after_tfms(
+TypeError: dump_all_images_as_pos_after_tfms() takes 4 positional arguments but 5 were given
+
+=== FAILED | attempt_time: 0:00:01.045059 ===

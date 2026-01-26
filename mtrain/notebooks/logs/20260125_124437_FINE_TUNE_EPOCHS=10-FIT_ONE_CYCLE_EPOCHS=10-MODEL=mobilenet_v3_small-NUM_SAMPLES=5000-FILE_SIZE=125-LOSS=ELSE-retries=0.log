@@ -1,0 +1,8 @@
+
+=== FINE_TUNE_EPOCHS=10-FIT_ONE_CYCLE_EPOCHS=10-MODEL=mobilenet_v3_small-NUM_SAMPLES=5000-FILE_SIZE=125-LOSS=ELSE-retries=0 | attempt 1 | start: 2026-01-25 12:44:37.600463 ===
+existing samples: 5001
+remaining (will generate): 0
+loading annotations into memory...
+Done (t=0.04s)
+creating index...
+index created!

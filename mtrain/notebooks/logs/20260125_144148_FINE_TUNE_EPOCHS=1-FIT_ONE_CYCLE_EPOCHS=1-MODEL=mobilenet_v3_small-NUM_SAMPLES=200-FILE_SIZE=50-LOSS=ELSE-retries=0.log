@@ -1,0 +1,13 @@
+
+=== FINE_TUNE_EPOCHS=1-FIT_ONE_CYCLE_EPOCHS=1-MODEL=mobilenet_v3_small-NUM_SAMPLES=200-FILE_SIZE=50-LOSS=ELSE-retries=0 | attempt 1 | start: 2026-01-25 14:41:48.567923 ===
+samples already exist in cache, will copy to /Users/hariomnarang/.mtrain_synth_cache/extract_all_taco_935e50d1288c5840 -> ../../datasets/T005-with-taco-and-ddg/FINE_TUNE_EPOCHS=1-FIT_ONE_CYCLE_EPOCHS=1-MODEL=mobilenet_v3_small-NUM_SAMPLES=200-FILE_SIZE=50-LOSS=ELSE-retries=0/synth
+copied files: 200
+existing samples: 204
+remaining (will generate): 0
+loading annotations into memory...
+Done (t=0.02s)
+creating index...
+index created!
+total cycles: 0
+samples already exist in cache, will copy to /Users/hariomnarang/.mtrain_synth_cache/dump_ddg_images_8e3358608d0f4a4f -> ../../datasets/T005-with-taco-and-ddg/FINE_TUNE_EPOCHS=1-FIT_ONE_CYCLE_EPOCHS=1-MODEL=mobilenet_v3_small-NUM_SAMPLES=200-FILE_SIZE=50-LOSS=ELSE-retries=0/synth/pos
+copied files: 200

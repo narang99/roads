@@ -1,0 +1,90 @@
+
+=== FINE_TUNE_EPOCHS=1-FIT_ONE_CYCLE_EPOCHS=1-MODEL=mobilenet_v3_small-NUM_SAMPLES=100-FILE_SIZE=50-LOSS=ELSE-retries=0 | attempt 1 | start: 2026-01-25 14:37:09.311058 ===
+existing samples: 100
+remaining (will generate): 0
+loading annotations into memory...
+Done (t=0.03s)
+creating index...
+index created!
+total cycles: 0
+existing samples: 100
+remaining (will generate): 0
+loading annotations into memory...
+Done (t=0.03s)
+creating index...
+index created!
+total cycles: 0
+[0, 1.2851125001907349, 0.6769378781318665, '00:01']
+[0, 0.925006628036499, 0.5752949714660645, '00:01']
+[0, 0.9294722676277161, 0.5567085146903992, '00:00']
+
+Generating samples: 0iteration [00:00, ?iteration/s]
+Generating samples: 0iteration [00:00, ?iteration/s]
+
+Generating samples: 0iteration [00:00, ?iteration/s]
+Generating samples: 0iteration [00:00, ?iteration/s]
+
+  0%|          | 0/100 [00:00<?, ?it/s]
+  8%|▊         | 8/100 [00:00<00:01, 72.27it/s]
+ 18%|█▊        | 18/100 [00:00<00:00, 86.17it/s]
+ 27%|██▋       | 27/100 [00:00<00:00, 80.98it/s]
+ 37%|███▋      | 37/100 [00:00<00:00, 86.04it/s]
+ 46%|████▌     | 46/100 [00:00<00:00, 84.43it/s]
+ 55%|█████▌    | 55/100 [00:00<00:00, 84.28it/s]
+ 64%|██████▍   | 64/100 [00:00<00:00, 82.28it/s]
+ 73%|███████▎  | 73/100 [00:00<00:00, 81.26it/s]
+ 85%|████████▌ | 85/100 [00:00<00:00, 91.14it/s]
+ 95%|█████████▌| 95/100 [00:01<00:00, 90.87it/s]
+100%|██████████| 100/100 [00:01<00:00, 86.90it/s]
+/Users/hariomnarang/Desktop/personal/roads/mtrain/.venv/lib/python3.12/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/Users/hariomnarang/Desktop/personal/roads/mtrain/.venv/lib/python3.12/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=MobileNet_V3_Small_Weights.IMAGENET1K_V1`. You can also use `weights=MobileNet_V3_Small_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
+
+  0%|          | 0/336 [00:00<?, ?it/s]
+  0%|          | 1/336 [00:00<02:20,  2.39it/s]
+  2%|▏         | 6/336 [00:00<00:23, 14.26it/s]
+  4%|▍         | 13/336 [00:00<00:11, 28.03it/s]
+  6%|▌         | 20/336 [00:00<00:08, 38.60it/s]
+  8%|▊         | 28/336 [00:00<00:06, 48.70it/s]
+ 11%|█         | 36/336 [00:00<00:05, 56.64it/s]
+ 13%|█▎        | 43/336 [00:01<00:04, 60.29it/s]
+ 15%|█▌        | 51/336 [00:01<00:04, 64.61it/s]
+ 18%|█▊        | 59/336 [00:01<00:04, 67.81it/s]
+ 20%|█▉        | 67/336 [00:01<00:03, 69.71it/s]
+ 22%|██▏       | 75/336 [00:01<00:03, 71.47it/s]
+ 25%|██▍       | 83/336 [00:01<00:03, 72.26it/s]
+ 27%|██▋       | 91/336 [00:01<00:03, 73.46it/s]
+ 29%|██▉       | 99/336 [00:01<00:03, 74.01it/s]
+ 32%|███▏      | 107/336 [00:01<00:03, 74.88it/s]
+ 34%|███▍      | 115/336 [00:02<00:02, 74.52it/s]
+ 37%|███▋      | 123/336 [00:02<00:02, 74.31it/s]
+ 39%|███▉      | 131/336 [00:02<00:02, 74.19it/s]
+ 41%|████▏     | 139/336 [00:02<00:02, 74.33it/s]
+ 44%|████▍     | 147/336 [00:02<00:02, 74.37it/s]
+ 46%|████▌     | 155/336 [00:02<00:02, 74.49it/s]
+ 49%|████▊     | 163/336 [00:02<00:02, 75.07it/s]
+ 51%|█████     | 171/336 [00:02<00:02, 75.21it/s]
+ 53%|█████▎    | 179/336 [00:02<00:02, 75.08it/s]
+ 56%|█████▌    | 187/336 [00:02<00:01, 75.08it/s]
+ 58%|█████▊    | 195/336 [00:03<00:02, 70.09it/s]
+ 60%|██████    | 203/336 [00:03<00:01, 69.40it/s]
+ 62%|██████▎   | 210/336 [00:03<00:01, 69.38it/s]
+ 65%|██████▍   | 217/336 [00:03<00:01, 69.36it/s]
+ 67%|██████▋   | 225/336 [00:03<00:01, 70.08it/s]
+ 69%|██████▉   | 233/336 [00:03<00:01, 71.09it/s]
+ 72%|███████▏  | 241/336 [00:03<00:01, 71.91it/s]
+ 74%|███████▍  | 249/336 [00:03<00:01, 71.46it/s]
+ 76%|███████▋  | 257/336 [00:03<00:01, 71.73it/s]
+ 79%|███████▉  | 265/336 [00:04<00:00, 72.86it/s]
+ 81%|████████▏ | 273/336 [00:04<00:00, 73.12it/s]
+ 84%|████████▎ | 281/336 [00:04<00:00, 73.94it/s]
+ 86%|████████▌ | 289/336 [00:04<00:00, 74.21it/s]
+ 88%|████████▊ | 297/336 [00:04<00:00, 74.71it/s]
+ 91%|█████████ | 305/336 [00:04<00:00, 74.19it/s]
+ 93%|█████████▎| 313/336 [00:04<00:00, 74.28it/s]
+ 96%|█████████▌| 321/336 [00:04<00:00, 73.86it/s]
+ 98%|█████████▊| 329/336 [00:04<00:00, 73.54it/s]
+100%|██████████| 336/336 [00:05<00:00, 66.61it/s]
+
+=== SUCCESS | attempt_time: 0:00:16.093666 ===
