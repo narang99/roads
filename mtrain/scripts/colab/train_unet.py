@@ -20,7 +20,7 @@ DATA_COUNT = int(os.environ["DATA_COUNT"])
 TILE_SIZE = int(os.environ["TILE_SIZE"])
 BATCH_SIZE = int(os.environ.get("BATCH_SIZE", "16"))
 FINE_TUNE_EPOCHS = int(os.environ["FINE_TUNE_EPOCHS"])
-FIT_EPOCHS = int(os.environ("FIT_EPOCHS"))
+FIT_EPOCHS = int(os.environ.get("FIT_EPOCHS"))
 
 PROJECT_DIR = DRIVE_BASE / "garbage" / "experiments" / PROJECT_CODE
 ANN_FILE = TACO_DIR / "annotations.json"
