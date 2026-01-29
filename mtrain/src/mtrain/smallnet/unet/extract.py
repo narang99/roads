@@ -18,14 +18,16 @@ from mtrain.random import random_filename
 def generate_dataset(ann_file, taco_dir, output_path, tile_size, num_samples):
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
+        ex1 = tmp / "multi-level"
         extract_images_and_masks(
             ann_file=ann_file,
             taco_dir=taco_dir,
-            output_path=tmp,
+            output_path=ex1,
             num_samples=num_samples,
         )
-        print(tmp.ls())
-        create_crops_from_extracted(ann_file, tmp, output_path, tile_size, num_samples)
+        ex2 = tmp / "binary-level"
+        collapse_to_binary_dataset(ex1, ex2)
+        create_crops_from_extracted(ann_file, ex2, output_path, tile_size, num_samples)
 
 
 @DEFAULT_SYNTH_CACHE.decorator(
