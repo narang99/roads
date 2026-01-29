@@ -35,6 +35,7 @@ LOG_BASE.mkdir(exist_ok=True, parents=True)
 ######### synth gen
 
 if DATA_DIR.exists():
+    print(f"deleting data dir: {DATA_DIR}")
     shutil.rmtree(DATA_DIR)
 generate_dataset(ANN_FILE, TACO_DIR, DATA_DIR, TILE_SIZE, num_samples=DATA_COUNT)
 print(DATA_DIR.ls())
