@@ -15,7 +15,7 @@ def get_dls(bs, log_path, tile_size, images_root, masks_root) -> SegmentationDat
         log_path,
         bs=bs,
         fnames=get_image_files(images_root),
-        label_func=lambda o: masks_root / o.name,
+        label_func=lambda o: masks_root / f"{o.stem}.png",
         codes=np.array(["background", "trash"]),
         item_tfms=Resize(tile_size),
     )
