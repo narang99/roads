@@ -1,4 +1,5 @@
 import random
+import string
 
 def random_start_points(background):
     max0, max1 = background[:, :, 0].shape
@@ -24,3 +25,9 @@ def random_true_one_sixth_times():
 def random_true_one_three_times():
     is_true = random.randint(0, 2) == 2
     return is_true
+
+
+def random_filename(length=8):
+    """Generate a random filename without suffix."""
+    characters = string.ascii_letters + string.digits
+    return ''.join(random.choice(characters) for _ in range(length))

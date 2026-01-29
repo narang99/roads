@@ -12,6 +12,7 @@ from PIL import Image, ImageDraw
 import itertools
 from mtrain.tqdm import Progress
 import tempfile
+from mtrain.random import random_filename
 
 
 def generate_dataset(ann_file, taco_dir, output_path, tile_size, num_samples):
@@ -29,7 +30,6 @@ def generate_dataset(ann_file, taco_dir, output_path, tile_size, num_samples):
 
 @DEFAULT_SYNTH_CACHE.decorator(
     output_arg="output_path",
-    num_samples_arg="num_samples",
     key_args=["ann_file", "taco_dir", "num_samples"],
 )
 def extract_images_and_masks(ann_file, taco_dir, output_path, num_samples=None):
@@ -49,6 +49,7 @@ def extract_images_and_masks(ann_file, taco_dir, output_path, num_samples=None):
     masks_dir.mkdir(parents=True, exist_ok=True)
 
     imgs = coco.loadImgs(coco.getImgIds())
+    random.shuffle(imgs)
     if num_samples is not None:
         imgs = imgs[:num_samples]
 
@@ -93,7 +94,6 @@ def extract_images_and_masks(ann_file, taco_dir, output_path, num_samples=None):
                     mask = np.array(mask_img)
 
         # Save with original filename stem
-        print("img iddddddd", img_id)
         fname = f"{img_id}.png"
         Image.fromarray(img_array).save(images_dir / fname)
         Image.fromarray(mask).save(masks_dir / fname)
@@ -155,6 +155,9 @@ def create_crops_from_extracted(
     input_images_dir = Path(input_dir) / "images"
     input_masks_dir = Path(input_dir) / "masks"
 
+    if output_dir.exists():
+        print(f"CROPS: output directory {output_dir} exists, nuking")
+        shutil.rmtree(output_dir)
     output_images_dir = Path(output_dir) / "images"
     output_masks_dir = Path(output_dir) / "masks"
     output_images_dir.mkdir(parents=True, exist_ok=True)
@@ -246,7 +249,7 @@ def show_extracted_dataset(d, n=8):
         res.append((im, msk))
 
     num = min(n, len(res))
-    _, ax = plt.subplots(num, 2, figsize=(10, 4 * num))
+    _, ax = plt.subplots(num, 2, figsize=(10, 3 * num))
     for i in range(num):
         r0 = np.array(Image.open(res[i][0]))
         r1 = np.array(Image.open(res[i][1]))
@@ -254,3 +257,41 @@ def show_extracted_dataset(d, n=8):
         ax[i][1].imshow(r1)
     plt.tight_layout()
     plt.show()
+
+
+def collate(all_extracted_dirs, output_dir, codes):
+    # we do not collate the codes.txt files for now, they are lost
+    # assume the user passes the codes
+    # randomise input file names and mask names coherently
+    all_extracted_dirs = list(map(Path, all_extracted_dirs))
+    output_dir = Path(output_dir)
+
+    if output_dir.exists():
+        shutil.rmtree(output_dir)
+    output_dir.mkdir(parents=True)
+    images_dir, masks_dir = output_dir / "images", output_dir / "masks"
+    images_dir.mkdir()
+    masks_dir.mkdir()
+
+    with open(output_dir / "codes.txt", "w") as f:
+        f.write("\n".join(codes))
+
+    progress = Progress(len(all_extracted_dirs), "Multiple Extraction")
+    for i, exd in enumerate(all_extracted_dirs):
+        _randomise_and_dump_single_extracted_dir(exd, images_dir, masks_dir)
+        progress(i)
+
+
+def _randomise_and_dump_single_extracted_dir(
+    extracted_dir, dest_images_dir, dest_masks_dir
+):
+    src_images_dir, src_masks_dir = extracted_dir / "images", extracted_dir / "masks"
+    images = list(src_images_dir.glob("*"))
+
+    for i, image in enumerate(images):
+        mask = src_masks_dir / image.name
+        if not mask.exists():
+            raise Exception(f"mask for image={image} does not exist at {mask}")
+        fname = f"{random_filename()}{image.suffix}"
+        shutil.copy(image, dest_images_dir / fname)
+        shutil.copy(mask, dest_masks_dir / fname)

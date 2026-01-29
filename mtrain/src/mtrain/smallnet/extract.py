@@ -59,9 +59,9 @@ def dump_all_images_as_pos_after_tfms(
         "images_root",
         "box_size",
         "empty_samples_ratio",
+        "total_samples",
     ],
     output_arg="out_dir",
-    num_samples_arg="total_samples",
     is_asset=SuffixIn([".jpg", ".jpeg", ".png"]),
 )
 def extract_all_taco(
