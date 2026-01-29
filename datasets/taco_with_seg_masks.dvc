@@ -1,0 +1,6 @@
+outs:
+- md5: 2784f5dc3db9bb4a75e744feaf274eb2.dir
+  size: 2624161755
+  nfiles: 2997
+  hash: md5
+  path: taco_with_seg_masks
