@@ -14,6 +14,7 @@ from mtrain.tqdm import Progress
 import tempfile
 from mtrain.random import random_filename
 from mtrain.chunk import chunk_list
+from multiprocessing import Pool
 
 
 def generate_dataset(ann_file, taco_dir, output_path, tile_size, num_samples):
@@ -67,13 +68,40 @@ def extract_images_and_masks(ann_file, taco_dir, output_path, num_samples=None):
     ]
 
     print("Starting image and mask extraction")
-    for i, chunk in enumerate(chunk_list(imgs)):
-        _extract_images_and_mask_chunk(
-            i, chunk, coco, taco_dir, catid2maskid, images_dir, masks_dir
-        )
+    hp = PoolHelper(coco, taco_dir, catid2maskid, images_dir, masks_dir)
+    with Pool(8) as p:
+        p.map(hp, list(enumerate(chunk_list(imgs, 8))))
 
     with open(output_path / "codes.txt", "w") as f:
         f.write("\n".join(codes))
+
+
+class PoolHelper:
+    def __init__(self, coco, taco_dir, catid2maskid, images_dir, masks_dir):
+        self.coco = coco
+        self.taco_dir = taco_dir
+        self.catid2maskid = catid2maskid
+        self.images_dir = images_dir
+        self.masks_dir = masks_dir
+
+    def __call__(self, id_and_chunk):
+        cid, chunk = id_and_chunk
+        _extract_images_and_mask_chunk(
+            cid,
+            chunk,
+            self.coco,
+            self.taco_dir,
+            self.catid2maskid,
+            self.images_dir,
+            self.masks_dir,
+        )
+
+
+def _mp_extract_util(id_and_chunk, coco, taco_dir, catid2maskid, images_dir, masks_dir):
+    cid, chunk = id_and_chunk
+    _extract_images_and_mask_chunk(
+        cid, chunk, coco, taco_dir, catid2maskid, images_dir, masks_dir
+    )
 
 
 def _extract_images_and_mask_chunk(
@@ -85,7 +113,6 @@ def _extract_images_and_mask_chunk(
             img_info, coco, taco_dir, catid2maskid, images_dir, masks_dir
         )
         progress(i)
-
 
 
 def _extract_images_and_mask_single(
