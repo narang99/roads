@@ -182,18 +182,10 @@ def create_crops_from_extracted(
 
         mask_path = input_masks_dir / img_path.name
 
-        # Load image and mask
-        # img = np.array(Image.open(img_path))
-        # mask = np.array(Image.open(mask_path))
-
         # Generate crop
         crop_img, crop_mask, _ = _extract_single_crop(
             coco, img_path, mask_path, tile_size, max_padding=max_padding
         )
-        # crop_img, crop_mask = generate_random_crop(
-        #     img, mask, tile_size, max_padding=1000
-        # )
-
         # Save with random filename
         fname = img_path.stem
         Image.fromarray(crop_img).save(output_images_dir / f"{fname}.png")
@@ -267,7 +259,9 @@ def collate(all_extracted_dirs, output_dir, codes):
     output_dir = Path(output_dir)
 
     if output_dir.exists():
+        print(f"COLLATE: output directory {output_dir} exists, nuking")
         shutil.rmtree(output_dir)
+
     output_dir.mkdir(parents=True)
     images_dir, masks_dir = output_dir / "images", output_dir / "masks"
     images_dir.mkdir()
