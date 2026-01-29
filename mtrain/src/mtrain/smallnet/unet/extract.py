@@ -36,7 +36,9 @@ def generate_dataset(ann_file, taco_dir, output_path, tile_size, num_samples):
     output_arg="output_path",
     key_args=["ann_file", "taco_dir", "num_samples"],
 )
-def extract_images_and_masks(ann_file, taco_dir, output_path, num_samples=None):
+def extract_images_and_masks(
+    ann_file, taco_dir, output_path, num_samples=None, workers=8
+):
     """
     Extract images and their corresponding masks from TACO dataset.
 
@@ -69,8 +71,8 @@ def extract_images_and_masks(ann_file, taco_dir, output_path, num_samples=None):
 
     print("Starting image and mask extraction")
     hp = PoolHelper(coco, taco_dir, catid2maskid, images_dir, masks_dir)
-    with Pool(8) as p:
-        p.map(hp, list(enumerate(chunk_list(imgs, 8))))
+    with Pool(workers) as p:
+        p.map(hp, list(enumerate(chunk_list(imgs, workers))))
 
     with open(output_path / "codes.txt", "w") as f:
         f.write("\n".join(codes))
@@ -97,17 +99,10 @@ class PoolHelper:
         )
 
 
-def _mp_extract_util(id_and_chunk, coco, taco_dir, catid2maskid, images_dir, masks_dir):
-    cid, chunk = id_and_chunk
-    _extract_images_and_mask_chunk(
-        cid, chunk, coco, taco_dir, catid2maskid, images_dir, masks_dir
-    )
-
-
 def _extract_images_and_mask_chunk(
     chunk_id, img_infos, coco, taco_dir, catid2maskid, images_dir, masks_dir
 ):
-    progress = Progress(len(img_infos), f"EXTRACT; CHUNK={chunk_id}")
+    progress = Progress(len(img_infos), f"EXTRACT; CHUNK={chunk_id}", step=5)
     for i, img_info in enumerate(img_infos):
         _extract_images_and_mask_single(
             img_info, coco, taco_dir, catid2maskid, images_dir, masks_dir
@@ -144,9 +139,9 @@ def _extract_images_and_mask_single(
                 mask = np.array(mask_img)
 
     # Save with original filename stem
-    fname = f"{img_id}.png"
-    Image.fromarray(img_array).save(images_dir / fname)
-    Image.fromarray(mask).save(masks_dir / fname)
+    fname = str(img_id)
+    Image.fromarray(img_array).save(images_dir / f"{fname}.jpeg")
+    _save_mask(mask, masks_dir / f"{fname}.png")
 
 
 def collapse_to_binary_dataset(orig_dir, binary_dir, background_label=0):
@@ -171,10 +166,10 @@ def collapse_to_binary_dataset(orig_dir, binary_dir, background_label=0):
         print(f"Original codes: {codes}")
 
     # Process masks
-    for mask_path in masks_dir.glob("*.png"):
+    for mask_path in masks_dir.glob("*.jpeg"):
         mask = np.array(Image.open(mask_path))
-        mask_binary = (mask != background_label).astype(np.uint8)
-        Image.fromarray(mask_binary).save(binary_dir / "masks" / mask_path.name)
+        mask_binary = (mask != background_label)
+        _save_mask(mask_binary, binary_dir / "masks" / mask_path.name)
 
     # Copy images
     for img_path in images_dir.glob("*.*"):
@@ -185,6 +180,11 @@ def collapse_to_binary_dataset(orig_dir, binary_dir, background_label=0):
         f.write("background\nforeground\n")
 
     print(f"Binary dataset created at: {binary_dir}")
+
+
+def _save_mask(mask, path):
+    mask = mask.astype(np.uint8)
+    Image.fromarray(mask, mode="L").save(path, format="PNG", compress_level=9)
 
 
 def create_crops_from_extracted(
@@ -212,7 +212,7 @@ def create_crops_from_extracted(
     output_masks_dir.mkdir(parents=True, exist_ok=True)
 
     # Get all image files
-    image_files = list(input_images_dir.glob("*.png"))
+    image_files = list(input_images_dir.glob("*.jpeg"))
 
     if len(image_files) == 0:
         print("No images found in input directory")
@@ -236,8 +236,8 @@ def create_crops_from_extracted(
         )
         # Save with random filename
         fname = img_path.stem
-        Image.fromarray(crop_img).save(output_images_dir / f"{fname}.png")
-        Image.fromarray(crop_mask).save(output_masks_dir / f"{fname}.png")
+        Image.fromarray(crop_img).save(output_images_dir / f"{fname}.jpeg")
+        _save_mask(crop_mask, output_masks_dir / f"{fname}.png")
 
 
 def _extract_single_crop(coco, img_path, mask_path, crop_size, max_padding):
