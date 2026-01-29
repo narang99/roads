@@ -25,7 +25,7 @@ FIT_EPOCHS = int(os.environ.get("FIT_EPOCHS"))
 PROJECT_DIR = DRIVE_BASE / "garbage" / "experiments" / PROJECT_CODE
 ANN_FILE = TACO_DIR / "annotations.json"
 LOG_BASE = PROJECT_DIR / "log"
-DATA_DIR = Path("/content/out")
+DATA_DIR = Path(os.environ.get("WORKING_DATA_DIR", "/content/out"))
 
 PROJECT_DIR.mkdir(exist_ok=True, parents=True)
 LOG_BASE.mkdir(exist_ok=True, parents=True)
@@ -36,6 +36,9 @@ LOG_BASE.mkdir(exist_ok=True, parents=True)
 if DATA_DIR.exists():
     shutil.rmtree(DATA_DIR)
 generate_dataset(ANN_FILE, TACO_DIR, DATA_DIR, TILE_SIZE, num_samples=DATA_COUNT)
+print(DATA_DIR.ls())
+print((DATA_DIR / "images").ls())
+print((DATA_DIR / "masks").ls())
 
 
 ######### dls

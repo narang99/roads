@@ -1,32 +1,33 @@
-
 import os
 import subprocess
 from datetime import datetime
 from pathlib import Path
 from itertools import product
 
-def cartesian_dict(param_grid):
+
+def cartesian_dict(name, param_grid):
     keys = list(param_grid.keys())
     values = list(param_grid.values())
 
     exps = []
     for combo in product(*values):
         d = dict(zip(keys, combo))
-        d["name"] = "-".join(f"{k}={v}" for k, v in d.items())
+        d["name"] = f"{name}-" + "-".join(f"{k}={v}" for k, v in d.items())
         d["PROJECT_CODE"] = d["name"]
         exps.append(d)
 
     return exps
 
+
 def stream_process(proc, log_file):
     with open(log_file, "a") as f:
         for line in proc.stdout:
-            print(line, end="")       # stdout to console
-            f.write(line)             # stdout to log
+            print(line, end="")  # stdout to console
+            f.write(line)  # stdout to log
 
         for line in proc.stderr:
-            print(line, end="")       # stderr to console
-            f.write(line)             # stderr to log
+            print(line, end="")  # stderr to console
+            f.write(line)  # stderr to log
 
 
 def _run_experiment(cfg, log_dir, script_run_commands):
@@ -44,19 +45,17 @@ def _run_experiment(cfg, log_dir, script_run_commands):
 
     while attempt <= retries:
         attempt += 1
-        print(f"\n🚀 Running [{name}] (attempt {attempt}/{retries+1})")
+        print(f"\n🚀 Running [{name}] (attempt {attempt}/{retries + 1})")
         print(f"log file: {log_file}")
 
         attempt_start = datetime.now()
 
         with open(log_file, "a") as f:
-            f.write(
-                f"\n=== {name} | attempt {attempt} | start: {attempt_start} ===\n"
-            )
+            f.write(f"\n=== {name} | attempt {attempt} | start: {attempt_start} ===\n")
 
         try:
             command = script_run_commands
-            env_string = " ".join([f"{k}='{str(v)}'" for k,v in cfg.items()])
+            env_string = " ".join([f"{k}='{str(v)}'" for k, v in cfg.items()])
             print("running command: ", env_string, " ".join(command))
             proc = subprocess.Popen(
                 command,
@@ -81,12 +80,12 @@ def _run_experiment(cfg, log_dir, script_run_commands):
             duration = datetime.now() - attempt_start
 
             if returncode != 0:
-                raise subprocess.CalledProcessError(returncode, " ".join(script_run_commands))
+                raise subprocess.CalledProcessError(
+                    returncode, " ".join(script_run_commands)
+                )
 
             with open(log_file, "a") as f:
-                f.write(
-                    f"\n=== SUCCESS | attempt_time: {duration} ===\n"
-                )
+                f.write(f"\n=== SUCCESS | attempt_time: {duration} ===\n")
 
             return True, log_file, datetime.now() - start_time
 
@@ -95,18 +94,18 @@ def _run_experiment(cfg, log_dir, script_run_commands):
             print(f"❌ Failed [{name}] after {duration}")
 
             with open(log_file, "a") as f:
-                f.write(
-                    f"\n=== FAILED | attempt_time: {duration} ===\n"
-                )
+                f.write(f"\n=== FAILED | attempt_time: {duration} ===\n")
 
             if attempt > retries:
                 return False, log_file, datetime.now() - start_time
+
 
 # ============================================================
 # MAIN
 # ============================================================
 
-def run_experiments(experiments, log_dir, script_run_commands):
+
+def run_experiments(experiments, log_dir, script_run_commands, extra_env=None):
     """Run your command wiht given experiment configs repeatadly. a very basic runner
 
     Example usage:
@@ -124,21 +123,31 @@ def run_experiments(experiments, log_dir, script_run_commands):
     run_experiments(EXPERIMENTS, Path("./log"), ["uv", "run", "my-script.py"])
     ```
 
-    Your script would be passed the experiment cfg as environment.  
-    """
+    Pass `extra_env` if it is some base env you need to pass everytime
 
+    Your script would be passed the experiment cfg as environment.
+    """
+    if extra_env is None:
+        extra_env = {}
 
     results = []
     global_start = datetime.now()
 
     for cfg in experiments:
+        cfg = {
+            "PYTHONUNBUFFERED": "1",
+            **cfg, 
+            **extra_env,
+        }
         success, log_path, duration = _run_experiment(cfg, log_dir, script_run_commands)
-        results.append({
-            "name": cfg.get("name", "unnamed"),
-            "success": success,
-            "duration": duration,
-            "log": log_path,
-        })
+        results.append(
+            {
+                "name": cfg.get("name", "unnamed"),
+                "success": success,
+                "duration": duration,
+                "log": log_path,
+            }
+        )
 
     print("\n📊 EXPERIMENT SUMMARY")
     print("-" * 70)

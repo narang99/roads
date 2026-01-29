@@ -42,6 +42,9 @@ class SyntheticCache:
                     raise ValueError(f"{output_arg} must be passed as kwarg")
 
                 real_output_dir = Path(kwargs[output_arg])
+                if real_output_dir.exists():
+                    print(f"output directory exists at {real_output_dir}, nuking")
+                    shutil.rmtree(real_output_dir)
                 real_output_dir.mkdir(parents=True, exist_ok=True)
 
                 num_samples = kwargs.get(num_samples_arg, None)
@@ -84,6 +87,7 @@ def _copy_assets_only(
     is_asset,
     max_count: int,
 ):
+    print(f"Copy: {src} {dst}")
     src = Path(src)
     dst = Path(dst)
     count = 0
@@ -101,9 +105,7 @@ def _copy_assets_only(
 
         shutil.copy2(path, out)
         count += 1
-        if count >= max_count:
-            break
-    print(f"copied files: {count}")
+    print(f"copied files: {count} to {dst}")
 
 
 def SuffixIn(suffs):
