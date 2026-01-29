@@ -69,38 +69,46 @@ def extract_images_and_masks(ann_file, taco_dir, output_path, num_samples=None):
     print("Starting image and mask extraction")
     for i, img_info in enumerate(imgs):
         progress(i)
+        _extract_images_and_mask_single(
+            img_info, coco, taco_dir, catid2maskid, images_dir, masks_dir
+        )
 
-        img_id = img_info["id"]
-        img_filename = img_info["file_name"]
-
-        # Load image
-        img_path = os.path.join(taco_dir, img_filename)
-        img = Image.open(img_path).convert("RGB")
-        img_array = np.array(img)
-        img_height, img_width = img_array.shape[:2]
-
-        # Get annotations and create mask
-        ann_ids = coco.getAnnIds(imgIds=img_id)
-        anns = coco.loadAnns(ann_ids)
-
-        # Create mask
-        mask = np.zeros((img_height, img_width), dtype=np.uint8)
-        for ann in anns:
-            if "segmentation" in ann:
-                mask_value = catid2maskid[ann["category_id"]]
-                for seg in ann["segmentation"]:
-                    poly = np.array(seg).reshape(-1, 2)
-                    mask_img = Image.fromarray(mask)
-                    draw = ImageDraw.Draw(mask_img)
-                    draw.polygon([tuple(p) for p in poly], fill=mask_value)
-                    mask = np.array(mask_img)
-
-        # Save with original filename stem
-        fname = f"{img_id}.png"
-        Image.fromarray(img_array).save(images_dir / fname)
-        Image.fromarray(mask).save(masks_dir / fname)
     with open(output_path / "codes.txt", "w") as f:
         f.write("\n".join(codes))
+
+
+def _extract_images_and_mask_single(
+    img_info, coco, taco_dir, catid2maskid, images_dir, masks_dir
+):
+    img_id = img_info["id"]
+    img_filename = img_info["file_name"]
+
+    # Load image
+    img_path = os.path.join(taco_dir, img_filename)
+    img = Image.open(img_path).convert("RGB")
+    img_array = np.array(img)
+    img_height, img_width = img_array.shape[:2]
+
+    # Get annotations and create mask
+    ann_ids = coco.getAnnIds(imgIds=img_id)
+    anns = coco.loadAnns(ann_ids)
+
+    # Create mask
+    mask = np.zeros((img_height, img_width), dtype=np.uint8)
+    for ann in anns:
+        if "segmentation" in ann:
+            mask_value = catid2maskid[ann["category_id"]]
+            for seg in ann["segmentation"]:
+                poly = np.array(seg).reshape(-1, 2)
+                mask_img = Image.fromarray(mask)
+                draw = ImageDraw.Draw(mask_img)
+                draw.polygon([tuple(p) for p in poly], fill=mask_value)
+                mask = np.array(mask_img)
+
+    # Save with original filename stem
+    fname = f"{img_id}.png"
+    Image.fromarray(img_array).save(images_dir / fname)
+    Image.fromarray(mask).save(masks_dir / fname)
 
 
 def collapse_to_binary_dataset(orig_dir, binary_dir, background_label=0):
