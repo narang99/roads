@@ -13,6 +13,7 @@ import itertools
 from mtrain.tqdm import Progress
 import tempfile
 from mtrain.random import random_filename
+from mtrain.chunk import chunk_list
 
 
 def generate_dataset(ann_file, taco_dir, output_path, tile_size, num_samples):
@@ -65,16 +66,26 @@ def extract_images_and_masks(ann_file, taco_dir, output_path, num_samples=None):
         coco.loadCats(cat_id)[0]["name"] for cat_id in category_ids
     ]
 
-    progress = Progress(len(imgs))
     print("Starting image and mask extraction")
-    for i, img_info in enumerate(imgs):
-        progress(i)
-        _extract_images_and_mask_single(
-            img_info, coco, taco_dir, catid2maskid, images_dir, masks_dir
+    for i, chunk in enumerate(chunk_list(imgs)):
+        _extract_images_and_mask_chunk(
+            i, chunk, coco, taco_dir, catid2maskid, images_dir, masks_dir
         )
 
     with open(output_path / "codes.txt", "w") as f:
         f.write("\n".join(codes))
+
+
+def _extract_images_and_mask_chunk(
+    chunk_id, img_infos, coco, taco_dir, catid2maskid, images_dir, masks_dir
+):
+    progress = Progress(len(img_infos), f"EXTRACT; CHUNK={chunk_id}")
+    for i, img_info in enumerate(img_infos):
+        _extract_images_and_mask_single(
+            img_info, coco, taco_dir, catid2maskid, images_dir, masks_dir
+        )
+        progress(i)
+
 
 
 def _extract_images_and_mask_single(
