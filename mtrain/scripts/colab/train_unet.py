@@ -37,7 +37,7 @@ LOG_BASE.mkdir(exist_ok=True, parents=True)
 if DATA_DIR.exists():
     print(f"deleting data dir: {DATA_DIR}")
     shutil.rmtree(DATA_DIR)
-generate_dataset(ANN_FILE, TACO_DIR, DATA_DIR, TILE_SIZE, num_samples=DATA_COUNT)
+generate_dataset(ANN_FILE, TACO_DIR, DATA_DIR, TILE_SIZE, num_samples=DATA_COUNT, workers=16)
 print(DATA_DIR.ls())
 print((DATA_DIR / "images").ls())
 print((DATA_DIR / "masks").ls())

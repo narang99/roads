@@ -31,9 +31,12 @@ def generate_dataset(ann_file, taco_dir, output_path, tile_size, num_samples, wo
             num_samples=num_samples,
             workers=workers,
         )
+        print("extraction: done")
         ex2 = tmp / "binary-level"
         collapse_to_binary_dataset(ex1, ex2, workers=workers)
+        print("binary collapse: done")
         create_crops_from_extracted(ann_file, ex2, output_path, tile_size, num_samples, workers=workers)
+        print("crops: done")
 
 
 @DEFAULT_SYNTH_CACHE.decorator(
