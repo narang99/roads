@@ -22,13 +22,11 @@ class SyntheticCache:
         self,
         *,
         output_arg: str = "output_dir",
-        num_samples_arg: str = "num_samples",
         key_args: Iterable[str],
         is_asset: Callable[[Path], bool] = lambda _: True,
     ):
         """
         output_arg: name of output directory argument
-        num_samples_arg: argument that specifies how many samples are requested
         key_args: arguments that define cache identity
         """
 
@@ -43,8 +41,6 @@ class SyntheticCache:
                     print(f"output directory exists at {real_output_dir}, nuking")
                     shutil.rmtree(real_output_dir)
                 real_output_dir.mkdir(parents=True, exist_ok=True)
-
-                num_samples = kwargs.get(num_samples_arg, None)
 
                 cache_key = self._hash_key(fn.__name__, kwargs, key_args)
                 cache_dir = self.root / cache_key
@@ -67,7 +63,7 @@ class SyntheticCache:
 
                 sys.stdout.flush()
                 _copy_assets_only(
-                    cache_dir, real_output_dir, is_asset=is_asset, max_count=num_samples
+                    cache_dir, real_output_dir, is_asset=is_asset
                 )
                 sys.stdout.flush()
 
@@ -82,7 +78,6 @@ def _copy_assets_only(
     dst: Path,
     *,
     is_asset,
-    max_count: int,
 ):
     print(f"Copy: {src} {dst}")
     src = Path(src)
