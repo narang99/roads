@@ -15,6 +15,7 @@ class Progress:
         self.step = step
         self.last_printed = [-1]
         self.title = title
+        print(f"Progress track: {title} total_samples={self.n}", flush=True)
     
     def __call__(self, i):
         pct = int((i + 1) / self.n * 100)
