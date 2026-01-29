@@ -7,9 +7,6 @@ from pathlib import Path
 from typing import Iterable, Callable
 
 
-
-
-
 class SyntheticCache:
     def __init__(self, root: str | Path):
         self.root = Path(root)
@@ -27,7 +24,7 @@ class SyntheticCache:
         output_arg: str = "output_dir",
         num_samples_arg: str = "num_samples",
         key_args: Iterable[str],
-        is_asset: Callable[[Path], bool] = lambda _: True
+        is_asset: Callable[[Path], bool] = lambda _: True,
     ):
         """
         output_arg: name of output directory argument
@@ -51,28 +48,28 @@ class SyntheticCache:
 
                 cache_key = self._hash_key(fn.__name__, kwargs, key_args)
                 cache_dir = self.root / cache_key
-                cache_dir.mkdir(parents=True, exist_ok=True)
-
-
-                print("CACHE: finding existing file count")
-                cached_assets = filter(is_asset, cache_dir.rglob("*"))
-                cached_count = sum(1 for _ in cached_assets)
-                print("CACHE: existing count:", cached_count)
-
-                # Enough samples → skip generation
-                if num_samples is not None and cached_count >= num_samples:
-                    print(f"samples already exist in cache, will copy to {cache_dir} -> {real_output_dir}")
+                if cache_dir.exists():
+                    print(f"CACHE HIT: will copy to {cache_dir} -> {real_output_dir}")
                 else:
-                    # Otherwise generate into cache
-                    kwargs[num_samples_arg] = num_samples - cached_count
-                    kwargs[output_arg] = cache_dir
-                    fn(*args, **kwargs)
+                    print("CACHE MISS: triggering data generation")
+                    try:
+                        # this sequence of actions have to be atomic
+                        cache_dir.mkdir(parents=True, exist_ok=True)
+                        kwargs[output_arg] = cache_dir
+                        fn(*args, **kwargs)
+                    except Exception as ex:
+                        # on failure, we mark that the cache does not exist
+                        print(
+                            f"failure in data generation function, deleting cache directory at {cache_dir}, reason={ex}. Will re-raise the exception, please do not interrupt, else the cache would be corrupted"
+                        )
+                        shutil.rmtree(cache_dir)
+                        raise
 
                 sys.stdout.flush()
-                _copy_assets_only(cache_dir, real_output_dir, is_asset=is_asset, max_count=num_samples)
+                _copy_assets_only(
+                    cache_dir, real_output_dir, is_asset=is_asset, max_count=num_samples
+                )
                 sys.stdout.flush()
-
-
 
             return inner
 
@@ -110,10 +107,11 @@ def _copy_assets_only(
 
 def SuffixIn(suffs):
     suff_list = set(suffs)
+
     def wrapped(path: Path) -> bool:
         return path.suffix in suff_list
+
     return wrapped
-            
 
 
 DEFAULT_SYNTH_CACHE = SyntheticCache(Path.home() / ".mtrain_synth_cache")
