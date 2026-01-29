@@ -1,4 +1,5 @@
 from pathlib import Path
+import matplotlib.pyplot as plt
 import shutil
 import os
 from mtrain.smallnet.unet.extract import generate_dataset
@@ -45,6 +46,10 @@ print((DATA_DIR / "masks").ls())
 
 
 dls = get_dls(BATCH_SIZE, LOG_BASE, TILE_SIZE, DATA_DIR / "images", DATA_DIR / "masks")
+dls.train.show_batch(max_n=4, nrows=1, alpha=0.7)
+show_batch_path = LOG_BASE / "show_batch.png"
+plt.savefig(show_batch_path, bbox_inches="tight", dpi=200)
+plt.close()
 
 ######### learner
 
@@ -61,6 +66,11 @@ learner.fine_tune(FINE_TUNE_EPOCHS)
 learner.unfreeze()
 learner.fit_one_cycle(FIT_EPOCHS, lr_max=slice(1e-6, 1e-4))
 
+########################### show results and save
+learner.show_results(max_n=9, alpha=0.7)
+show_results_path = LOG_BASE / "show_results.png"
+plt.savefig(show_results_path, bbox_inches="tight", dpi=200)
+plt.close()
 
 ########## export
 learner.remove_cb(CSVLogger)

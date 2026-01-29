@@ -10,7 +10,7 @@ def get_learner(dls, model):
     return learn
 
 
-def get_dls(bs, log_path, tile_size, images_root, masks_root):
+def get_dls(bs, log_path, tile_size, images_root, masks_root) -> SegmentationDataLoaders:
     dls = SegmentationDataLoaders.from_label_func(
         log_path,
         bs=bs,
