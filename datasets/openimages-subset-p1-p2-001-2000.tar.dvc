@@ -1,0 +1,5 @@
+outs:
+- md5: 67fa2ee6cc70db96fb8de393e81ea23e
+  size: 599879680
+  hash: md5
+  path: openimages-subset-p1-p2-001-2000.tar
