@@ -56,9 +56,16 @@ def resize_and_pad_raw(img, target_size, pad_value=0):
         value=pad_value,
     )
 
-    return padded, {
-        "left": pad_left,
-        "right": pad_right,
-        "top": pad_top,
-        "bottom": pad_bottom,
+    meta = {
+        "orig_h": h,
+        "orig_w": w,
+        "scale": scale,
+        "new_h": new_h,
+        "new_w": new_w,
+        "pad_left": pad_left,
+        "pad_right": pad_right,
+        "pad_top": pad_top,
+        "pad_bottom": pad_bottom,
     }
+
+    return padded, meta
