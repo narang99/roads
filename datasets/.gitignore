@@ -15,3 +15,11 @@
 /T009-unet
 /taco_with_seg_masks
 /openimages-subset-p1-p2-001-2000.tar
+
+/taco-unet-crops/raw/size-100-num-3000
+/taco-unet-crops/raw/size-30-num-3000
+/taco-unet-crops/raw/size-60-num-3000
+/taco-unet-crops/raw/size-80-num-3000
+/SM-001-on-taco/
+/T014-unet-mobile-net/
+/s013-mobilenet-unet-compare/
