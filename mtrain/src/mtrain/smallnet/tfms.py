@@ -69,3 +69,32 @@ def resize_and_pad_raw(img, target_size, pad_value=0):
     }
 
     return padded, meta
+
+
+def unpad_and_resize_mask(mask, meta):
+    """
+    Reverse resize_and_pad_raw for masks.
+    """
+
+    pt = meta["pad_top"]
+    pb = meta["pad_bottom"]
+    pl = meta["pad_left"]
+    pr = meta["pad_right"]
+
+    # 1. Remove padding
+    unpadded = mask[
+        pt : mask.shape[0] - pb,
+        pl : mask.shape[1] - pr,
+    ]
+
+    # 2. Resize back to original size
+    orig_h = meta["orig_h"]
+    orig_w = meta["orig_w"]
+
+    restored = cv2.resize(
+        unpadded,
+        (orig_w, orig_h),
+        interpolation=cv2.INTER_NEAREST,
+    )
+
+    return restored
