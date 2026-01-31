@@ -48,7 +48,6 @@ def overlay_mask_on_img(img_arr, mask, alpha=0.4):
     return res
 
 def predict_unet_only_mask(img_arr, sz, learner):
-    # img_arr = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB)
     arr_and_coord = split_image_into_tiles(img_arr, sz)
     mask_and_coord = [
         (learner.predict(arr)[0].numpy(), (y, x)) for (arr, (y, x)) in tqdm(arr_and_coord)
