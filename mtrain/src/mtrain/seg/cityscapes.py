@@ -6,6 +6,7 @@ from PIL import Image
 import torch
 import functools
 from enum import Enum
+import matplotlib.pyplot as plt
 
 class CityScapesCls(Enum):
     ROAD = 0
@@ -98,3 +99,15 @@ def get_mask_with_labels(pred, lbls: list[CityScapesCls]):
     for lbl in lbls:
         mask |= (pred == lbl.value)
     return mask
+
+
+def show_seg_mask(mask):
+    label_by_name = {mem.value: mem.name for mem in CityScapesCls}
+    plt.figure(figsize=(5, 5))
+    im = plt.imshow(mask, cmap="tab20", interpolation="nearest")
+    plt.colorbar(im, ticks=np.unique(mask))
+    plt.title("Segmentation Mask")
+    plt.axis("off")
+    plt.show()
+    for k,v in label_by_name.items():
+        print(f"{k:>20} -> {v}")

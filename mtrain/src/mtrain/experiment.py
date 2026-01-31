@@ -5,15 +5,19 @@ from pathlib import Path
 from itertools import product
 
 
-def cartesian_dict(name, param_grid):
+def _add_project_code(exp_dict, name):
+    exp_dict["name"] = f"{name}-" + "-".join(f"{k}={v}" for k, v in exp_dict.items())
+    exp_dict["PROJECT_CODE"] = exp_dict["name"]
+    return exp_dict
+
+
+def cartesian_dict(param_grid):
     keys = list(param_grid.keys())
     values = list(param_grid.values())
 
     exps = []
     for combo in product(*values):
         d = dict(zip(keys, combo))
-        d["name"] = f"{name}-" + "-".join(f"{k}={v}" for k, v in d.items())
-        d["PROJECT_CODE"] = d["name"]
         exps.append(d)
 
     return exps
@@ -30,8 +34,9 @@ def stream_process(proc, log_file):
             f.write(line)  # stderr to log
 
 
-def _run_experiment(cfg, log_dir, script_run_commands):
+def _run_experiment(cfg, script_run_commands, log_dir):
     name = cfg.get("name", "unnamed")
+
     retries = cfg.get("retries", 0)
 
     env = os.environ.copy()
@@ -105,7 +110,72 @@ def _run_experiment(cfg, log_dir, script_run_commands):
 # ============================================================
 
 
-def run_experiments(experiments, log_dir, script_run_commands, extra_env=None):
+class NestedProjectDirsGetter:
+    def __init__(self, root_dir: Path):
+        self.r = root_dir
+
+    def __call__(self, project_code):
+        work_dir = self.r / project_code / "work"
+        perm_dir = self.r / project_code / "perm"
+        logs_dir = self.r / project_code / "logs"
+        work_dir.mkdir(parents=True)
+        perm_dir.mkdir(parents=True)
+        logs_dir.mkdir(parents=True)
+        return work_dir, perm_dir, logs_dir
+
+
+class SeparateProjectDirsGetter:
+    def __init__(self, perm_root_dir: Path, work_root_dir: Path):
+        self._perm = perm_root_dir
+        self._work = work_root_dir
+
+    def __call__(self, project_code):
+        work_dir = self._work / project_code / "work"
+        perm_dir = self._perm / project_code / "perm"
+        logs_dir = self._perm / project_code / "logs"
+        work_dir.mkdir(parents=True)
+        perm_dir.mkdir(parents=True)
+        logs_dir.mkdir(parents=True)
+        return work_dir, perm_dir, logs_dir
+
+
+def _print_summary(results, global_start):
+    print("\n📊 EXPERIMENT SUMMARY")
+    print("-" * 70)
+    for r in results:
+        status = "✅ SUCCESS" if r["success"] else "❌ FAILED"
+        print(
+            f"{status:<10} | "
+            f"{r['name']:<10} | "
+            f"time: {str(r['duration']).split('.')[0]} | "
+            f"log: {r['log']}"
+        )
+
+    print("-" * 70)
+    print(f"Total wall time: {datetime.now() - global_start}")
+
+
+def prepare_experiment_cfg(name, cfg, project_dirs_getter, extra_env=None):
+    if extra_env is None:
+        extra_env = {}
+    _add_project_code(cfg, name)
+    work_dir, perm_dir, logs_dir = project_dirs_getter(cfg["PROJECT_CODE"])
+    cfg = {
+        **cfg,
+        **extra_env,
+    }
+    cfg["PROJECT_WORK_DIR"] = str(work_dir)
+    cfg["PROJECT_PERM_DIR"] = str(perm_dir)
+    return cfg, logs_dir
+
+
+def run_experiments(
+    name,
+    experiments,
+    script_run_commands,
+    project_dirs_getter,
+    extra_env=None,
+):
     """Run your command wiht given experiment configs repeatadly. a very basic runner
 
     Example usage:
@@ -120,26 +190,21 @@ def run_experiments(experiments, log_dir, script_run_commands, extra_env=None):
         "retries": [0],
     }
     EXPERIMENTS = cartesian_dict(EXP_CONF)
-    run_experiments(EXPERIMENTS, Path("./log"), ["uv", "run", "my-script.py"])
+    run_experiments("exp_name", EXPERIMENTS, Path("./log"), ["uv", "run", "my-script.py"])
     ```
 
     Pass `extra_env` if it is some base env you need to pass everytime
 
     Your script would be passed the experiment cfg as environment.
     """
-    if extra_env is None:
-        extra_env = {}
-
     results = []
     global_start = datetime.now()
-
     for cfg in experiments:
-        cfg = {
-            "PYTHONUNBUFFERED": "1",
-            **cfg, 
-            **extra_env,
-        }
-        success, log_path, duration = _run_experiment(cfg, log_dir, script_run_commands)
+        cfg, logs_dir = prepare_experiment_cfg(name, cfg, project_dirs_getter, extra_env)
+        cfg["PYTHONUNBUFFERED"] = "1"
+        success, log_path, duration = _run_experiment(
+            cfg, script_run_commands, logs_dir
+        )
         results.append(
             {
                 "name": cfg.get("name", "unnamed"),
@@ -148,17 +213,4 @@ def run_experiments(experiments, log_dir, script_run_commands, extra_env=None):
                 "log": log_path,
             }
         )
-
-    print("\n📊 EXPERIMENT SUMMARY")
-    print("-" * 70)
-    for r in results:
-        status = "✅ SUCCESS" if r["success"] else "❌ FAILED"
-        print(
-            f"{status:<10} | "
-            f"{r['name']:<10} | "
-            f"time: {str(r['duration']).split('.')[0]} | "
-            f"log: {r['log']}"
-        )
-
-    print("-" * 70)
-    print(f"Total wall time: {datetime.now() - global_start}")
+    _print_summary(results, global_start)

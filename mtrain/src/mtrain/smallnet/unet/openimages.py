@@ -48,7 +48,6 @@ import json
 # go through segmentations.csv
 # each image can have multiple masks
 # you have to find that mask and & it with this mask for our purposes
-#!/usr/bin/env python3
 class OpenImagesExtractor:
     def __init__(self, dataset_root, output_dir):
         """
@@ -65,7 +64,9 @@ class OpenImagesExtractor:
         self.data_dir = self.dataset_root / "data"
         self.labels_dir = self.dataset_root / "labels"
         self.masks_dir = self.labels_dir / "masks"
+        self.metadata_dir = self.dataset_root / "metadata"
         self.segmentations_csv = self.labels_dir / "segmentations.csv"
+        self.classes_csv = self.metadata_dir / "classes.csv"
 
         # Output paths
         self.output_images_dir = self.output_dir / "images"
@@ -76,23 +77,49 @@ class OpenImagesExtractor:
         self.output_masks_dir.mkdir(parents=True, exist_ok=True)
 
         # In-memory metadata
-        self.image_to_masks = None
         self.mask_path_cache = {}
+        self.class_names = {}
 
     def build_mask_path_cache(self):
         """Build complete cache of all mask file locations in memory"""
         print("Building mask location cache...")
 
-        mask_path_cache = {
-            f.name: f for f in self.masks_dir.rglob("*.png") if f.is_file()
-        }
+        mask_path_cache = {}
+
+        # Scan all subdirectories (0-5) and cache mask locations
+        for subdir in range(6):
+            subdir_path = self.masks_dir / str(subdir)
+            if subdir_path.exists():
+                for mask_file in subdir_path.iterdir():
+                    if mask_file.is_file():
+                        mask_path_cache[mask_file.name] = mask_file
 
         print(f"Cached {len(mask_path_cache)} mask file locations")
         return mask_path_cache
 
+    def load_class_names(self):
+        """Load class ID to name mapping from classes.csv"""
+        print("Loading class names...")
+        class_names = {}
+
+        if self.classes_csv.exists():
+            with open(self.classes_csv, "r") as f:
+                for row in csv.reader(f):
+                    # classes.csv typically has columns like: LabelName, DisplayName
+                    label_name = row[0]
+                    display_name = row[1]
+                    if label_name and display_name:
+                        class_names[label_name] = display_name
+            print(f"Loaded {len(class_names)} class names")
+        else:
+            print("Warning: classes.csv not found, class names will not be available")
+
+        return class_names
+
     def load_all_metadata(self):
         """Load all metadata into memory"""
         print("Loading all metadata into memory...")
+        class_names = self.load_class_names()
 
         # Load segmentations and group by image_id
         print("  - Loading segmentations.csv...")
@@ -102,14 +129,22 @@ class OpenImagesExtractor:
             reader = csv.DictReader(f)
             for row in reader:
                 image_id = row["ImageID"]
-                mask_path = row["MaskPath"]
-                image_to_masks[image_id].append(mask_path)
+                mask_filename = row["MaskPath"]
+                label_name = row["LabelName"]
+
+                # Store mask info including class
+                mask_info = {
+                    "filename": mask_filename,
+                    "label_id": label_name,
+                    "label_name": class_names.get(
+                        label_name, label_name
+                    ),  # Use ID if name not found
+                }
+                image_to_masks[image_id].append(mask_info)
 
         print(f"  - Found {len(image_to_masks)} unique images with masks")
-
         # Build mask path cache
         mask_path_cache = self.build_mask_path_cache()
-
         return image_to_masks, mask_path_cache
 
     def combine_masks(self, mask_paths):
@@ -136,7 +171,7 @@ class OpenImagesExtractor:
 
         return combined_mask
 
-    def process_image(self, image_id, mask_filenames):
+    def process_image(self, image_id, mask_infos, mask_path_cache):
         """Process a single image and its masks"""
         try:
             # Source image path
@@ -150,18 +185,17 @@ class OpenImagesExtractor:
             dst_image_path = self.output_images_dir / f"{image_id}.jpeg"
             shutil.copy2(src_image_path, dst_image_path)
 
-            # Get mask paths from cache
+            # Get mask paths from cache and collect class info
             mask_paths = []
-            for mask_filename in mask_filenames:
-                if mask_filename in self.mask_path_cache:
-                    mask_paths.append(self.mask_path_cache[mask_filename])
+            for mask_info in mask_infos:
+                mask_filename = mask_info["filename"]
+                if mask_filename in mask_path_cache:
+                    mask_paths.append(mask_path_cache[mask_filename])
                 else:
                     print(f"Warning: Mask {mask_filename} not found in cache")
-
             if not mask_paths:
                 print(f"Warning: No masks found for image {image_id}")
                 return False
-
             # Combine masks if multiple
             if len(mask_paths) == 1:
                 # Just load the single mask
@@ -170,42 +204,47 @@ class OpenImagesExtractor:
             else:
                 # Combine multiple masks
                 combined_mask = self.combine_masks(mask_paths)
-
             # Save combined mask with same base name as image
             # Convert to binary image (0 or 255 for visibility)
             mask_image = Image.fromarray(combined_mask * 255)
             dst_mask_path = self.output_masks_dir / f"{image_id}.png"
             mask_image.save(dst_mask_path)
-
             return True
-
         except Exception as e:
             print(f"Error processing image {image_id}: {e}")
             return False
 
-    def extract(self):
+    def extract(self, classes):
         """Main extraction process"""
         # Load all metadata into memory
-        self.image_to_masks, self.mask_path_cache = self.load_all_metadata()
+        image_to_masks, mask_path_cache = self.load_all_metadata()
+        image_to_masks = self._only_masks_with_classes(image_to_masks, classes)
 
         # Process all images
-        images = list(self.data_dir.rglob("*.jpg"))
-        total_images = len(images)
+        total_images = len(image_to_masks)
         print(f"\nProcessing {total_images} images...")
 
         success_count = 0
-        for image_path in images:
-            image_id = image_path.stem
-            mask_filenames = self.image_to_masks.get(image_id)
-            if not mask_filenames:
-                print(f"no mask file: {image_id}")
-            if self.process_image(image_id, mask_filenames):
+        for image_id, mask_infos in tqdm(image_to_masks.items(), desc="Extracting"):
+            if self.process_image(image_id, mask_infos, mask_path_cache):
                 success_count += 1
 
-        print(f"\nExtraction complete!")
+        print("\nExtraction complete!")
         print(f"Images saved to: {self.output_images_dir}")
         print(f"Masks saved to: {self.output_masks_dir}")
+        print(f"Class info saved to: {self.output_masks_dir}/*_classes.txt")
         print(f"Successfully processed: {success_count}/{total_images} images")
+
+    def _only_masks_with_classes(self, image_to_masks, classes):
+        res = {}
+        for image, mask_infos in image_to_masks.items():
+            cur = []
+            for info in mask_infos:
+                if info["label_name"] in classes:
+                    cur.append(info)
+            if cur:
+                res[image] = cur
+        return res
 
 
 def extract_images(dataset_root, output_dir):
@@ -241,7 +280,7 @@ def _download_and_extract_cacheable(n_samples_by_classes_str, output_dir):
             classes=classes,
             max_samples=int(n_sample),
             shuffle=True,
-            splits=["validation"],
+            splits=["train"],
         )
 
-    extract_images(fiftyone_data_loc / "validation", output_dir)
+    extract_images(fiftyone_data_loc / "train", output_dir)

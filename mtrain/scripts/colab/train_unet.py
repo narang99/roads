@@ -3,32 +3,30 @@ import matplotlib.pyplot as plt
 import shutil
 import os
 from mtrain.smallnet.unet.extract import generate_dataset
-from fastai.vision.all import resnet18
+from fastai.vision.all import resnet18, mobilenet_v3_large, mobilenet_v3_small
 from mtrain.smallnet.unet.train import get_dls
 from fastai.vision.all import unet_learner, ProgressCallback, CSVLogger
 
-
-DRIVE_BASE = Path(
-    os.environ.get(
-        "DRIVE_BASE", "/content/drive/Othercomputers/My MacBook Pro/gdrive-sync"
-    )
-)
+## extra env, always fixed
 TACO_DIR = Path(os.environ.get("TACO_DIR", "/content/data"))
 
+## exp root dirs injected by runner
+PROJECT_PERM_DIR = Path(os.environ["PROJECT_PERM_DIR"])
+PROJECT_WORK_DIR = Path(os.environ["PROJECT_WORK_DIR"])
 
-PROJECT_CODE = os.environ["PROJECT_CODE"]
+## exp params
 DATA_COUNT = int(os.environ["DATA_COUNT"])
 TILE_SIZE = int(os.environ["TILE_SIZE"])
 BATCH_SIZE = int(os.environ.get("BATCH_SIZE", "16"))
 FINE_TUNE_EPOCHS = int(os.environ["FINE_TUNE_EPOCHS"])
 FIT_EPOCHS = int(os.environ.get("FIT_EPOCHS"))
+MODEL = os.environ.get("MODEL", "resnet18")
 
-PROJECT_DIR = DRIVE_BASE / "garbage" / "experiments" / PROJECT_CODE
+# inferred
 ANN_FILE = TACO_DIR / "annotations.json"
-LOG_BASE = PROJECT_DIR / "log"
-DATA_DIR = Path(os.environ.get("WORKING_DATA_DIR", "/content/out"))
+LOG_BASE = PROJECT_PERM_DIR / "log"
+DATA_DIR = PROJECT_WORK_DIR / "data"
 
-PROJECT_DIR.mkdir(exist_ok=True, parents=True)
 LOG_BASE.mkdir(exist_ok=True, parents=True)
 
 
@@ -37,7 +35,14 @@ LOG_BASE.mkdir(exist_ok=True, parents=True)
 if DATA_DIR.exists():
     print(f"deleting data dir: {DATA_DIR}")
     shutil.rmtree(DATA_DIR)
-generate_dataset(ANN_FILE, TACO_DIR, DATA_DIR, TILE_SIZE, num_samples=DATA_COUNT, workers=16)
+generate_dataset(
+    ann_file=ANN_FILE,
+    taco_dir=TACO_DIR,
+    output_path=DATA_DIR,
+    tile_size=TILE_SIZE,
+    num_samples=DATA_COUNT,
+    workers=16,
+)
 print(DATA_DIR.ls())
 print((DATA_DIR / "images").ls())
 print((DATA_DIR / "masks").ls())
@@ -53,8 +58,13 @@ plt.savefig(show_batch_path, bbox_inches="tight", dpi=200)
 plt.close()
 
 ######### learner
+model_by_cls = {
+    "resnet18": resnet18,
+    "mobilenet_v3_small": mobilenet_v3_small,
+    "mobilenet_v3_large": mobilenet_v3_large,
+}
 
-learner = unet_learner(dls, resnet18)
+learner = unet_learner(dls, model_by_cls[MODEL])
 learner.remove_cb(ProgressCallback)
 learner.add_cb(CSVLogger)
 

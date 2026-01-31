@@ -19,8 +19,13 @@ from multiprocessing import Pool
 from multiprocessing.dummy import Pool as ThreadPool
 
 
-
-def generate_dataset(ann_file, taco_dir, output_path, tile_size, num_samples, workers=8):
+@DEFAULT_SYNTH_CACHE.decorator(
+    output_arg="output_path",
+    key_args=["ann_file", "taco_dir", "num_samples", "tile_size"],
+)
+def generate_dataset(
+    ann_file, taco_dir, output_path, tile_size, num_samples, workers=8
+):
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
         ex1 = tmp / "multi-level"
@@ -35,7 +40,15 @@ def generate_dataset(ann_file, taco_dir, output_path, tile_size, num_samples, wo
         ex2 = tmp / "binary-level"
         collapse_to_binary_dataset(ex1, ex2, workers=workers)
         print("binary collapse: done")
-        create_crops_from_extracted(ann_file, ex2, output_path, tile_size, num_samples, workers=workers)
+        # ann_file, input_dir, output_dir, tile_size, num_crops, max_padding=1000, workers=8
+        create_crops_from_extracted(
+            ann_file=ann_file,
+            input_dir=ex2,
+            output_dir=output_path,
+            tile_size=tile_size,
+            num_crops=num_samples,
+            workers=4,
+        )
         print("crops: done")
 
 
@@ -149,7 +162,6 @@ def _extract_images_and_mask_single(
                 # fill the polygon in-place on the mask
                 cv2.fillPoly(mask, [pts], color=mask_value)
 
-
     # Save with original filename stem
     fname = str(img_id)
     Image.fromarray(img_array).save(images_dir / f"{fname}.jpeg")
@@ -186,7 +198,6 @@ def collapse_to_binary_dataset(orig_dir, binary_dir, background_label=0, workers
     with _get_pool(len(all_masks_paths), workers) as p:
         p.map(mph, list(enumerate(chunk_list(all_masks_paths, workers))))
 
-
     # Copy images
     images_list = list(images_dir.glob("*.*"))
     progress = Progress(len(images_list), "COPY_IMAGE")
@@ -212,9 +223,8 @@ class MpCollapseHelper:
         for p in mask_paths:
             progress(i)
             mask = np.array(Image.open(p))
-            mask_binary = (mask != self._bg_label)
+            mask_binary = mask != self._bg_label
             _save_mask(mask_binary, self._bin_dir / "masks" / p.name)
-        
 
 
 def _save_mask(mask, path):
@@ -226,6 +236,10 @@ def _corres_mask_name(img_path):
     return f"{Path(img_path).stem}.png"
 
 
+@DEFAULT_SYNTH_CACHE.decorator(
+    output_arg="output_dir",
+    key_args=["ann_file", "tile_size", "num_crops", "max_padding"],
+)
 def create_crops_from_extracted(
     ann_file, input_dir, output_dir, tile_size, num_crops, max_padding=1000, workers=8
 ):
@@ -264,10 +278,16 @@ def create_crops_from_extracted(
     it = itertools.islice(itertools.cycle(image_files), num_crops)
     images = list(it)
 
-
     # progress = Progress(num_crops)
 
-    mpcrp = MpCropHelper(input_masks_dir, tile_size, max_padding, coco, output_images_dir, output_masks_dir)
+    mpcrp = MpCropHelper(
+        input_masks_dir,
+        tile_size,
+        max_padding,
+        coco,
+        output_images_dir,
+        output_masks_dir,
+    )
     with _get_pool(len(images), workers) as p:
         p.map(mpcrp, enumerate(chunk_list(images, workers)))
 
@@ -287,7 +307,15 @@ def create_crops_from_extracted(
 
 
 class MpCropHelper:
-    def __init__(self, input_masks_dir, tile_size, max_padding, coco, output_images_dir, output_masks_dir):
+    def __init__(
+        self,
+        input_masks_dir,
+        tile_size,
+        max_padding,
+        coco,
+        output_images_dir,
+        output_masks_dir,
+    ):
         self.input_masks_dir = input_masks_dir
         self.tile_size = tile_size
         self.max_padding = max_padding
@@ -297,17 +325,23 @@ class MpCropHelper:
 
     def __call__(self, i_and_chunk):
         chunk_id, paths = i_and_chunk
-        progress =Progress(len(paths), f"MPCrop {chunk_id}:")
+        progress = Progress(len(paths), f"MPCrop {chunk_id}:")
         for i, img_path in enumerate(paths):
             mask_path = self.input_masks_dir / _corres_mask_name(img_path)
 
             # Generate crop
             try:
                 crop_img, crop_mask, _ = _extract_single_crop(
-                    self.coco, img_path, mask_path, self.tile_size, max_padding=self.max_padding
+                    self.coco,
+                    img_path,
+                    mask_path,
+                    self.tile_size,
+                    max_padding=self.max_padding,
                 )
             except Exception as ex:
-                print(f"failure in generating crop for {img_path}, reason={ex}. ignoring")
+                print(
+                    f"failure in generating crop for {img_path}, reason={ex}. ignoring"
+                )
                 continue
             # Save with random filename
             img_fname = img_path.name
@@ -362,11 +396,13 @@ def show_extracted_dataset(d, n=8, img_id=None):
     res = []
     it = ims.glob("*")
     if img_id is not None:
+
         def _same_as_img_id(im_path):
             try:
                 return int(Path(im_path).stem) == int(img_id)
             except:
                 return False
+
         it = filter(_same_as_img_id, it)
 
     for im in islice(it, n):
