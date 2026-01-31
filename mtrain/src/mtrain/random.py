@@ -14,6 +14,11 @@ def many_random_start_points(background, n=50):
     ]
 
 
+def add_jitter_pixels(pixels):
+    sign = 1 if random_bool() else -1
+    return pixels + sign * random.randint(0, 20)
+
+
 def random_bool():
     return bool(random.getrandbits(1))
 

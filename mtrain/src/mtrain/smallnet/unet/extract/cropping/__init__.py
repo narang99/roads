@@ -1,9 +1,14 @@
 from PIL import Image
+import functools
 from typing import Optional, Literal
 from mtrain.tqdm import Progress
 from mtrain.chunk import chunk_list
 import random
-from mtrain.random import random_filename, random_true_one_three_times
+from mtrain.random import (
+    random_filename,
+    random_true_one_three_times,
+    add_jitter_pixels,
+)
 from mtrain.smallnet.tfms import PaddedResize
 from mtrain.smallnet.unet.extract.cropping import engulf, cut
 from pycocotools.coco import COCO
@@ -19,7 +24,7 @@ def create_crops_dataset(
     out_dir,
     images_to_sample=-1,
     max_pad_scale=4,
-    crops_per_image=10,
+    crops_per_image=5,
     crop_size=50,
     max_skew=3,
     mode: CropType = None,
@@ -128,11 +133,41 @@ def extract_crops_for_single_image(
         raise Exception(f"num samples has to be positive, passed = {num_samples}")
 
     # first add the sample without any skewing
-    res = [engulf.extract_single_crop(coco, img_path, mask_path, max_pad_scale, 1, 1)]
-    num_samples -= 1
 
-    # add skews
-    while num_samples > 0:
+    engulf_extractor = functools.partial(
+        engulf.extract_single_crop,
+        coco=coco,
+        img_path=img_path,
+        mask_path=mask_path,
+        max_pad_scale=max_pad_scale,
+    )
+    res = []
+    # one without skew for each
+    anns_len = engulf.get_num_annotations(coco, img_path)
+    for idx in range(anns_len):
+        res.append(
+            engulf_extractor(
+                horiz_skew=1,
+                vert_skew=1,
+                max_padding=add_jitter_pixels(100),
+                ann_idx=idx,
+            )
+        )
+
+    # one centered small for each
+    for idx in range(anns_len):
+        res.append(
+            engulf_extractor(
+                horiz_skew=1,
+                vert_skew=1,
+                max_padding=add_jitter_pixels(4000),
+                min_padding=add_jitter_pixels(2000),
+                ann_idx=idx,
+            ),
+        )
+
+    # add skews and randomisation
+    for _ in range(num_samples):
         horiz_skew = random.choice([-1, 1]) * random.uniform(1, max_skew)
         vert_skew = random.choice([-1, 1]) * random.uniform(1, max_skew)
 
@@ -151,5 +186,4 @@ def extract_crops_for_single_image(
                     coco, img_path, mask_path, max_pad_scale
                 )
             )
-        num_samples -= 1
     return res
