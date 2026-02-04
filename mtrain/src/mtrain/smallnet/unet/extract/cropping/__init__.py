@@ -29,6 +29,7 @@ def create_crops_dataset(
     max_skew=3,
     mode: CropType = None,
     workers: int = 4,
+    min_padding=None,
 ):
     coco = COCO(ann_file)
     in_images_dir, in_masks_dir = in_dir / "images", in_dir / "masks"
@@ -50,6 +51,7 @@ def create_crops_dataset(
         crop_size,
         out_images_dir,
         out_masks_dir,
+        min_padding,
     )
     with Pool(workers) as p:
         p.map(chunker, chunk_list(images, workers))
@@ -67,6 +69,7 @@ class ChunkCropper:
         crop_size,
         out_images_dir,
         out_masks_dir,
+        min_padding,
     ):
         self.in_masks_dir = in_masks_dir
         self.coco = coco
@@ -77,6 +80,7 @@ class ChunkCropper:
         self.crop_size = crop_size
         self.out_images_dir = out_images_dir
         self.out_masks_dir = out_masks_dir
+        self.min_padding = min_padding
 
     def __call__(self, img_paths):
         progress = Progress(len(img_paths), "Create Crops", 5)
@@ -124,6 +128,7 @@ def extract_crops_for_single_image(
     num_samples,
     max_skew=3,
     mode: CropType = None,
+    min_padding=None,
 ):
     # you should generally have a high number of num_samples, it helps
     # in providing a variety of data points
@@ -139,6 +144,7 @@ def extract_crops_for_single_image(
         coco=coco,
         img_path=img_path,
         mask_path=mask_path,
+        min_padding=min_padding,
         max_pad_scale=max_pad_scale,
     )
     res = []
