@@ -10,7 +10,7 @@ from mtrain.random import (
     add_jitter_pixels,
 )
 from mtrain.smallnet.tfms import PaddedResize
-from mtrain.smallnet.unet.extract.cropping import engulf, cut
+from mtrain.smallnet.unet.extract.cropping import engulf, cut, v2_engulf
 from pycocotools.coco import COCO
 from multiprocessing import Pool
 
@@ -30,6 +30,7 @@ def create_crops_dataset(
     mode: CropType = None,
     workers: int = 4,
     min_padding=None,
+    min_length=None,
 ):
     coco = COCO(ann_file)
     in_images_dir, in_masks_dir = in_dir / "images", in_dir / "masks"
@@ -52,6 +53,7 @@ def create_crops_dataset(
         out_images_dir,
         out_masks_dir,
         min_padding,
+        min_length,
     )
     with Pool(workers) as p:
         p.map(chunker, chunk_list(images, workers))
@@ -70,6 +72,7 @@ class ChunkCropper:
         out_images_dir,
         out_masks_dir,
         min_padding,
+        min_length,
     ):
         self.in_masks_dir = in_masks_dir
         self.coco = coco
@@ -81,6 +84,7 @@ class ChunkCropper:
         self.out_images_dir = out_images_dir
         self.out_masks_dir = out_masks_dir
         self.min_padding = min_padding
+        self.min_length = min_length
 
     def __call__(self, img_paths):
         progress = Progress(len(img_paths), "Create Crops", 5)
@@ -94,6 +98,7 @@ class ChunkCropper:
                 self.crops_per_image,
                 self.max_skew,
                 self.mode,
+                min_length=self.min_length,
             )
             resizer = PaddedResize(self.crop_size)
             for img, mask in res:
@@ -129,6 +134,7 @@ def extract_crops_for_single_image(
     max_skew=3,
     mode: CropType = None,
     min_padding=None,
+    min_length=None,
 ):
     # you should generally have a high number of num_samples, it helps
     # in providing a variety of data points
@@ -137,37 +143,36 @@ def extract_crops_for_single_image(
     if num_samples < 0:
         raise Exception(f"num samples has to be positive, passed = {num_samples}")
 
-    # first add the sample without any skewing
 
     engulf_extractor = functools.partial(
-        engulf.extract_single_crop,
+        v2_engulf.extract_single_crop,
         coco=coco,
         img_path=img_path,
         mask_path=mask_path,
-        min_padding=min_padding,
-        max_pad_scale=max_pad_scale,
     )
     res = []
+    # TODO: what is this?
+    # first add the sample without any skewing
     # one without skew for each
-    anns_len = engulf.get_num_annotations(coco, img_path)
-    for idx in range(anns_len):
-        res.append(
-            engulf_extractor(
-                horiz_skew=1,
-                vert_skew=1,
-                max_padding=add_jitter_pixels(100),
-                ann_idx=idx,
-            )
-        )
+    # for idx in range(anns_len):
+    #     res.append(
+    #         engulf_extractor(
+    #             horiz_skew=1,
+    #             vert_skew=1,
+    #             max_padding=add_jitter_pixels(100),
+    #             ann_idx=idx,
+    #             min_length=min_length,
+    #         )
+    #     )
 
+    anns_len = engulf.get_num_annotations(coco, img_path)
     # one centered small for each
     for idx in range(anns_len):
         res.append(
             engulf_extractor(
                 horiz_skew=1,
                 vert_skew=1,
-                max_padding=add_jitter_pixels(4000),
-                min_padding=add_jitter_pixels(2000),
+                max_padding=add_jitter_pixels(100),
                 ann_idx=idx,
             ),
         )
@@ -182,8 +187,10 @@ def extract_crops_for_single_image(
             mode = "cut" if random_true_one_three_times() else "engulf"
         if mode == "engulf":
             res.append(
-                engulf.extract_single_crop(
-                    coco, img_path, mask_path, max_pad_scale, horiz_skew, vert_skew
+                engulf_extractor(
+                    horiz_skew=horiz_skew,
+                    vert_skew=vert_skew,
+                    min_length=min_length,
                 )
             )
         else:
