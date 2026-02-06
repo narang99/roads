@@ -27,7 +27,7 @@ def _bytes2bit(data):
     return "".join([str(_access_bit(data, i)) for i in range(len(data) * 8)])
 
 
-def _rle_to_mask(rle: list[int], height: int, width: int) -> np.array:
+def rle_to_mask(rle: list[int], height: int, width: int) -> np.array:
     """
     Converts rle to image mask
     Args:
@@ -134,7 +134,7 @@ def extract_from_single_result(content) -> list[ExtractedFragment]:
     result = []
     for i, annot in enumerate(content["annotations"]):
         for res in annot["result"]:
-            mask = _rle_to_mask(
+            mask = rle_to_mask(
                 res["value"]["rle"], res["original_height"], res["original_width"]
             )
             crop, _ = crop_from_mask(img, mask)
