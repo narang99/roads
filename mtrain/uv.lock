@@ -2720,7 +2720,7 @@ requires-dist = [
     { name = "pycocotools", specifier = ">=2.0.11" },
     { name = "scikit-learn", specifier = ">=1.8.0" },
     { name = "tqdm", specifier = ">=4.67.1" },
-    { name = "transformers", extras = ["pytorch", "torch"], specifier = ">=4.57.6" },
+    { name = "transformers", extras = ["torch"], specifier = ">=4.57.6" },
     { name = "ultralytics", specifier = ">=8.4.6" },
 ]
 
