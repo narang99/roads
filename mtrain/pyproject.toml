@@ -22,7 +22,7 @@ dependencies = [
     "pycocotools>=2.0.11",
     "scikit-learn>=1.8.0",
     "tqdm>=4.67.1",
-    "transformers[pytorch,torch]>=4.57.6",
+    "transformers[torch]>=4.57.6",
     "ultralytics>=8.4.6",
 ]
 
