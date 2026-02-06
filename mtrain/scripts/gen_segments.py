@@ -17,9 +17,11 @@ def create_mapillary_segments(image_dir: Path, out_dir: Path, exts: tuple):
             continue
         # find the parent directory relative to root directory
         path_comp = img.parent.resolve().relative_to(image_dir.resolve())
+        dest = out_dir / path_comp / f"{img.stem}.json"
+        if dest.exists():
+            continue
         mask = mapillary.cached_predict(img)
         # maintain relative directory semantics
-        dest = out_dir / path_comp / f"{img.stem}.json"
         with open(dest, "w") as f:
             json.dump(mask.tolist(), f)
 
