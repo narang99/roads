@@ -1,0 +1,6 @@
+outs:
+- md5: 144c7468714aa58b4f0802a34d614483.dir
+  size: 28080935
+  nfiles: 497
+  hash: md5
+  path: v2_data
