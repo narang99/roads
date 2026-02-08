@@ -43,7 +43,7 @@ class SegFormerElevatedVegetation:
             SegformerImageProcessor,
             SegformerForSemanticSegmentation,
         )
-        model_dir = "/Users/hariomnarang/Desktop/personal/roads/datasets/elevated-vegetation/checkpoint-1200"
+        model_dir = "/Users/hariomnarang/Desktop/personal/roads/datasets/elevated-vegetation/checkpoint-3680"
         processor = SegformerImageProcessor.from_pretrained(
             "nvidia/segformer-b0-finetuned-cityscapes-1024-1024", do_reduce_labels=False
         )

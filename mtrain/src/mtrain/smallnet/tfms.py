@@ -66,9 +66,19 @@ def resize_and_pad_raw(img, target_size, pad_value=0):
         "pad_right": pad_right,
         "pad_top": pad_top,
         "pad_bottom": pad_bottom,
+        "target_size": target_size,
     }
 
     return padded, meta
+
+
+class UnpadException(Exception):
+    def __init__(self, message, *, mask=None, unpadded=None,meta=None, cause=None):
+        super().__init__(message)
+        self.mask = mask
+        self.unpadded = unpadded
+        self.meta = meta
+        self.cause = cause
 
 
 def unpad_and_resize_mask(mask, meta):
@@ -91,10 +101,14 @@ def unpad_and_resize_mask(mask, meta):
     orig_h = meta["orig_h"]
     orig_w = meta["orig_w"]
 
-    restored = cv2.resize(
-        unpadded,
-        (orig_w, orig_h),
-        interpolation=cv2.INTER_NEAREST,
-    )
+    try:
+        restored = cv2.resize(
+            unpadded,
+            (orig_w, orig_h),
+            interpolation=cv2.INTER_NEAREST,
+        )
+    except Exception as ex:
+        raise UnpadException("resize failure", meta=meta, mask=mask, unpadded=unpadded, cause=ex) from ex
+        # raise Exception(f"meta: {meta} orig_h={orig_h} orig_w={orig_w} shape={unpadded.shape}") from ex
 
     return restored

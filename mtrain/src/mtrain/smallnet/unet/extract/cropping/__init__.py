@@ -56,7 +56,7 @@ def create_crops_dataset(
         min_length,
     )
     with Pool(workers) as p:
-        p.map(chunker, chunk_list(images, workers))
+       p.map(chunker, chunk_list(images, workers))
 
 
 class ChunkCropper:
@@ -131,7 +131,7 @@ def extract_crops_for_single_image(
     mask_path,
     max_pad_scale,
     num_samples,
-    max_skew=3,
+    max_skew=5,
     mode: CropType = None,
     min_padding=None,
     min_length=None,
@@ -168,35 +168,50 @@ def extract_crops_for_single_image(
     anns_len = engulf.get_num_annotations(coco, img_path)
     # one centered small for each
     for idx in range(anns_len):
-        res.append(
-            engulf_extractor(
-                horiz_skew=1,
-                vert_skew=1,
-                max_padding=add_jitter_pixels(100),
-                ann_idx=idx,
-            ),
+        yield engulf_extractor(
+            horiz_skew=1,
+            vert_skew=1,
+            max_padding=add_jitter_pixels(100),
+            ann_idx=idx,
         )
 
-    # add skews and randomisation
+    # one for extreme skew for each id
+    skews = {
+        "h": [1, -10, 10],
+        "v": [1, -10, 10],
+    }
+    skew_min_length = max(min_length, 1000) if min_length is not None else 1000
+    for hskew in skews["h"]:
+        for vskew in skews["v"]:
+            if hskew == 1 and vskew == 1:
+                continue
+
+            for idx in range(anns_len):
+                yield engulf_extractor(
+                    horiz_skew=hskew,
+                    vert_skew=vskew,
+                    ann_idx=idx,
+                    min_length=skew_min_length,
+                    coords_fn=v2_engulf.skewed_coords,
+                )
+
+    # # add skews and randomisation
     for _ in range(num_samples):
-        horiz_skew = random.choice([-1, 1]) * random.uniform(1, max_skew)
-        vert_skew = random.choice([-1, 1]) * random.uniform(1, max_skew)
+        random_min_skew = random.randint(1, max_skew)
+        horiz_skew = random.choice([-1, 1]) * random.uniform(random_min_skew, max_skew)
+        vert_skew = random.choice([-1, 1]) * random.uniform(random_min_skew, max_skew)
 
         # cut with a probability of 1/3
         if mode is None:
             mode = "cut" if random_true_one_three_times() else "engulf"
         if mode == "engulf":
-            res.append(
-                engulf_extractor(
-                    horiz_skew=horiz_skew,
-                    vert_skew=vert_skew,
-                    min_length=min_length,
-                )
+            yield engulf_extractor(
+                horiz_skew=horiz_skew,
+                vert_skew=vert_skew,
+                min_length=min_length,
             )
         else:
-            res.append(
-                cut.extract_crop_by_cutting_object(
-                    coco, img_path, mask_path, max_pad_scale
-                )
+            yield cut.extract_crop_by_cutting_object(
+                coco, img_path, mask_path, max_pad_scale
             )
     return res
