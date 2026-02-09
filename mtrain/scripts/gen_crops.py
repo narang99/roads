@@ -16,7 +16,7 @@ if __name__ == '__main__':
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     coco = COCO(ANN_FILE)
     EXT_DIR = OUT_DIR / "EXT"
-    CROPS_DIR = OUT_DIR / "engulfed-higher-skewing-50"
+    CROPS_DIR = OUT_DIR / "engulfed-higher-skewing-50-whole-img"
     engulfed_dir = CROPS_DIR
 
 
@@ -39,4 +39,5 @@ if __name__ == '__main__':
         crop_size=CROP_SIZE,
         crops_per_image=10,
         max_pad_scale=10,
+        min_padding=3000,
     )

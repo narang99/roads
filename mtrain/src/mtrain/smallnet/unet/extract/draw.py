@@ -47,3 +47,12 @@ def _filter_only_img_id_in_path(it, img_id):
 
     it = filter(_same_as_img_id, it)
     return it
+
+
+def overlay_mask_on_img(img_arr, mask, alpha=0.4, color=[255,0,0]):
+    res = img_arr.copy()
+    res[mask] = (
+        (1 - alpha) * res[mask].astype(np.float32) +
+        alpha * np.array(color)
+    ).astype(np.uint8)
+    return res

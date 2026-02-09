@@ -1,4 +1,5 @@
 from PIL import Image
+import numpy as np
 import functools
 from typing import Optional, Literal
 from mtrain.tqdm import Progress
@@ -90,26 +91,33 @@ class ChunkCropper:
         progress = Progress(len(img_paths), "Create Crops", 5)
         for i, img_path in enumerate(img_paths):
             mask_path = self.in_masks_dir / f"{img_path.stem}.png"
-            res = extract_crops_for_single_image(
-                self.coco,
-                img_path,
-                mask_path,
-                self.max_pad_scale,
-                self.crops_per_image,
-                self.max_skew,
-                self.mode,
-                min_length=self.min_length,
-            )
+            img = np.array(Image.open(img_path))
+            mask = np.array(Image.open(mask_path))
             resizer = PaddedResize(self.crop_size)
-            for img, mask in res:
-                try:
-                    img, mask = resizer(img), resizer(mask)
-                except Exception as ex:
-                    print("image shape", img.shape, "mask shape", mask.shape)
-                    print("reason", str(ex))
-                    raise
-                _save_crop(img, mask, self.out_images_dir, self.out_masks_dir)
+            img, mask = resizer(img), resizer(mask)
+            _save_crop(img, mask, self.out_images_dir, self.out_masks_dir)
             progress(i)
+
+            # res = extract_crops_for_single_image(
+            #     self.coco,
+            #     img_path,
+            #     mask_path,
+            #     self.max_pad_scale,
+            #     self.crops_per_image,
+            #     self.max_skew,
+            #     self.mode,
+            #     min_length=self.min_length,
+            # )
+            # resizer = PaddedResize(self.crop_size)
+            # for img, mask in res:
+            #     try:
+            #         img, mask = resizer(img), resizer(mask)
+            #     except Exception as ex:
+            #         print("image shape", img.shape, "mask shape", mask.shape)
+            #         print("reason", str(ex))
+            #         raise
+            #     _save_crop(img, mask, self.out_images_dir, self.out_masks_dir)
+            # progress(i)
 
 
 def _arr_subset(arr, n):

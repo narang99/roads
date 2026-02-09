@@ -35,6 +35,8 @@ def resize_and_pad_raw(img, target_size, pad_value=0):
     new_w = int(round(w * scale))
     new_h = int(round(h * scale))
 
+    # TODO: might test with this
+    # blurred = cv2.GaussianBlur(img, ksize=(0, 0), sigmaX=3, sigmaY=3)
     resized = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
 
     # Compute padding
