@@ -1,0 +1,359 @@
+{
+    "selections": [
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/1063466365286241/image.jpg",
+            "r": 8,
+            "c": 13
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/269626184842101/image.jpg",
+            "r": 12,
+            "c": 17
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/269626184842101/image.jpg",
+            "r": 9,
+            "c": 3
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/269626184842101/image.jpg",
+            "r": 11,
+            "c": 19
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/269626184842101/image.jpg",
+            "r": 12,
+            "c": 15
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/269626184842101/image.jpg",
+            "r": 11,
+            "c": 18
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/269626184842101/image.jpg",
+            "r": 12,
+            "c": 18
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/315160246629281/image.jpg",
+            "r": 9,
+            "c": 5
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/315160246629281/image.jpg",
+            "r": 9,
+            "c": 3
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/144320970994811/image.jpg",
+            "r": 7,
+            "c": 5
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/144320970994811/image.jpg",
+            "r": 7,
+            "c": 6
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/798716214778226/image.jpg",
+            "r": 8,
+            "c": 8
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/798716214778226/image.jpg",
+            "r": 12,
+            "c": 17
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/798716214778226/image.jpg",
+            "r": 12,
+            "c": 18
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/798716214778226/image.jpg",
+            "r": 9,
+            "c": 11
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/514958029543931/image.jpg",
+            "r": 11,
+            "c": 15
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/514958029543931/image.jpg",
+            "r": 12,
+            "c": 14
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/757153534976075/image.jpg",
+            "r": 14,
+            "c": 1
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/757153534976075/image.jpg",
+            "r": 14,
+            "c": 2
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/757153534976075/image.jpg",
+            "r": 14,
+            "c": 3
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/139518418221716/image.jpg",
+            "r": 7,
+            "c": 15
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/139518418221716/image.jpg",
+            "r": 8,
+            "c": 18
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/393653915053077/image.jpg",
+            "r": 10,
+            "c": 3
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/393653915053077/image.jpg",
+            "r": 10,
+            "c": 1
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/393653915053077/image.jpg",
+            "r": 9,
+            "c": 3
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/393653915053077/image.jpg",
+            "r": 10,
+            "c": 2
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/840360290207521/image.jpg",
+            "r": 10,
+            "c": 5
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/840360290207521/image.jpg",
+            "r": 8,
+            "c": 17
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/840360290207521/image.jpg",
+            "r": 9,
+            "c": 8
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/840360290207521/image.jpg",
+            "r": 10,
+            "c": 3
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/840360290207521/image.jpg",
+            "r": 8,
+            "c": 18
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/840360290207521/image.jpg",
+            "r": 9,
+            "c": 7
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/316808383153070/image.jpg",
+            "r": 8,
+            "c": 16
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/463249064941489/image.jpg",
+            "r": 5,
+            "c": 10
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/365691138218268/image.jpg",
+            "r": 7,
+            "c": 16
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/1794282134457843/image.jpg",
+            "r": 13,
+            "c": 6
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/1794282134457843/image.jpg",
+            "r": 13,
+            "c": 7
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/1102231600254227/image.jpg",
+            "r": 10,
+            "c": 15
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/1102231600254227/image.jpg",
+            "r": 11,
+            "c": 19
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/1102231600254227/image.jpg",
+            "r": 10,
+            "c": 17
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/1102231600254227/image.jpg",
+            "r": 10,
+            "c": 16
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/1102231600254227/image.jpg",
+            "r": 10,
+            "c": 19
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/459607681773313/image.jpg",
+            "r": 8,
+            "c": 8
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/459607681773313/image.jpg",
+            "r": 9,
+            "c": 12
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/459607681773313/image.jpg",
+            "r": 8,
+            "c": 10
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/459607681773313/image.jpg",
+            "r": 8,
+            "c": 9
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/459607681773313/image.jpg",
+            "r": 9,
+            "c": 14
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/459607681773313/image.jpg",
+            "r": 9,
+            "c": 11
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/1199990993777444/image.jpg",
+            "r": 13,
+            "c": 3
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/1199990993777444/image.jpg",
+            "r": 12,
+            "c": 11
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/1199990993777444/image.jpg",
+            "r": 13,
+            "c": 4
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/1199990993777444/image.jpg",
+            "r": 11,
+            "c": 16
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/1163966157381398/image.jpg",
+            "r": 9,
+            "c": 9
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/511367493425560/image.jpg",
+            "r": 10,
+            "c": 18
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/3734117870034044/image.jpg",
+            "r": 7,
+            "c": 16
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/483253289676601/image.jpg",
+            "r": 10,
+            "c": 14
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/483253289676601/image.jpg",
+            "r": 7,
+            "c": 10
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/483253289676601/image.jpg",
+            "r": 8,
+            "c": 10
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/483253289676601/image.jpg",
+            "r": 10,
+            "c": 13
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/483253289676601/image.jpg",
+            "r": 3,
+            "c": 19
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/483253289676601/image.jpg",
+            "r": 8,
+            "c": 18
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/483253289676601/image.jpg",
+            "r": 11,
+            "c": 14
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/483253289676601/image.jpg",
+            "r": 8,
+            "c": 11
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/808596090034730/image.jpg",
+            "r": 13,
+            "c": 2
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/808596090034730/image.jpg",
+            "r": 12,
+            "c": 2
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/345173251842687/image.jpg",
+            "r": 4,
+            "c": 5
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/236879098235008/image.jpg",
+            "r": 8,
+            "c": 4
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/236879098235008/image.jpg",
+            "r": 7,
+            "c": 1
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/236879098235008/image.jpg",
+            "r": 6,
+            "c": 4
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/236879098235008/image.jpg",
+            "r": 7,
+            "c": 2
+        },
+        {
+            "img": "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/test-pos-samples/stridded_mapillary_neg_with_elev/scale=50_to_50/236879098235008/image.jpg",
+            "r": 8,
+            "c": 2
+        }
+    ]
+}
