@@ -1,0 +1,6 @@
+outs:
+- md5: 55aa1e34dbd1c6ec55dbd9ce53bf16ae.dir
+  size: 4085760034
+  nfiles: 281
+  hash: md5
+  path: experiments_before_19-02-2026
