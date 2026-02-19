@@ -13,6 +13,9 @@
       "path": "datasets",
     },
     {
+      "path": "mtrain",
+    },
+    {
       "path": "explog",
     }
   ]
