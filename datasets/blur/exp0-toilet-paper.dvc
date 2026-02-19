@@ -1,0 +1,6 @@
+outs:
+- md5: aa6c4a09e9cd48bc78cb781ec8074fdf.dir
+  size: 53299924
+  nfiles: 10
+  hash: md5
+  path: exp0-toilet-paper
