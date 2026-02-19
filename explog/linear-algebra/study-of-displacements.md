@@ -1,0 +1,6 @@
+If I look at linear algebra as a study of displacements, a vector is basically a direction and a magnitude—a displacement from a fixed frame. When you add two vectors, adding their components individually gives a new vector, which is essentially the same displacement you’d get if you performed the two displacements one after the other. This is geometrically apparent and seems to be an assumption of what I'm going to do here in the next work
+
+Now ChatGPT suggested that the commutativity of addition forces a feeling of flatness on the coordinate frame. That is, if you displace along V₁ and then along V₂, it will be the same as displacing along V₂ first and then along V₁. This means that the distance you travel on the grid in any direction for one cell is the same. It seems to preserve flatness. I need to read more about what structure is being preserved.  
+Before this, I was too focused on why addition works. This is most likely because I'm getting too abstract right now. It frustrates me, and I'm not sure if I'm the type of person who can work in such an abstract way. For now, let's start with concrete ground and see where we go.
+
+Let's take the question of how these are represented in different coordinate systems. I need to study this in different frames, like a given vector fixed at the origin. How does it look in different frames?
