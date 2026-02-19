@@ -1,6 +1,6 @@
 outs:
-- md5: 2784f5dc3db9bb4a75e744feaf274eb2.dir
-  size: 2624161755
-  nfiles: 2997
+- md5: 2adbaa2d87b019b56acef7a0e746d942.dir
+  size: 2624167903
+  nfiles: 2998
   hash: md5
   path: taco_with_seg_masks
