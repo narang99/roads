@@ -3,9 +3,22 @@ import numpy as np
 from pathlib import Path
 from PIL import Image
 import matplotlib.pyplot as plt
+import math
 
+def show(crops, figsize=None, ncols=2):
+    crops = list(crops)
+    rows = math.ceil(len(crops) / ncols)
+    if figsize is None:
+        figsize = (10 * rows, 10 * rows)
+        print("figsize", figsize)
+    _, axs = plt.subplots(rows, ncols, figsize=figsize)
+    axs = axs.flatten()
+    for i, c in enumerate(crops):
+        axs[i].imshow(c)
+    plt.tight_layout()
+    plt.show()
 
-def show_extracted_dataset(d, n=8, img_id=None, mode=None):
+def get_batch_from_extracted_dataset(d, n=8, img_id=None):
     ims, msks = d / "images", d / "masks"
     res = []
     it = ims.glob("*")
@@ -16,6 +29,10 @@ def show_extracted_dataset(d, n=8, img_id=None, mode=None):
     for im in ims[:n]:
         msk = msks / f"{im.stem}.png"
         res.append((im, msk))
+    return res
+
+def show_extracted_dataset(d, n=8, img_id=None, mode=None):
+    res = get_batch_from_extracted_dataset(d, n, img_id)
     _show_images_and_masks(n, res)
 
 

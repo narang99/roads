@@ -1,0 +1,5 @@
+outs:
+- md5: 85de5fbad66fb2c283269ec43930b768
+  size: 560578048
+  hash: md5
+  path: engulfed-bbox-levels-crops.tar

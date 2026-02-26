@@ -14,6 +14,7 @@ from mtrain.smallnet.tfms import PaddedResize
 from mtrain.smallnet.unet.extract.cropping import engulf, cut, v2_engulf
 from pycocotools.coco import COCO
 from multiprocessing import Pool
+from . import bbox_based
 
 
 CropType = Optional[Literal["engulf", "cut"]]
@@ -57,7 +58,7 @@ def create_crops_dataset(
         min_length,
     )
     with Pool(workers) as p:
-       p.map(chunker, chunk_list(images, workers))
+        p.map(chunker, chunk_list(images, workers))
 
 
 class ChunkCropper:
@@ -74,6 +75,7 @@ class ChunkCropper:
         out_masks_dir,
         min_padding,
         min_length,
+        bbox_heights=None,
     ):
         self.in_masks_dir = in_masks_dir
         self.coco = coco
@@ -86,38 +88,67 @@ class ChunkCropper:
         self.out_masks_dir = out_masks_dir
         self.min_padding = min_padding
         self.min_length = min_length
+        self.bbox_heights = (
+            list(range(10, crop_size, 5)) if bbox_heights is None else bbox_heights
+        )
 
     def __call__(self, img_paths):
+        success, failures = 0, 0
         progress = Progress(len(img_paths), "Create Crops", 5)
         for i, img_path in enumerate(img_paths):
             mask_path = self.in_masks_dir / f"{img_path.stem}.png"
             img = np.array(Image.open(img_path))
             mask = np.array(Image.open(mask_path))
-            resizer = PaddedResize(self.crop_size)
-            img, mask = resizer(img), resizer(mask)
-            _save_crop(img, mask, self.out_images_dir, self.out_masks_dir)
-            progress(i)
 
-            # res = extract_crops_for_single_image(
-            #     self.coco,
-            #     img_path,
-            #     mask_path,
-            #     self.max_pad_scale,
-            #     self.crops_per_image,
-            #     self.max_skew,
-            #     self.mode,
-            #     min_length=self.min_length,
-            # )
-            # resizer = PaddedResize(self.crop_size)
-            # for img, mask in res:
-            #     try:
-            #         img, mask = resizer(img), resizer(mask)
-            #     except Exception as ex:
-            #         print("image shape", img.shape, "mask shape", mask.shape)
-            #         print("reason", str(ex))
-            #         raise
-            #     _save_crop(img, mask, self.out_images_dir, self.out_masks_dir)
-            # progress(i)
+            fname_prefix = random_filename()
+            it = bbox_based.extract_crops_for_single_image(
+                img,
+                mask,
+                self.bbox_heights,
+                self.crop_size,
+                self.crop_size,
+            )
+            for idx, (rsz_img, rsz_mask) in enumerate(it):
+                if rsz_img is None:
+                    failures += 1
+                else:
+                    fname = f"{fname_prefix}_{idx}"
+                    _save_crop(
+                        rsz_img,
+                        rsz_mask,
+                        self.out_images_dir,
+                        self.out_masks_dir,
+                        fname=fname,
+                    )
+                    success += 1
+            progress(i)
+        print(f"Success: {success}")
+        print(f"Failures: {failures}")
+
+        # resizer = PaddedResize(self.crop_size)
+        # img, mask = resizer(img), resizer(mask)
+        # _save_crop(img, mask, self.out_images_dir, self.out_masks_dir)
+
+        # res = extract_crops_for_single_image(
+        #     self.coco,
+        #     img_path,
+        #     mask_path,
+        #     self.max_pad_scale,
+        #     self.crops_per_image,
+        #     self.max_skew,
+        #     self.mode,
+        #     min_length=self.min_length,
+        # )
+        # resizer = PaddedResize(self.crop_size)
+        # for img, mask in res:
+        #     try:
+        #         img, mask = resizer(img), resizer(mask)
+        #     except Exception as ex:
+        #         print("image shape", img.shape, "mask shape", mask.shape)
+        #         print("reason", str(ex))
+        #         raise
+        #     _save_crop(img, mask, self.out_images_dir, self.out_masks_dir)
+        # progress(i)
 
 
 def _arr_subset(arr, n):
@@ -127,8 +158,8 @@ def _arr_subset(arr, n):
         return arr[:n]
 
 
-def _save_crop(img, mask, out_images_dir, out_masks_dir):
-    fname = random_filename()
+def _save_crop(img, mask, out_images_dir, out_masks_dir, fname=None):
+    fname = random_filename() if fname is None else fname
     Image.fromarray(img, "RGB").save(out_images_dir / f"{fname}.jpeg")
     Image.fromarray(mask, "L").save(out_masks_dir / f"{fname}.png")
 
@@ -150,7 +181,6 @@ def extract_crops_for_single_image(
         return []
     if num_samples < 0:
         raise Exception(f"num samples has to be positive, passed = {num_samples}")
-
 
     engulf_extractor = functools.partial(
         v2_engulf.extract_single_crop,
