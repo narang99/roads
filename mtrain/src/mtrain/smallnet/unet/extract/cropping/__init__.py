@@ -33,6 +33,7 @@ def create_crops_dataset(
     workers: int = 4,
     min_padding=None,
     min_length=None,
+    bbox_heights=None,
 ):
     coco = COCO(ann_file)
     in_images_dir, in_masks_dir = in_dir / "images", in_dir / "masks"
@@ -56,6 +57,7 @@ def create_crops_dataset(
         out_masks_dir,
         min_padding,
         min_length,
+        bbox_heights,
     )
     with Pool(workers) as p:
         p.map(chunker, chunk_list(images, workers))
@@ -88,9 +90,16 @@ class ChunkCropper:
         self.out_masks_dir = out_masks_dir
         self.min_padding = min_padding
         self.min_length = min_length
+        small_crops = list(range(5, min(crop_size, 20), 3))
+        if crop_size > 20:
+            big_crops = list(range(20, crop_size, 5))
+        else:
+            big_crops = []
+        crop_levels = big_crops + small_crops
         self.bbox_heights = (
-            list(range(10, crop_size, 5)) if bbox_heights is None else bbox_heights
+            crop_levels if bbox_heights is None else bbox_heights
         )
+        print("Chunker: bbox heights:", self.bbox_heights)
 
     def __call__(self, img_paths):
         success, failures = 0, 0
