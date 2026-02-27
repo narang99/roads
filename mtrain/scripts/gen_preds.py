@@ -28,14 +28,14 @@ IMAGES = [
 ]
 
 # 50x50
-# MODEL_PATH = "/Users/hariomnarang/Desktop/gdrive-sync/garbage/experiments/T009-more-skew-engulf-50-resnet18-v2/log/export_iter_4.pkl"
-# SIZE = 50
-# DEST_DIR = Path("/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/small_positive_samples")
+MODEL_PATH = "/Users/hariomnarang/Desktop/personal/roads/datasets/models/iter_4_engulf_t009_more-skew-resnet18-v2.pkl"
+SIZE = 50
+DEST_DIR = Path("/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/small_positive_samples")
 
 # 200x200
-MODEL_PATH = "/Users/hariomnarang/Desktop/gdrive-sync/garbage/experiments/T009-engulf-3000-200/log/export_iter_4.pkl"
-SIZE = 200
-DEST_DIR = Path("/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/200_small_positive_samples")
+# MODEL_PATH = "/Users/hariomnarang/Desktop/gdrive-sync/garbage/experiments/T009-engulf-3000-200/log/export_iter_4.pkl"
+# SIZE = 200
+# DEST_DIR = Path("/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/200_small_positive_samples")
 
 def main():
     learner = load_learner(MODEL_PATH)

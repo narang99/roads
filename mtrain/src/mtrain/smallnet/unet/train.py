@@ -18,5 +18,10 @@ def get_dls(bs, log_path, tile_size, images_root, masks_root) -> SegmentationDat
         label_func=lambda o: masks_root / f"{o.stem}.png",
         codes=np.array(["background", "trash"]),
         item_tfms=Resize(tile_size),
+        num_workers=8,
+        pin_memory=True,
+        persistent_workers=True,
     )
+    dls.train.prefetch_factor = 4
+    dls.valid.prefetch_factor = 4
     return dls
