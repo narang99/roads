@@ -1,0 +1,5 @@
+outs:
+- md5: b8e515b2c998fce52942ed2fa2ff2dc9
+  size: 64822272
+  hash: md5
+  path: segs.tar
