@@ -1,0 +1,6 @@
+outs:
+- md5: 918dd42c2c8ee8545534d06f70efdb12.dir
+  size: 8814888
+  nfiles: 80
+  hash: md5
+  path: positive-samples
