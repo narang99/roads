@@ -1,0 +1,5 @@
+outs:
+- md5: 7332423252d41c2f4e83064992535895
+  size: 28483072
+  hash: md5
+  path: stridded_mapillary_neg_with_elev.tar

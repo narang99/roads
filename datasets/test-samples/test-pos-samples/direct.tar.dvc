@@ -1,0 +1,5 @@
+outs:
+- md5: d9b11b344655e85384a8c761a1669736
+  size: 37187072
+  hash: md5
+  path: direct.tar
