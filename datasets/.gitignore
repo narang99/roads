@@ -1,5 +1,4 @@
 /ignore
-/samples_mapillary
 /crops
 /mapillary
 /clean_samples
@@ -23,3 +22,5 @@
 /SM-001-on-taco/
 /T014-unet-mobile-net/
 /s013-mobilenet-unet-compare/
+/samples_mapillary.tar
+/samples_mapillary

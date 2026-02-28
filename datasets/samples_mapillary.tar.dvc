@@ -1,0 +1,5 @@
+outs:
+- md5: 4e680bb5fc69ed848f4b572136739124
+  size: 502193664
+  hash: md5
+  path: samples_mapillary.tar

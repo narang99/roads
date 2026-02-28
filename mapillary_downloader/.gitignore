@@ -11,3 +11,4 @@ wheels/
 
 mapillary_downloader.log
 /data
+/.env
