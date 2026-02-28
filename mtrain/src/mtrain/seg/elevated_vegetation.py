@@ -12,14 +12,14 @@ class Label(Enum):
     ELEVATED_VEGETATION = 1
 
 
-@functools.lru_cache(maxsize=1)
-def get_cached_seg_former() -> "SegFormerElevatedVegetation":
-    return SegFormerElevatedVegetation()
+@functools.lru_cache(maxsize=5)
+def get_cached_seg_former(segformer_path=None) -> "SegFormerElevatedVegetation":
+    return SegFormerElevatedVegetation(segformer_path)
 
 
 @functools.lru_cache(maxsize=40)
-def cached_predict(img_path) -> np.ndarray:
-    model = get_cached_seg_former()
+def cached_predict(img_path, seg_former_path=None) -> np.ndarray:
+    model = get_cached_seg_former(seg_former_path)
     return model.predict(img_path)
 
 
@@ -37,13 +37,14 @@ class SegFormerElevatedVegetation:
         cv2.imshow(orig)
     """
 
-    def __init__(self):
+    def __init__(self, model_dir=None):
         # hardcoded for now
         from transformers import (
             SegformerImageProcessor,
             SegformerForSemanticSegmentation,
         )
-        model_dir = "/Users/hariomnarang/Desktop/personal/roads/datasets/elevated-vegetation/checkpoint-3680"
+        if model_dir is None:
+            model_dir = "/Users/hariomnarang/Desktop/personal/roads/datasets/elevated-vegetation/checkpoint-3680"
         processor = SegformerImageProcessor.from_pretrained(
             "nvidia/segformer-b0-finetuned-cityscapes-1024-1024", do_reduce_labels=False
         )
