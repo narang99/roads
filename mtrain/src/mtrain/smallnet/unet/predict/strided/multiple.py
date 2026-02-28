@@ -1,7 +1,16 @@
+from dataclasses import dataclass
+from collections import defaultdict
 from itertools import batched, chain
 from PIL import Image
 import numpy as np
 from mtrain.smallnet.tile import split_image_into_tiles
+
+
+@dataclass
+class TileTag:
+    img_idx: int
+    stride: int
+    pos: tuple  # (y, x)
 
 
 def _do_batch(batch, learner):
@@ -11,7 +20,7 @@ def _do_batch(batch, learner):
     preds, _ = learner.get_preds(dl=tdl)
     masks = preds.argmax(dim=1)
 
-    return [(mask.numpy(), pos) for mask, (_, pos) in zip(masks, batch)]
+    return [(mask.numpy(), tag) for mask, (_, tag) in zip(masks, batch)]
 
 
 def predict_unet_only_mask(img_arr, sz, learner, bs):
@@ -28,8 +37,34 @@ def predict_unet_only_mask(img_arr, sz, learner, bs):
     return res
 
 
+def _strided_tiles(img_arr, tile_size, strides, img_idx):
+    all_strides = [(s, img_arr[s:, s:]) for s in strides]
+    for stride, strided in all_strides:
+        for arr, pos in split_image_into_tiles(strided, tile_size):
+            yield arr, TileTag(img_idx=img_idx, stride=stride, pos=pos)
+
+
+def _recombine_strided(tagged_masks, img_arr, tile_size, all_strides):
+    H, W = img_arr.shape[:2]
+
+    strided_masks = defaultdict(list)
+    for mask, tag in tagged_masks:
+        strided_masks[tag.stride].append((mask, tag.pos))
+
+    safe_fms = []
+    for stride in all_strides:
+        sh, sw = img_arr[stride:, stride:].shape[:2]
+        strided_mask = np.zeros((sh, sw), dtype=np.bool_)
+        for mask, (y, x) in strided_masks.get(stride, []):
+            ny, nx = min(y + tile_size, sh), min(x + tile_size, sw)
+            strided_mask[y:ny, x:nx] = mask[: ny - y, : nx - x].astype(bool)
+        safe_fms.append(_shift_mask(strided_mask, H, W, stride, stride))
+
+    return np.logical_or.reduce(safe_fms)
+
+
 def strided_predict_unet_only_mask(
-    img_arr,
+    img_arrs,
     tile_size,
     learner,
     strides=None,
@@ -37,20 +72,26 @@ def strided_predict_unet_only_mask(
 ):
     if strides is None:
         strides = []
-    strideds = [(0, img_arr.copy())]
-    for stride in strides:
-        strideds.append((stride, img_arr[stride:, stride:]))
-    fms = []
-    for stride, strided in strideds:
-        fm = predict_unet_only_mask(strided, tile_size, learner, bs)
-        fms.append((stride, fm))
-    H, W = img_arr.shape[:2]
+    strides = [0] + strides
 
-    safe_fms = []
-    for stride, mask in fms:
-        safe_fms.append(_shift_mask(mask, H, W, stride, stride))
-    full_mask = np.logical_or.reduce(safe_fms)
-    return full_mask
+    all_tiles = list(chain.from_iterable(
+        _strided_tiles(img_arr, tile_size, strides, img_idx)
+        for img_idx, img_arr in enumerate(img_arrs)
+    ))
+
+    batches = list(batched(all_tiles, bs))
+    all_results = list(chain.from_iterable(
+        _do_batch(batch, learner) for batch in batches
+    ))
+
+    img_by_tagged_masks = defaultdict(list)
+    for mask, tag in all_results:
+        img_by_tagged_masks[tag.img_idx].append((mask, tag))
+
+    return [
+        _recombine_strided(img_by_tagged_masks[i], img_arr, tile_size, strides)
+        for i, img_arr in enumerate(img_arrs)
+    ]
 
 
 def _shift_mask(mask, orig_h, orig_w, shift_y, shift_x):
