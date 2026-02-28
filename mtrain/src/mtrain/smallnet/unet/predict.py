@@ -1,4 +1,6 @@
 import cv2
+from itertools import batched, chain
+from PIL import Image
 from tqdm import tqdm
 import numpy as np
 from mtrain.smallnet.tile import split_image_into_tiles
@@ -51,13 +53,25 @@ def overlay_mask_on_img(img_arr, mask, alpha=0.4):
     ).astype(np.uint8)
     return res
 
+def _do_batch(batch, learner):
+    images = [Image.fromarray(arr) for (arr, _) in batch]
 
-def predict_unet_only_mask(img_arr, sz, learner):
+    tdl = learner.dls.test_dl(test_items=images, with_labels=False)
+    preds, _ = learner.get_preds(dl=tdl)
+    masks = preds.argmax(dim=1)
+
+    return [(mask.numpy(), pos) for mask, (_, pos) in zip(masks, batch)]
+
+
+def predict_unet_only_mask(img_arr, sz, learner, bs):
     arr_and_coord = split_image_into_tiles(img_arr, sz)
-    mask_and_coord = [
-        (learner.predict(arr)[0].numpy(), (y, x))
-        for (arr, (y, x)) in tqdm(arr_and_coord)
-    ]
+    mask_and_coord = list(chain.from_iterable((
+        _do_batch(batch, learner) for batch in tqdm(batched(arr_and_coord, bs))
+    )))
+    # mask_and_coord = [
+    #     (learner.predict(arr)[0].numpy(), (y, x))
+    #     for (arr, (y, x)) in tqdm(arr_and_coord)
+    # ]
     H, W = img_arr.shape[:2]
     res = np.zeros((H, W), dtype=np.bool)
     for mask, (y, x) in tqdm(mask_and_coord):
@@ -72,6 +86,7 @@ def strided_predict_unet_only_mask(
     tile_size,
     learner,
     strides=None,
+    bs=4,
 ):
     if strides is None:
         strides = []
@@ -80,7 +95,7 @@ def strided_predict_unet_only_mask(
         strideds.append((stride, img_arr[stride:, stride:]))
     fms = []
     for stride, strided in strideds:
-        fm = predict_unet_only_mask(strided, tile_size, learner)
+        fm = predict_unet_only_mask(strided, tile_size, learner, bs)
         fms.append((stride, fm))
     H, W = img_arr.shape[:2]
 

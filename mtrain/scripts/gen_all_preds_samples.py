@@ -16,7 +16,7 @@ import shutil
 from tqdm import tqdm
 
 
-def run_model_on_images(images, learner, sz, results_dir):
+def run_model_on_images(images, learner, sz, results_dir, bs):
     for im in tqdm(images):
         dest = mkdir(results_dir / im.stem)
         shutil.copy(im, dest / f"image{im.suffix}")
@@ -25,7 +25,7 @@ def run_model_on_images(images, learner, sz, results_dir):
         res_dest = dest / "res.jpg"
         if mask_dest.exists() and res_dest.exists():
             continue
-        mask = strided_predict_unet_only_mask(img, sz, learner, [50])
+        mask = strided_predict_unet_only_mask(img, sz, learner, [50], bs)
         # mask = predict_unet_only_mask(img, sz, learner)
         overlaid = overlay_mask_on_img(img, mask)
         Image.fromarray(mask, "L").save(dest / "mask.png")
@@ -50,5 +50,6 @@ learner100 = load_learner(
     "/Users/hariomnarang/Desktop/gdrive-sync/garbage/experiments/enguled-bbox-levels-crops-v3/log/export_iter_14.pkl"
 )
 SIZE = 100
+BATCH_SIZE = 256
 
-run_model_on_images(images, learner100, SIZE, INITIAL_RESULTS_DIR)
+run_model_on_images(images, learner100, SIZE, INITIAL_RESULTS_DIR, BATCH_SIZE)
