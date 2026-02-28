@@ -56,12 +56,15 @@ class SegFormerElevatedVegetation:
             # ignore_mismatched_sizes=True
         )
 
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.processor = processor
-        self.model = model
+        self.model = model.to(self.device)
 
     def _predict(self, pil_image):
         inputs = self.processor(images=pil_image, return_tensors="pt")
-        outputs = self.model(**inputs)
+        inputs = {k: v.to(self.device) for k, v in inputs.items()}
+        with torch.no_grad():
+            outputs = self.model(**inputs)
         logits = outputs.logits  # shape (batch_size, num_labels, height/4, width/4)
         upsampled_logits = torch.nn.functional.interpolate(
             logits,
@@ -70,7 +73,7 @@ class SegFormerElevatedVegetation:
             align_corners=False,
         )
         pred_seg = upsampled_logits.argmax(dim=1)[0]
-        return pred_seg.numpy()
+        return pred_seg.cpu().numpy()
 
     def predict_bgr_image(self, img):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)

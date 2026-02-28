@@ -112,8 +112,9 @@ class SegFormerMapillary:
         model = Mask2FormerForUniversalSegmentation.from_pretrained(
             "facebook/mask2former-swin-large-mapillary-vistas-semantic"
         )
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.processor = processor
-        self.model = model
+        self.model = model.to(self.device)
 
     def _predict(self, pil_image):
         img = pil_image
@@ -121,6 +122,7 @@ class SegFormerMapillary:
         h, w, _ = orig.shape
 
         inputs = self.processor(images=img, return_tensors="pt")
+        inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
         with torch.no_grad():
             outputs = self.model(**inputs)
@@ -129,7 +131,7 @@ class SegFormerMapillary:
         predicted_semantic_map = self.processor.post_process_semantic_segmentation(
             outputs, target_sizes=[img.size[::-1]]
         )[0]
-        return predicted_semantic_map.numpy()
+        return predicted_semantic_map.cpu().numpy()
 
 
     def predict_bgr_image(self, img):
