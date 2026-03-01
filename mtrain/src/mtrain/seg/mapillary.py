@@ -7,6 +7,7 @@ import torch
 import functools
 from enum import Enum
 import matplotlib.pyplot as plt
+from .draw import show_segmentation_pred
 
 
 
@@ -157,13 +158,6 @@ def get_mask_with_labels(pred, lbls: list[Label]):
     return mask
 
 
-def show_seg_mask(mask):
+def show_seg_mask(pred):
     label_by_name = {mem.value: mem.name for mem in Label}
-    plt.figure(figsize=(5, 5))
-    im = plt.imshow(mask, cmap="tab20", interpolation="nearest")
-    plt.colorbar(im, ticks=np.unique(mask))
-    plt.title("Segmentation Mask")
-    plt.axis("off")
-    plt.show()
-    for k, v in label_by_name.items():
-        print(f"{k:>20} -> {v}")
+    show_segmentation_pred(pred, label_by_name)

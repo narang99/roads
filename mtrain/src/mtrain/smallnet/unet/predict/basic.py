@@ -44,7 +44,7 @@ def predict_unet(img_path, sz, learner, alpha=0.4):
 
 def overlay_mask_on_img(img_arr, mask, alpha=0.4):
     if mask.dtype != "bool":
-        print(
+        raise Exception(
             f"WARN: mask dtype is {mask.dtype}. This can have adverse performance, please pass it astype(bool)"
         )
     res = img_arr.copy()

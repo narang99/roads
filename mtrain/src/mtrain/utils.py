@@ -7,8 +7,8 @@ import string
 import json
 
 
-def mkdir(p: Path):
-    p.mkdir(exist_ok=True, parents=True)
+def mkdir(p: Path | str):
+    Path(p).mkdir(exist_ok=True, parents=True)
     return p
 
 
