@@ -144,7 +144,7 @@ class LabelWidget:
     crop_pad   : context padding in pixels added around each bbox (default 40)
     """
 
-    def __init__(self, output_dir: str | Path, crop_pad: int = 40, theme: str = "Dark"):
+    def __init__(self, output_dir: str | Path, crop_pad: int = 100, theme: str = "Dark"):
         self._out_dir = Path(output_dir)
         self._crop_pad = crop_pad
         self._bg = _THEME_BG[theme]
@@ -186,14 +186,13 @@ class LabelWidget:
         self._out_crop = widgets.Output()
         self._out_full = widgets.Output()
 
-        self._alpha_slider = widgets.SelectionSlider(
-            options=[0.0, 0.2, 0.4, 0.8],
-            value=0.4,
-            description="Alpha:",
-            continuous_update=False,
-            layout=widgets.Layout(width="300px"),
+        self._overlay_toggle = widgets.ToggleButton(
+            value=True,
+            description="Overlay on",
+            icon="eye",
+            layout=widgets.Layout(width="120px"),
         )
-        self._alpha_slider.observe(lambda _: self._render(), names="value")
+        self._overlay_toggle.observe(lambda _: self._render(), names="value")
 
         self._btn_trash = widgets.Button(
             description="Trash (1)",
@@ -222,10 +221,10 @@ class LabelWidget:
 
         views = widgets.HBox([self._out_crop, self._out_full], layout=widgets.Layout(gap="12px"))
         btn_row = widgets.HBox(
-            [self._btn_trash, self._btn_other, self._btn_skip],
+            [self._btn_trash, self._btn_other, self._btn_skip, self._overlay_toggle],
             layout=widgets.Layout(gap="8px", margin="8px 0 0 0"),
         )
-        display(widgets.VBox([self._status, self._alpha_slider, views, btn_row]))
+        display(widgets.VBox([self._status, views, btn_row]))
 
     def _set_buttons(self, disabled: bool):
         for btn in (self._btn_trash, self._btn_other, self._btn_skip):
@@ -262,7 +261,7 @@ class LabelWidget:
             return
 
         bbox = self._bboxes[self._bbox_idx]
-        alpha = float(self._alpha_slider.value)
+        alpha = 0.4 if self._overlay_toggle.value else 0.0
         self._status.value = f"{self._name}  —  crop {self._bbox_idx + 1} / {len(self._bboxes)}"
 
         # Crop view: padded crop with bbox rectangle
@@ -270,15 +269,17 @@ class LabelWidget:
         crop_mask, _, _ = padded_crop(self._mask, bbox, self._crop_pad)
         crop_overlaid = overlay_mask_on_img(crop_img, crop_mask, alpha).copy()
         _HOT_PINK = (255, 59, 48)
-        cv2.rectangle(
-            crop_overlaid,
-            (bbox.x - x1c, bbox.y - y1c), (bbox.x2 - x1c, bbox.y2 - y1c),
-            _HOT_PINK, 1,
-        )
+        if self._overlay_toggle.value:
+            cv2.rectangle(
+                crop_overlaid,
+                (bbox.x - x1c, bbox.y - y1c), (bbox.x2 - x1c, bbox.y2 - y1c),
+                _HOT_PINK, 1,
+            )
 
         # Full image view: full overlay with bbox rectangle
         full_overlaid = overlay_mask_on_img(self._image, self._mask, alpha).copy()
-        cv2.rectangle(full_overlaid, (bbox.x, bbox.y), (bbox.x2, bbox.y2), _HOT_PINK, 5)
+        if self._overlay_toggle.value:
+            cv2.rectangle(full_overlaid, (bbox.x, bbox.y), (bbox.x2, bbox.y2), _HOT_PINK, 3)
 
         self._out_crop.clear_output(wait=True)
         with self._out_crop:
