@@ -29,6 +29,11 @@ _LABEL_FOLDER: dict[int, str] = {
     LABEL_UNKNOWN: "unknown",
 }
 
+_THEME_BG: dict[str, str] = {
+    "Dark": "#1e1e1e",
+    "Light": "#f5f5f5",
+}
+
 
 @dataclass
 class Bbox:
@@ -139,12 +144,15 @@ class LabelWidget:
     crop_pad   : context padding in pixels added around each bbox (default 40)
     """
 
-    def __init__(self, output_dir: str | Path, crop_pad: int = 40):
+    def __init__(self, output_dir: str | Path, crop_pad: int = 40, theme: str = "Dark"):
         self._out_dir = Path(output_dir)
         self._crop_pad = crop_pad
+        self._bg = _THEME_BG[theme]
 
         for sub in ("dataset", "crop_level/trash", "crop_level/other", "crop_level/unknown"):
             (self._out_dir / sub).mkdir(parents=True, exist_ok=True)
+
+        self._done: set[str] = self._load_done()
 
         # State — populated by ui()
         self._name: str = ""
@@ -209,6 +217,9 @@ class LabelWidget:
 
         self._status = widgets.Label(value="")
 
+        self._out_crop.layout.background = self._bg
+        self._out_full.layout.background = self._bg
+
         views = widgets.HBox([self._out_crop, self._out_full], layout=widgets.Layout(gap="12px"))
         btn_row = widgets.HBox(
             [self._btn_trash, self._btn_other, self._btn_skip],
@@ -219,6 +230,28 @@ class LabelWidget:
     def _set_buttons(self, disabled: bool):
         for btn in (self._btn_trash, self._btn_other, self._btn_skip):
             btn.disabled = disabled
+
+    # ------------------------------------------------------------------
+    # Done tracking
+    # ------------------------------------------------------------------
+
+    @property
+    def _done_file(self) -> Path:
+        return self._out_dir / "done_names.txt"
+
+    def _load_done(self) -> set[str]:
+        if self._done_file.exists():
+            return set(self._done_file.read_text().splitlines())
+        return set()
+
+    def _mark_done(self, name: str) -> None:
+        self._done.add(name)
+        with self._done_file.open("a") as f:
+            f.write(name + "\n")
+
+    def is_done(self, name: str) -> bool:
+        """Return True if this image name has already been fully labelled."""
+        return name in self._done
 
     # ------------------------------------------------------------------
     # Rendering
@@ -236,20 +269,25 @@ class LabelWidget:
         crop_img, y1c, x1c = padded_crop(self._image, bbox, self._crop_pad)
         crop_mask, _, _ = padded_crop(self._mask, bbox, self._crop_pad)
         crop_overlaid = overlay_mask_on_img(crop_img, crop_mask, alpha).copy()
+        _HOT_PINK = (255, 59, 48)
         cv2.rectangle(
             crop_overlaid,
             (bbox.x - x1c, bbox.y - y1c), (bbox.x2 - x1c, bbox.y2 - y1c),
-            (255, 255, 255), 1,
+            _HOT_PINK, 1,
         )
 
         # Full image view: full overlay with bbox rectangle
         full_overlaid = overlay_mask_on_img(self._image, self._mask, alpha).copy()
-        cv2.rectangle(full_overlaid, (bbox.x, bbox.y), (bbox.x2, bbox.y2), (255, 255, 255), 1)
+        cv2.rectangle(full_overlaid, (bbox.x, bbox.y), (bbox.x2, bbox.y2), _HOT_PINK, 5)
 
-        for out, arr in ((self._out_crop, crop_overlaid), (self._out_full, full_overlaid)):
-            out.clear_output(wait=True)
-            with out:
-                display(widgets.Image(value=arr_to_png_bytes(arr), format="png"))
+        self._out_crop.clear_output(wait=True)
+        with self._out_crop:
+            display(widgets.Image(value=arr_to_png_bytes(crop_overlaid), format="png",
+                                  layout=widgets.Layout(width="500px")))
+
+        self._out_full.clear_output(wait=True)
+        with self._out_full:
+            display(widgets.Image(value=arr_to_png_bytes(full_overlaid), format="png"))
 
     # ------------------------------------------------------------------
     # Button handler
@@ -294,6 +332,8 @@ class LabelWidget:
         Image.fromarray((self._mask.astype(np.uint8) * 255)).save(sample_dir / "in_mask.png")
         Image.fromarray(self._out_mask).save(sample_dir / "out_mask.png")
 
+        self._mark_done(self._name)
+
         for out in (self._out_crop, self._out_full):
             out.clear_output()
         self._status.value = f"✓ Saved — {self._name}  ({len(self._bboxes)} crops)"
@@ -313,5 +353,8 @@ def parse_crop_level_ds(root: Path):
     other = _label_iter("other")
     trash = _label_iter("trash")
     unknown = _label_iter("unknown")
-    for d, label in itertools.chain.from_iterable(zip(trash, other, unknown)):
+    zipped = itertools.zip_longest(trash, other, unknown)
+    it = itertools.chain.from_iterable(zipped)
+    it = filter(lambda p: p is not None, it)
+    for d, label in it:
         yield label, d / "image.jpg", d / "mask.png"
