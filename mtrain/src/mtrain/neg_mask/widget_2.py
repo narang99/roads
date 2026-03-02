@@ -1,4 +1,5 @@
 import io
+import itertools
 from pathlib import Path
 from dataclasses import dataclass
 
@@ -97,7 +98,7 @@ def apply_label_to_out_mask(
     In-place: write `label` onto `out_mask` for every foreground pixel of
     `mask` that lies within `bbox`.
     """
-    region_mask = mask[bbox.y:bbox.y2, bbox.x:bbox.x2]
+    region_mask = mask[bbox.y:bbox.y2, bbox.x:bbox.x2].astype(bool)
     out_mask[bbox.y:bbox.y2, bbox.x:bbox.x2][region_mask] = label
 
 
@@ -296,3 +297,21 @@ class LabelWidget:
         for out in (self._out_crop, self._out_full):
             out.clear_output()
         self._status.value = f"✓ Saved — {self._name}  ({len(self._bboxes)} crops)"
+
+
+
+def parse_top_level_ds(root: Path):
+    for d in root.glob("*"):
+        if not d.is_dir():
+            continue
+        yield d / "image.jpg", d / "in_mask.png", d / "out_mask.png"
+
+
+def parse_crop_level_ds(root: Path):
+    def _label_iter(label):
+        return zip((root / label).glob("*"), itertools.repeat(label))
+    other = _label_iter("other")
+    trash = _label_iter("trash")
+    unknown = _label_iter("unknown")
+    for d, label in itertools.chain.from_iterable(zip(trash, other, unknown)):
+        yield label, d / "image.jpg", d / "mask.png"

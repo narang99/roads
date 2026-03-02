@@ -37,8 +37,10 @@ class LabelWidget:
         self._alpha = overlay_alpha
         self._idx = 0
         self._current = None
+        self._displayed_name: str | None = None  # name of the last shown item
 
         self._setup_dirs()
+        self._done = self._load_done()
         self._build_ui()
         self._load_next()
 
@@ -49,6 +51,20 @@ class LabelWidget:
     def _setup_dirs(self):
         for sub in ("data/trash", "data/no", "skipped"):
             (self._out_dir / sub).mkdir(parents=True, exist_ok=True)
+
+    @property
+    def _done_file(self) -> Path:
+        return self._out_dir / "done_names.txt"
+
+    def _load_done(self) -> set[str]:
+        if self._done_file.exists():
+            return set(self._done_file.read_text().splitlines())
+        return set()
+
+    def _mark_done(self, name: str) -> None:
+        self._done.add(name)
+        with self._done_file.open("a") as f:
+            f.write(name + "\n")
 
     def _build_ui(self):
         self._out_image = widgets.Output()
@@ -96,16 +112,30 @@ class LabelWidget:
     # ------------------------------------------------------------------
 
     def _load_next(self):
-        try:
-            self._current = next(self._iter)
+        while True:
+            try:
+                name, image, mask = next(self._iter)
+            except StopIteration:
+                if self._displayed_name is not None:
+                    self._mark_done(self._displayed_name)
+                self._current = None
+                self._status.value = "✓ Done — no more items."
+                for out in (self._out_image, self._out_overlaid, self._out_mask):
+                    out.clear_output()
+                self._set_buttons(disabled=True)
+                return
+
+            if name in self._done:
+                continue
+
+            if self._displayed_name is not None and name != self._displayed_name:
+                self._mark_done(self._displayed_name)
+
+            self._displayed_name = name
+            self._current = (name, image, mask)
             self._render()
             self._set_buttons(disabled=False)
-        except StopIteration:
-            self._current = None
-            self._status.value = "✓ Done — no more items."
-            for out in (self._out_image, self._out_overlaid, self._out_mask):
-                out.clear_output()
-            self._set_buttons(disabled=True)
+            return
 
     def _set_buttons(self, disabled: bool):
         for btn in (self._btn_trash, self._btn_no, self._btn_skip):
