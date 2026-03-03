@@ -1,5 +1,6 @@
 import io
 import itertools
+import json
 from pathlib import Path
 from dataclasses import dataclass
 
@@ -28,6 +29,8 @@ _LABEL_FOLDER: dict[int, str] = {
     LABEL_OTHER: "other",
     LABEL_UNKNOWN: "unknown",
 }
+
+_BBOX_INSET = 5  # pixels the drawn rectangle is inset from the actual bbox edge
 
 _THEME_BG: dict[str, str] = {
     "Dark": "#1e1e1e",
@@ -75,7 +78,7 @@ def padded_crop(arr: np.ndarray, bbox: Bbox, pad: int) -> tuple[np.ndarray, int,
 
 def bbox_only_mask(mask: np.ndarray, bbox: Bbox, pad: int) -> np.ndarray:
     """
-    Return a uint8 binary mask (0 / 255) with padding, where ONLY pixels
+    Return a uint8 binary mask (0 / 1) with padding, where ONLY pixels
     that are (a) inside the bbox boundary AND (b) foreground in `mask` are kept.
     Foreground pixels in the padding region are zeroed out.
 
@@ -92,7 +95,7 @@ def bbox_only_mask(mask: np.ndarray, bbox: Bbox, pad: int) -> np.ndarray:
     rx1, rx2 = bbox.x - x1c, bbox.x2 - x1c
 
     result = np.zeros(crop.shape, dtype=np.uint8)
-    result[ry1:ry2, rx1:rx2] = crop[ry1:ry2, rx1:rx2].astype(bool).astype(np.uint8) * 255
+    result[ry1:ry2, rx1:rx2] = crop[ry1:ry2, rx1:rx2].astype(bool).astype(np.uint8)
     return result
 
 
@@ -136,7 +139,7 @@ class LabelWidget:
         {trash|other|unknown}/
           {image_name}_{crop_idx}/
             image.jpg    — padded crop of the original image
-            mask.png     — binary mask (0 / 255); only pixels inside bbox kept
+            mask.png     — binary mask (0 / 1); only pixels inside bbox kept
 
     Parameters
     ----------
@@ -144,7 +147,7 @@ class LabelWidget:
     crop_pad   : context padding in pixels added around each bbox (default 40)
     """
 
-    def __init__(self, output_dir: str | Path, crop_pad: int = 100, theme: str = "Dark"):
+    def __init__(self, output_dir: str | Path, crop_pad: int = 220, theme: str = "Dark"):
         self._out_dir = Path(output_dir)
         self._crop_pad = crop_pad
         self._bg = _THEME_BG[theme]
@@ -153,6 +156,7 @@ class LabelWidget:
             (self._out_dir / sub).mkdir(parents=True, exist_ok=True)
 
         self._done: set[str] = self._load_done()
+        self._skipped: set[str] = self._load_skipped()
 
         # State — populated by ui()
         self._name: str = ""
@@ -194,6 +198,14 @@ class LabelWidget:
         )
         self._overlay_toggle.observe(lambda _: self._render(), names="value")
 
+        self._bbox_toggle = widgets.ToggleButton(
+            value=True,
+            description="BBox on",
+            icon="square-o",
+            layout=widgets.Layout(width="120px"),
+        )
+        self._bbox_toggle.observe(lambda _: self._render(), names="value")
+
         self._btn_trash = widgets.Button(
             description="Trash (1)",
             button_style="danger",
@@ -210,9 +222,22 @@ class LabelWidget:
             layout=widgets.Layout(width="120px"),
         )
 
+        self._btn_other_all = widgets.Button(
+            description="Other All",
+            button_style="info",
+            layout=widgets.Layout(width="120px"),
+        )
+        self._btn_skip_all = widgets.Button(
+            description="Skip Image",
+            button_style="warning",
+            layout=widgets.Layout(width="120px"),
+        )
+
         self._btn_trash.on_click(lambda _: self._on_label(LABEL_TRASH))
         self._btn_other.on_click(lambda _: self._on_label(LABEL_OTHER))
         self._btn_skip.on_click(lambda _: self._on_label(LABEL_UNKNOWN))
+        self._btn_other_all.on_click(lambda _: self._on_other_all())
+        self._btn_skip_all.on_click(lambda _: self._on_skip_all())
 
         self._status = widgets.Label(value="")
 
@@ -220,14 +245,18 @@ class LabelWidget:
         self._out_full.layout.background = self._bg
 
         views = widgets.HBox([self._out_crop, self._out_full], layout=widgets.Layout(gap="12px"))
-        btn_row = widgets.HBox(
-            [self._btn_trash, self._btn_other, self._btn_skip, self._overlay_toggle],
+        toggle_row = widgets.HBox(
+            [self._overlay_toggle, self._bbox_toggle],
             layout=widgets.Layout(gap="8px", margin="8px 0 0 0"),
         )
-        display(widgets.VBox([self._status, views, btn_row]))
+        btn_row = widgets.HBox(
+            [self._btn_trash, self._btn_other, self._btn_skip, self._btn_other_all, self._btn_skip_all],
+            layout=widgets.Layout(gap="8px", margin="8px 0 0 0"),
+        )
+        display(widgets.VBox([toggle_row, btn_row, self._status, views]))
 
     def _set_buttons(self, disabled: bool):
-        for btn in (self._btn_trash, self._btn_other, self._btn_skip):
+        for btn in (self._btn_trash, self._btn_other, self._btn_skip, self._btn_other_all, self._btn_skip_all):
             btn.disabled = disabled
 
     # ------------------------------------------------------------------
@@ -252,12 +281,36 @@ class LabelWidget:
         """Return True if this image name has already been fully labelled."""
         return name in self._done
 
+    @property
+    def _skipped_file(self) -> Path:
+        return self._out_dir / "skipped_images.txt"
+
+    def _load_skipped(self) -> set[str]:
+        if self._skipped_file.exists():
+            return set(self._skipped_file.read_text().splitlines())
+        return set()
+
+    def _mark_skipped(self, name: str) -> None:
+        self._skipped.add(name)
+        with self._skipped_file.open("a") as f:
+            f.write(name + "\n")
+
+    def is_skipped(self, name: str) -> bool:
+        """Return True if this image was fully skipped via Skip Image."""
+        return name in self._skipped
+
     # ------------------------------------------------------------------
     # Rendering
     # ------------------------------------------------------------------
 
     def _render(self):
         if self._bbox_idx >= len(self._bboxes):
+            # self._status.value = f"{self._name}  —  DONE"
+            # alpha = 0.4 if self._overlay_toggle.value else 0.0
+            # full_overlaid = overlay_mask_on_img(self._image, self._mask, alpha).copy()
+            # self._out_full.clear_output(wait=True)
+            # with self._out_full:
+            #     display(widgets.Image(value=arr_to_png_bytes(full_overlaid), format="png"))
             return
 
         bbox = self._bboxes[self._bbox_idx]
@@ -268,23 +321,28 @@ class LabelWidget:
         crop_img, y1c, x1c = padded_crop(self._image, bbox, self._crop_pad)
         crop_mask, _, _ = padded_crop(self._mask, bbox, self._crop_pad)
         crop_overlaid = overlay_mask_on_img(crop_img, crop_mask, alpha).copy()
-        _HOT_PINK = (255, 59, 48)
-        if self._overlay_toggle.value:
+        full_overlaid = overlay_mask_on_img(self._image, self._mask, alpha).copy()
+
+        if self._bbox_toggle.value:
+            _HOT_PINK = (255, 105, 180)
+            inset = 0
             cv2.rectangle(
                 crop_overlaid,
-                (bbox.x - x1c, bbox.y - y1c), (bbox.x2 - x1c, bbox.y2 - y1c),
+                (bbox.x - x1c + inset, bbox.y - y1c + inset),
+                (bbox.x2 - x1c - inset, bbox.y2 - y1c - inset),
                 _HOT_PINK, 1,
             )
-
-        # Full image view: full overlay with bbox rectangle
-        full_overlaid = overlay_mask_on_img(self._image, self._mask, alpha).copy()
-        if self._overlay_toggle.value:
-            cv2.rectangle(full_overlaid, (bbox.x, bbox.y), (bbox.x2, bbox.y2), _HOT_PINK, 3)
+            cv2.rectangle(
+                full_overlaid,
+                (bbox.x + inset, bbox.y + inset),
+                (bbox.x2 - inset, bbox.y2 - inset),
+                _HOT_PINK, 1,
+            )
 
         self._out_crop.clear_output(wait=True)
         with self._out_crop:
             display(widgets.Image(value=arr_to_png_bytes(crop_overlaid), format="png",
-                                  layout=widgets.Layout(width="500px")))
+                                  layout=widgets.Layout(width="700px")))
 
         self._out_full.clear_output(wait=True)
         with self._out_full:
@@ -293,6 +351,21 @@ class LabelWidget:
     # ------------------------------------------------------------------
     # Button handler
     # ------------------------------------------------------------------
+
+    def _on_skip_all(self):
+        for bbox in self._bboxes[self._bbox_idx:]:
+            apply_label_to_out_mask(self._out_mask, self._mask, bbox, LABEL_UNKNOWN)
+            self._save_crop_level(bbox, LABEL_UNKNOWN)
+            self._bbox_idx += 1
+        self._mark_skipped(self._name)
+        self._finish()
+
+    def _on_other_all(self):
+        for bbox in self._bboxes[self._bbox_idx:]:
+            apply_label_to_out_mask(self._out_mask, self._mask, bbox, LABEL_OTHER)
+            self._save_crop_level(bbox, LABEL_OTHER)
+            self._bbox_idx += 1
+        self._finish()
 
     def _on_label(self, label: int):
         if self._bbox_idx >= len(self._bboxes):
@@ -317,11 +390,14 @@ class LabelWidget:
         sample_dir = self._out_dir / "crop_level" / folder / f"{self._name}_{self._bbox_idx}"
         sample_dir.mkdir(parents=True, exist_ok=True)
 
-        crop_img, _, _ = padded_crop(self._image, bbox, self._crop_pad)
+        crop_img, y1c, x1c = padded_crop(self._image, bbox, self._crop_pad)
         crop_mask = bbox_only_mask(self._mask, bbox, self._crop_pad)
 
         Image.fromarray(crop_img).save(sample_dir / "image.jpg")
         Image.fromarray(crop_mask).save(sample_dir / "mask.png")
+        (sample_dir / "meta.json").write_text(
+            json.dumps({"crop_origin": {"x": int(x1c), "y": int(y1c)}})
+        )
 
     def _finish(self):
         self._set_buttons(disabled=True)
@@ -330,7 +406,7 @@ class LabelWidget:
         sample_dir.mkdir(parents=True, exist_ok=True)
 
         Image.fromarray(self._image).save(sample_dir / "image.jpg")
-        Image.fromarray((self._mask.astype(np.uint8) * 255)).save(sample_dir / "in_mask.png")
+        Image.fromarray((self._mask.astype(np.uint8))).save(sample_dir / "in_mask.png")
         Image.fromarray(self._out_mask).save(sample_dir / "out_mask.png")
 
         self._mark_done(self._name)

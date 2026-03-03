@@ -1,4 +1,5 @@
 from itertools import batched, chain
+from tqdm import tqdm
 from PIL import Image
 import numpy as np
 from mtrain.smallnet.tile import split_image_into_tiles
@@ -17,7 +18,7 @@ def _do_batch(batch, learner):
 def predict_unet_only_mask(img_arr, sz, learner, bs):
     arr_and_coord = split_image_into_tiles(img_arr, sz)
     mask_and_coord = list(chain.from_iterable((
-        _do_batch(batch, learner) for batch in batched(arr_and_coord, bs)
+        _do_batch(batch, learner) for batch in tqdm(batched(arr_and_coord, bs))
     )))
     H, W = img_arr.shape[:2]
     res = np.zeros((H, W), dtype=np.bool)
