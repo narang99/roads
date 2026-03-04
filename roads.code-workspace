@@ -10,5 +10,8 @@
       "path": "explog",
     }
   ],
-  "settings": {}
+  "settings": {
+    "git.enabled": false,
+  },
+
 }

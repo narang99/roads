@@ -44,7 +44,7 @@ def random_filename(k, suffix=None):
     else:
         return f"{name}{suffix}"
 
-def show(crops, figsize=None, ncols=2):
+def show(crops, figsize=None, ncols=2, axis="on"):
     crops = list(crops)
     rows = math.ceil(len(crops) / ncols)
     if figsize is None:
@@ -57,6 +57,7 @@ def show(crops, figsize=None, ncols=2):
         axs = [axs]
     for i, c in enumerate(crops):
         axs[i].imshow(c)
+        axs[i].axis(axis)
     plt.tight_layout()
     plt.show()
 
