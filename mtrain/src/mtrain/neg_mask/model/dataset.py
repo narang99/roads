@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from PIL import Image
 from torchvision.transforms import v2
@@ -24,14 +25,11 @@ class MaskClassificationDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         dirs: list[Path | str],
-        norm_stats: tuple[list[float], list[float]],
         labels: list[
             str
         ],  # make sure these are always in the same order, new labels should be appended
         train: bool,
     ):
-        self.mean = torch.tensor(norm_stats[0])
-        self.std = torch.tensor(norm_stats[1])
         self.dirs = [d for d in map(Path, dirs) if _is_valid_dir(d)]
         self.labels = labels
         self.label_by_idx = {label: i for i, label in enumerate(self.labels)}
@@ -86,6 +84,15 @@ class MaskInferenceDataset(torch.utils.data.Dataset):
         mask = tv_tensors.Mask(torch.from_numpy(mask).unsqueeze(0))
         t_img, t_mask = self.tfms([img, mask])
         return torch.cat([t_img, t_mask], dim=0)
+
+
+def denormalize(combined: torch.Tensor):
+    """Return (img_np uint8 HxWx3, mask_np uint8 HxW) from a 4-channel tensor."""
+    mean = torch.tensor(MASK_DS_IMAGENET_MEAN).view(3, 1, 1)
+    std = torch.tensor(MASK_DS_IMAGENET_STD).view(3, 1, 1)
+    rgb = (combined[:3] * std + mean).clamp(0, 1)
+    img_np = (rgb.permute(1, 2, 0).numpy() * 255).astype(np.uint8)
+    return img_np, combined[3].numpy()
 
 
 def _label_func(d: Path):

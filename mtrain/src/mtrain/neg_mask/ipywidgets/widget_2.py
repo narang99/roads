@@ -1,4 +1,3 @@
-import io
 import itertools
 import json
 from pathlib import Path
@@ -10,6 +9,7 @@ from IPython.display import display
 from PIL import Image
 from mtrain.smallnet.unet.extract.draw import overlay_mask_on_img
 from mtrain.neg_mask.crops import Bbox, bbox_only_mask, padded_crop
+from mtrain.neg_mask.ipywidgets.utils import arr_to_png_bytes
 
 # ------------------------------------------------------------------
 # Label constants
@@ -85,14 +85,6 @@ def get_region_crops(img, mask, padding=20):
         yield Bbox(c1, r1, c2-c1, r2-r1)
 
 
-def arr_to_png_bytes(arr: np.ndarray) -> bytes:
-    """Encode a numpy array (uint8 RGB or grayscale) as PNG bytes."""
-    buf = io.BytesIO()
-    Image.fromarray(arr).save(buf, format="png")
-    buf.seek(0)
-    return buf.getvalue()
-
-
 # ==================================================================
 # Widget — UI only, delegates all data work to helpers above
 # ==================================================================
@@ -135,6 +127,7 @@ class LabelWidget:
 
         # State — populated by ui()
         self._name: str = ""
+        self._source_dir: Path | None = None
         self._bboxes: list[Bbox] = []
         self._image: np.ndarray = np.zeros((1, 1, 3), dtype=np.uint8)
         self._mask: np.ndarray = np.zeros((1, 1), dtype=bool)
@@ -145,9 +138,10 @@ class LabelWidget:
     # Public entry point
     # ------------------------------------------------------------------
 
-    def ui(self, name: str, bboxes: list[Bbox], image: np.ndarray, mask: np.ndarray):
+    def ui(self, source_dir: Path, bboxes: list[Bbox], image: np.ndarray, mask: np.ndarray):
         """Display the labeling UI for one image.  Call once per cell."""
-        self._name = name
+        self._name = source_dir.name
+        self._source_dir = source_dir
         self._bboxes = bboxes
         self._image = image
         self._mask = mask.astype(bool)
@@ -172,6 +166,14 @@ class LabelWidget:
             layout=widgets.Layout(width="120px"),
         )
         self._overlay_toggle.observe(lambda _: self._render(), names="value")
+
+        self._blend_toggle = widgets.ToggleButton(
+            value=False,
+            description="Full blend",
+            icon="adjust",
+            layout=widgets.Layout(width="120px"),
+        )
+        self._blend_toggle.observe(lambda _: self._render(), names="value")
 
         self._bbox_toggle = widgets.ToggleButton(
             value=True,
@@ -221,7 +223,7 @@ class LabelWidget:
 
         views = widgets.HBox([self._out_crop, self._out_full], layout=widgets.Layout(gap="12px"))
         toggle_row = widgets.HBox(
-            [self._overlay_toggle, self._bbox_toggle],
+            [self._overlay_toggle, self._blend_toggle, self._bbox_toggle],
             layout=widgets.Layout(gap="8px", margin="8px 0 0 0"),
         )
         btn_row = widgets.HBox(
@@ -289,14 +291,14 @@ class LabelWidget:
             return
 
         bbox = self._bboxes[self._bbox_idx]
-        alpha = 0.4 if self._overlay_toggle.value else 0.0
+        alpha = (1.0 if self._blend_toggle.value else 0.4) if self._overlay_toggle.value else 0.0
         self._status.value = f"{self._name}  —  crop {self._bbox_idx + 1} / {len(self._bboxes)}"
 
         # Crop view: padded crop with bbox rectangle
         crop_img, y1c, x1c = padded_crop(self._image, bbox, self._crop_pad)
-        crop_mask, _, _ = padded_crop(self._mask, bbox, self._crop_pad)
-        crop_overlaid = overlay_mask_on_img(crop_img, crop_mask, alpha).copy()
-        full_overlaid = overlay_mask_on_img(self._image, self._mask, alpha).copy()
+        crop_mask = bbox_only_mask(self._mask, bbox, self._crop_pad)
+        crop_overlaid = overlay_mask_on_img(crop_img, crop_mask.astype(bool), alpha).copy()
+        full_overlaid = overlay_mask_on_img(self._image, self._mask.astype(bool), alpha).copy()
 
         if self._bbox_toggle.value:
             _HOT_PINK = (255, 105, 180)
@@ -373,6 +375,10 @@ class LabelWidget:
         (sample_dir / "meta.json").write_text(
             json.dumps({"crop_origin": {"x": int(x1c), "y": int(y1c)}})
         )
+        if self._source_dir is not None:
+            symlink = sample_dir / "source_dir"
+            if not symlink.exists() and not symlink.is_symlink():
+                symlink.symlink_to(self._source_dir)
 
     def _finish(self):
         self._set_buttons(disabled=True)
