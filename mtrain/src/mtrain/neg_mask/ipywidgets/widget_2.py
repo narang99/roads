@@ -114,10 +114,11 @@ class LabelWidget:
     crop_pad   : context padding in pixels added around each bbox (default 40)
     """
 
-    def __init__(self, output_dir: str | Path, crop_pad: int = 220, theme: str = "Dark"):
+    def __init__(self, output_dir: str | Path, crop_pad: int = 220, theme: str = "Dark", learner=None):
         self._out_dir = Path(output_dir)
         self._crop_pad = crop_pad
         self._bg = _THEME_BG[theme]
+        self._learner = learner
 
         for sub in ("dataset", "crop_level/trash", "crop_level/other", "crop_level/unknown"):
             (self._out_dir / sub).mkdir(parents=True, exist_ok=True)
@@ -134,6 +135,10 @@ class LabelWidget:
         self._out_mask: np.ndarray = np.zeros((1, 1), dtype=np.uint8)
         self._bbox_idx: int = 0
 
+        # Model prediction cache: (label, prob) or None; keyed by bbox_idx
+        self._current_model_pred: tuple[int, float] | None = None
+        self._last_pred_idx: int = -1
+
     # ------------------------------------------------------------------
     # Public entry point
     # ------------------------------------------------------------------
@@ -147,6 +152,8 @@ class LabelWidget:
         self._mask = mask.astype(bool)
         self._out_mask = np.zeros(mask.shape, dtype=np.uint8)
         self._bbox_idx = 0
+        self._current_model_pred = None
+        self._last_pred_idx = -1
 
         self._build_ui()
         self._render()
@@ -217,6 +224,7 @@ class LabelWidget:
         self._btn_skip_all.on_click(lambda _: self._on_skip_all())
 
         self._status = widgets.Label(value="")
+        self._model_status = widgets.Label(value="")
 
         self._out_crop.layout.background = self._bg
         self._out_full.layout.background = self._bg
@@ -230,7 +238,7 @@ class LabelWidget:
             [self._btn_trash, self._btn_other, self._btn_skip, self._btn_other_all, self._btn_skip_all],
             layout=widgets.Layout(gap="8px", margin="8px 0 0 0"),
         )
-        display(widgets.VBox([toggle_row, btn_row, self._status, views]))
+        display(widgets.VBox([toggle_row, btn_row, self._status, self._model_status, views]))
 
     def _set_buttons(self, disabled: bool):
         for btn in (self._btn_trash, self._btn_other, self._btn_skip, self._btn_other_all, self._btn_skip_all):
@@ -277,6 +285,19 @@ class LabelWidget:
         return name in self._skipped
 
     # ------------------------------------------------------------------
+    # Model prediction
+    # ------------------------------------------------------------------
+
+    def _run_model_pred(self, crop_img: np.ndarray, crop_mask: np.ndarray) -> tuple[int, float]:
+        from mtrain.neg_mask.model.predict import run_inference
+        all_probs = run_inference(self._learner, [(crop_img, crop_mask)])  # [1, C]
+        class_idx = all_probs[0].argmax().item()
+        prob = all_probs[0, int(class_idx)].item()
+        # trash_pred_idx=0 matches the default in predict_trash
+        label = LABEL_TRASH if class_idx == 0 else LABEL_OTHER
+        return label, prob
+
+    # ------------------------------------------------------------------
     # Rendering
     # ------------------------------------------------------------------
 
@@ -297,6 +318,17 @@ class LabelWidget:
         # Crop view: padded crop with bbox rectangle
         crop_img, y1c, x1c = padded_crop(self._image, bbox, self._crop_pad)
         crop_mask = bbox_only_mask(self._mask, bbox, self._crop_pad)
+
+        # Model prediction (cached per bbox so toggles don't re-run inference)
+        if self._learner is not None and self._bbox_idx != self._last_pred_idx:
+            self._current_model_pred = self._run_model_pred(crop_img, crop_mask)
+            self._last_pred_idx = self._bbox_idx
+        if self._learner is not None and self._current_model_pred is not None:
+            pred_label, pred_prob = self._current_model_pred
+            pred_name = "Trash" if pred_label == LABEL_TRASH else "Other"
+            self._model_status.value = f"Model: {pred_name}  ({pred_prob:.2f})"
+        else:
+            self._model_status.value = ""
         crop_overlaid = overlay_mask_on_img(crop_img, crop_mask.astype(bool), alpha).copy()
         full_overlaid = overlay_mask_on_img(self._image, self._mask.astype(bool), alpha).copy()
 
@@ -372,9 +404,13 @@ class LabelWidget:
 
         Image.fromarray(crop_img).save(sample_dir / "image.jpg")
         Image.fromarray(crop_mask).save(sample_dir / "mask.png")
-        (sample_dir / "meta.json").write_text(
-            json.dumps({"crop_origin": {"x": int(x1c), "y": int(y1c)}})
-        )
+        meta: dict = {"crop_origin": {"x": int(x1c), "y": int(y1c)}}
+        if self._current_model_pred is not None:
+            pred_label, pred_prob = self._current_model_pred
+            meta["model_pred"] = {"label": pred_label, "prob": round(pred_prob, 4)}
+            if pred_label != label:
+                meta["model_disagreement"] = True
+        (sample_dir / "meta.json").write_text(json.dumps(meta))
         if self._source_dir is not None:
             symlink = sample_dir / "source_dir"
             if not symlink.exists() and not symlink.is_symlink():

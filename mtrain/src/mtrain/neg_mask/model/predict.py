@@ -5,7 +5,8 @@ from fastai.vision.all import default_device
 from mtrain.neg_mask.crops import get_crops_for_image
 
 
-def predict_trash(learn, img_mask_pairs, trash_pred_idx=0, threshold=0.25, device=None):
+def run_inference(learn, img_mask_pairs, device=None) -> torch.Tensor:
+    """Return softmax probabilities for all classes, shape [N, C]."""
     from torch.utils.data import DataLoader as TorchDataLoader
 
     if device is None:
@@ -24,10 +25,13 @@ def predict_trash(learn, img_mask_pairs, trash_pred_idx=0, threshold=0.25, devic
             probs = learn.model(x).softmax(dim=1)
             all_probs.append(probs.cpu())
 
-    all_probs = torch.cat(all_probs)
+    return torch.cat(all_probs)
+
+
+def predict_trash(learn, img_mask_pairs, trash_pred_idx=0, threshold=0.25, device=None):
+    all_probs = run_inference(learn, img_mask_pairs, device=device)
     trash_probs = all_probs[:, trash_pred_idx]
     predicted_trash = trash_probs >= threshold
-
     return predicted_trash, trash_probs
 
 
