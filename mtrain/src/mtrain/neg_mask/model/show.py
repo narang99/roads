@@ -16,6 +16,7 @@ show_confusion_matrix_using_preds(all_valid_preds, all_valid_targs, labels=LABEL
 worst_idxs = [i for _, i in train_losses_and_idxes[:32]]
 show_images(train_ds, worst_idxs, all_train_preds, labels=LABELS, title="Worst train losses")
 """
+from mtrain.smallnet.unet.extract.draw import overlay_mask_on_img
 
 from collections import defaultdict
 
@@ -28,6 +29,7 @@ from fastai.vision.all import default_device
 from torch.utils.data import DataLoader as TorchDataLoader
 
 from .dataset import MaskClassificationDataset, _label_func
+from mtrain.utils import show
 
 
 def get_preds_for_ds(learn, ds, bs=4, device=None):
@@ -129,7 +131,7 @@ def show_images(dataset, idxs, preds, labels, title, nrows=4):
     plt.show()
 
 
-def show_single(d, data_point, overlay_mask_on_img, show):
+def show_single(d, data_point):
     orig_img = plt.imread(str(d / "image.jpg"))
     orig_mask = plt.imread(str(d / "mask.png"))
     tf_img = denormalize(data_point[0][:3].permute(1, 2, 0))

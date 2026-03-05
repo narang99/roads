@@ -18,6 +18,8 @@ MASK_DS_EVAL_TFMS = v2.Compose(
     ]
 )
 
+
+
 class MaskClassificationDataset(torch.utils.data.Dataset):
     IMAGENET_MEAN = [0.485, 0.456, 0.406]
     IMAGENET_STD = [0.229, 0.224, 0.225]
@@ -70,6 +72,16 @@ class MaskClassificationDataset(torch.utils.data.Dataset):
         label_tensor = torch.Tensor([label_idx]).squeeze()
 
         return (combined, label_tensor)
+
+    @classmethod
+    def denormalize(cls, combined: torch.Tensor):
+        """Return (img_np uint8 HxWx3, mask_np uint8 HxW) from a 4-channel tensor."""
+        mean = torch.tensor(MASK_DS_IMAGENET_MEAN).view(3, 1, 1)
+        std = torch.tensor(MASK_DS_IMAGENET_STD).view(3, 1, 1)
+        rgb = (combined[:3] * std + mean).clamp(0, 1)
+        img_np = (rgb.permute(1, 2, 0).numpy() * 255).astype(np.uint8)
+        return img_np, combined[3].numpy()
+
 
 class MaskInferenceDataset(torch.utils.data.Dataset):
     IMAGENET_MEAN = [0.485, 0.456, 0.406]

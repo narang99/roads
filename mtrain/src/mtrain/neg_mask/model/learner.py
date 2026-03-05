@@ -9,7 +9,7 @@ def load_our_learner(dls, model_arch, weights, labels, pth_path=None):
         F1Score,
         ProgressCallback,
     )
-    loss_func = CrossEntropyLossFlat(weight=weights) if weights else CrossEntropyLossFlat()
+    loss_func = CrossEntropyLossFlat(weight=weights) if weights is not None else CrossEntropyLossFlat()
 
     learn = vision_learner(
         dls,
