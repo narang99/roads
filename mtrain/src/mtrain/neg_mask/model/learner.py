@@ -1,10 +1,7 @@
 from mtrain.neg_mask.model.dataset import MaskClassificationDataset
 from pathlib import Path
 
-LABELS = ["trash", "other"]
-
-
-def load_our_learner(dls, model_arch, weights, pth_path=None):
+def load_our_learner(dls, model_arch, weights, labels, pth_path=None):
     from fastai.vision.all import (
         vision_learner,
         CrossEntropyLossFlat,
@@ -12,14 +9,15 @@ def load_our_learner(dls, model_arch, weights, pth_path=None):
         F1Score,
         ProgressCallback,
     )
+    loss_func = CrossEntropyLossFlat(weight=weights) if weights else CrossEntropyLossFlat()
 
     learn = vision_learner(
         dls,
         model_arch,
         n_in=4,
         metrics=[accuracy, F1Score(average="macro")],
-        loss_func=CrossEntropyLossFlat(weight=weights),
-        n_out=len(LABELS),
+        loss_func=loss_func,
+        n_out=len(labels),
         normalize=False,
     )
     learn = learn.remove_cb(ProgressCallback)
@@ -31,12 +29,12 @@ def load_our_learner(dls, model_arch, weights, pth_path=None):
     return learn
 
 
-def dummy_dls(device=None):
+def dummy_dls(labels, device=None):
     from fastai.vision.all import DataLoaders, default_device
 
     if device is None:
         device = default_device()
     return DataLoaders.from_dsets(
-        MaskClassificationDataset([], LABELS, True),
-        MaskClassificationDataset([], LABELS, False),
+        MaskClassificationDataset([], labels, True),
+        MaskClassificationDataset([], labels, False),
     )

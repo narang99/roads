@@ -60,9 +60,13 @@ class MaskClassificationDataset(torch.utils.data.Dataset):
         t_img, t_mask = self.tfms([img, mask])
         combined = torch.cat([t_img, t_mask], dim=0)
 
-        # label tensor
-        label = _label_func(d)
-        label_idx = self.label_by_idx[label]
+        # label tensor — if mask is empty after transforms, force label to 0
+        area = t_mask.sum()
+        if area < 5:
+            label_idx = 0
+        else:
+            label = _label_func(d)
+            label_idx = self.label_by_idx[label]
         label_tensor = torch.Tensor([label_idx]).squeeze()
 
         return (combined, label_tensor)
