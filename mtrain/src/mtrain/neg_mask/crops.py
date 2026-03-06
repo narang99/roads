@@ -55,6 +55,54 @@ def get_region_crops(img, mask, padding=20):
         yield Bbox(c1, r1, c2 - c1, r2 - r1)
 
 
+@dataclass
+class Paddings:
+    left: int
+    right: int
+    top: int
+    bottom: int
+
+
+def configurable_padded_crop(arr: np.ndarray, bbox: Bbox, pads: Paddings) -> tuple[np.ndarray, int, int]:
+    """
+    Crop `arr` around `bbox` with `pad` pixels on each side, clamped to array bounds.
+
+    Returns
+    -------
+    crop   : the cropped sub-array (view, not a copy)
+    y1c    : actual top row used  (needed to map bbox coords into crop space)
+    x1c    : actual left col used
+    """
+    H, W = arr.shape[:2]
+    y1c = max(0, bbox.y - pads.top)
+    y2c = min(H, bbox.y2 + pads.bottom)
+    x1c = max(0, bbox.x - pads.left)
+    x2c = min(W, bbox.x2 + pads.right)
+    return arr[y1c:y2c, x1c:x2c], y1c, x1c
+
+def configurable_bbox_only_mask(mask: np.ndarray, bbox: Bbox, pads: Paddings) -> np.ndarray:
+    """
+    Return a uint8 binary mask (0 / 1) with padding, where ONLY pixels
+    that are (a) inside the bbox boundary AND (b) foreground in `mask` are kept.
+    Foreground pixels in the padding region are zeroed out.
+
+    Parameters
+    ----------
+    mask : bool or uint8 array, shape (H, W)
+    bbox : bounding box
+    pad  : context padding in pixels
+    """
+    crop, y1c, x1c = configurable_padded_crop(mask, bbox, pads)
+
+    # Local bbox coordinates inside the padded crop
+    ry1, ry2 = bbox.y - y1c, bbox.y2 - y1c
+    rx1, rx2 = bbox.x - x1c, bbox.x2 - x1c
+
+    result = np.zeros(crop.shape, dtype=np.uint8)
+    result[ry1:ry2, rx1:rx2] = crop[ry1:ry2, rx1:rx2].astype(bool).astype(np.uint8)
+    return result
+
+
 def padded_crop(arr: np.ndarray, bbox: Bbox, pad: int) -> tuple[np.ndarray, int, int]:
     """
     Crop `arr` around `bbox` with `pad` pixels on each side, clamped to array bounds.

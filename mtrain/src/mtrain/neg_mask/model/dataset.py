@@ -62,10 +62,17 @@ class GenericMaskClassificationDataset(torch.utils.data.Dataset):
         train_tfms = v2.Compose(
             [
                 ResizeIfLarger(200),
+                #   v2.RandomCrop(130),  # Instead of CenterCrop
+                #   v2.RandomHorizontalFlip(p=0.5),
+                #   v2.RandomVerticalFlip(p=0.3),  # Good for aerial/satellite data
+                #   v2.RandomRotation(degrees=15),  # Moderate rotation
+                #   v2.RandomPerspective(distortion_scale=0.1, p=0.3),
+                #   v2.RandomAffine(degrees=10, translate=(0.1, 0.1), scale=(0.9, 1.1)),
                 # v2.Resize(200, antialias=True),
                 # v2.RandomCrop(130),
                 # v2.RandomHorizontalFlip(p=0.5),
                 v2.CenterCrop(130),
+                # v2.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
                 v2.ToDtype(torch.float32, scale=True),
                 v2.Normalize(mean=MASK_DS_IMAGENET_MEAN, std=MASK_DS_IMAGENET_STD),
                 v2.ToPureTensor(),

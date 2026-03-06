@@ -8,6 +8,7 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "albumentations>=2.0.8",
     "cachetools>=6.2.4",
     "clip",
     "datasets>=4.5.0",

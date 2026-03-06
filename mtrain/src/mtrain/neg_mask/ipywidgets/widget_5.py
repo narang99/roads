@@ -1,3 +1,4 @@
+from mtrain.neg_mask.leveled_cropping import CropLevelSample
 import itertools
 import json
 from pathlib import Path
@@ -136,7 +137,7 @@ class LabelWidget:
         self._bbox_idx: int = 0
 
         # Model prediction cache: (label, prob) or None; keyed by bbox_idx
-        self._current_model_pred: tuple[int, float] | None = None
+        self._current_model_pred = None
         self._last_pred_idx: int = -1
 
     # ------------------------------------------------------------------
@@ -149,7 +150,7 @@ class LabelWidget:
         self._source_dir = source_dir
         self._bboxes = bboxes
         self._image = image
-        self._mask = mask.astype(bool)
+        self._mask = mask
         self._out_mask = np.zeros(mask.shape, dtype=np.uint8)
         self._bbox_idx = 0
         self._current_model_pred = None
@@ -165,6 +166,7 @@ class LabelWidget:
     def _build_ui(self):
         self._out_crop = widgets.Output()
         self._out_full = widgets.Output()
+        self._out_model_input = widgets.Output()
 
         self._overlay_toggle = widgets.ToggleButton(
             value=True,
@@ -189,6 +191,14 @@ class LabelWidget:
             layout=widgets.Layout(width="120px"),
         )
         self._bbox_toggle.observe(lambda _: self._render(), names="value")
+
+        self._model_input_toggle = widgets.ToggleButton(
+            value=False,
+            description="Model Input",
+            icon="cog",
+            layout=widgets.Layout(width="120px"),
+        )
+        self._model_input_toggle.observe(lambda _: self._render(), names="value")
 
         self._btn_trash = widgets.Button(
             description="Trash (1)",
@@ -228,17 +238,24 @@ class LabelWidget:
 
         self._out_crop.layout.background = self._bg
         self._out_full.layout.background = self._bg
+        self._out_model_input.layout.background = self._bg
 
-        views = widgets.HBox([self._out_crop, self._out_full], layout=widgets.Layout(gap="12px"))
+        # Create tabbed view
+        main_view = widgets.HBox([self._out_crop, self._out_full], layout=widgets.Layout(gap="12px"))
+        model_input_view = self._out_model_input
+        
+        # Use conditional display based on toggle
+        self._views_container = widgets.VBox()
+        
         toggle_row = widgets.HBox(
-            [self._overlay_toggle, self._blend_toggle, self._bbox_toggle],
+            [self._overlay_toggle, self._blend_toggle, self._bbox_toggle, self._model_input_toggle],
             layout=widgets.Layout(gap="8px", margin="8px 0 0 0"),
         )
         btn_row = widgets.HBox(
             [self._btn_trash, self._btn_other, self._btn_skip, self._btn_other_all, self._btn_skip_all],
             layout=widgets.Layout(gap="8px", margin="8px 0 0 0"),
         )
-        display(widgets.VBox([toggle_row, btn_row, self._status, self._model_status, views]))
+        display(widgets.VBox([toggle_row, btn_row, self._status, self._model_status, self._views_container]))
 
     def _set_buttons(self, disabled: bool):
         for btn in (self._btn_trash, self._btn_other, self._btn_skip, self._btn_other_all, self._btn_skip_all):
@@ -288,14 +305,24 @@ class LabelWidget:
     # Model prediction
     # ------------------------------------------------------------------
 
-    def _run_model_pred(self, crop_img: np.ndarray, crop_mask: np.ndarray, bbox) -> tuple[int, float]:
-        from mtrain.neg_mask.model.predict import run_inference
-        all_probs = run_inference(self._learner, [(crop_img, crop_mask, bbox)])  # [1, C]
+    def _run_model_pred(self, crop_img: np.ndarray, crop_mask: np.ndarray):
+        from mtrain.neg_mask.model.predict import run_inference, _prepare_12_channel_tensor
+        from mtrain.neg_mask.crops import Bbox
+        
+        # For 12-channel model, we need to pass (image, mask, bbox) format
+        # Since we have a crop, we need to reconstruct the bbox relative to full image
+        bbox = self._bboxes[self._bbox_idx]  # Current bbox being processed
+        crop_data = [(self._image, self._mask, bbox)]  # Full image + mask + bbox
+        
+        # Store the 12-channel tensor for visualization
+        self._current_model_tensor = _prepare_12_channel_tensor(self._image, self._mask, bbox)
+        
+        all_probs = run_inference(self._learner, crop_data)  # [1, C]
         class_idx = all_probs[0].argmax().item()
         prob = all_probs[0, int(class_idx)].item()
-        # trash_pred_idx=0 matches the default in predict_trash
+        # trash_pred_idx=1 for new 12-channel model (LABELS = ["other", "trash"])
         label = LABEL_TRASH if class_idx == 1 else LABEL_OTHER
-        return label, prob
+        return label, prob, all_probs
 
     # ------------------------------------------------------------------
     # Rendering
@@ -321,14 +348,15 @@ class LabelWidget:
 
         # Model prediction (cached per bbox so toggles don't re-run inference)
         if self._learner is not None and self._bbox_idx != self._last_pred_idx:
-            self._current_model_pred = self._run_model_pred(crop_img, crop_mask, self._bboxes[self._bbox_idx])
+            self._current_model_pred = self._run_model_pred(crop_img, crop_mask)
             self._last_pred_idx = self._bbox_idx
         if self._learner is not None and self._current_model_pred is not None:
-            pred_label, pred_prob = self._current_model_pred
+            pred_label, pred_prob, all_probs = self._current_model_pred
             pred_name = "Trash" if pred_label == LABEL_TRASH else "Other"
-            self._model_status.value = f"Model: {pred_name}  ({pred_prob:.2f})"
+            self._model_status.value = f"Model: {pred_name}  ({all_probs[0][0]:.2f} {all_probs[0][1]:.2f})"
         else:
             self._model_status.value = ""
+        
         crop_overlaid = overlay_mask_on_img(crop_img, crop_mask.astype(bool), alpha).copy()
         full_overlaid = overlay_mask_on_img(self._image, self._mask.astype(bool), alpha).copy()
 
@@ -348,14 +376,48 @@ class LabelWidget:
                 _HOT_PINK, 1,
             )
 
-        self._out_crop.clear_output(wait=True)
-        with self._out_crop:
-            display(widgets.Image(value=arr_to_png_bytes(crop_overlaid), format="png",
-                                  layout=widgets.Layout(width="700px")))
+        # Update views based on toggle
+        self._views_container.children = []
+        
+        if self._model_input_toggle.value:
+            # Show model input visualization
+            self._render_model_input()
+            self._views_container.children = [self._out_model_input]
+        else:
+            # Show normal crop/full views
+            self._out_crop.clear_output(wait=True)
+            with self._out_crop:
+                display(widgets.Image(value=arr_to_png_bytes(crop_overlaid), format="png",
+                                      layout=widgets.Layout(width="700px")))
 
-        self._out_full.clear_output(wait=True)
-        with self._out_full:
-            display(widgets.Image(value=arr_to_png_bytes(full_overlaid), format="png"))
+            self._out_full.clear_output(wait=True)
+            with self._out_full:
+                display(widgets.Image(value=arr_to_png_bytes(full_overlaid), format="png"))
+            
+            main_view = widgets.HBox([self._out_crop, self._out_full], layout=widgets.Layout(gap="12px"))
+            self._views_container.children = [main_view]
+
+    def _render_model_input(self):
+        """Render the 12-channel model input visualization."""
+        if not hasattr(self, '_current_model_tensor') or self._current_model_tensor is None:
+            self._out_model_input.clear_output(wait=True)
+            with self._out_model_input:
+                display(widgets.HTML(value="<p>No model input available. Run prediction first.</p>"))
+            return
+        
+        from mtrain.neg_mask.model.dataset import GenericMaskClassificationDataset
+        from mtrain.utils import it_chain, show
+        
+        # Denormalize the 12-channel tensor to get images and masks
+        img_and_masks = GenericMaskClassificationDataset.denormalize(self._current_model_tensor, 3)
+        
+        self._out_model_input.clear_output(wait=True)
+        with self._out_model_input:
+            display(widgets.HTML(value="<h3>12-Channel Model Input</h3>"))
+            display(widgets.HTML(value="<p>Tight crop (20px) | Medium crop (130px) | Full image | Corresponding masks</p>"))
+            
+            # Show all 6 components (3 images + 3 masks)
+            show(it_chain(img_and_masks), (15, 15), ncols=3, axis="off")
 
     # ------------------------------------------------------------------
     # Button handler
@@ -399,14 +461,32 @@ class LabelWidget:
         sample_dir = self._out_dir / "crop_level" / folder / f"{self._name}_{self._bbox_idx}"
         sample_dir.mkdir(parents=True, exist_ok=True)
 
-        crop_img, y1c, x1c = padded_crop(self._image, bbox, self._crop_pad)
-        crop_mask = bbox_only_mask(self._mask, bbox, self._crop_pad)
+        # Save full source image
+        Image.fromarray(self._image).save(sample_dir / "image.jpg")
+        
+        # Create single region mask in full image coordinates
+        single_region_mask = np.zeros(self._mask.shape, dtype=np.uint8)
+        region_mask = self._mask[bbox.y:bbox.y2, bbox.x:bbox.x2].astype(bool)
+        single_region_mask[bbox.y:bbox.y2, bbox.x:bbox.x2][region_mask] = 255
+        Image.fromarray(single_region_mask).save(sample_dir / "mask.png")
+        
+        # Save original full mask from source if available
+        if self._source_dir is not None:
+            original_mask_path = self._source_dir / "mask.png"
+            if original_mask_path.exists():
+                import shutil
+                shutil.copy2(original_mask_path, sample_dir / "original_mask.png")
+            else:
+                # Fallback: save current mask as original_mask
+                Image.fromarray((self._mask.astype(np.uint8) * 255)).save(sample_dir / "original_mask.png")
+        else:
+            # Fallback: save current mask as original_mask  
+            Image.fromarray((self._mask.astype(np.uint8) * 255)).save(sample_dir / "original_mask.png")
 
-        Image.fromarray(crop_img).save(sample_dir / "image.jpg")
-        Image.fromarray(crop_mask).save(sample_dir / "mask.png")
-        meta: dict = {"crop_origin": {"x": int(x1c), "y": int(y1c)}}
+        # Save metadata
+        meta: dict = {}
         if self._current_model_pred is not None:
-            pred_label, pred_prob = self._current_model_pred
+            pred_label, pred_prob, _ = self._current_model_pred
             meta["model_pred"] = {"label": pred_label, "prob": round(pred_prob, 4)}
             if pred_label != label:
                 meta["model_disagreement"] = True
