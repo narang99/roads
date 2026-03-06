@@ -294,7 +294,7 @@ class LabelWidget:
         class_idx = all_probs[0].argmax().item()
         prob = all_probs[0, int(class_idx)].item()
         # trash_pred_idx=0 matches the default in predict_trash
-        label = LABEL_TRASH if class_idx == 0 else LABEL_OTHER
+        label = LABEL_TRASH if class_idx == 1 else LABEL_OTHER
         return label, prob
 
     # ------------------------------------------------------------------

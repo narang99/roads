@@ -99,7 +99,8 @@ def show_confusion_matrix(learn, dataloader, labels):
     preds, targs = learn.get_preds(dl=dataloader)
     pred_classes = preds.argmax(dim=1)
     cm = confusion_matrix(targs, pred_classes)
-    ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels).plot()
+    fig, ax = plt.subplots(figsize=(30,30))
+    ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels).plot(ax=ax)
 
 
 def show_confusion_matrix_using_preds(preds, targs, labels):

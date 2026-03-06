@@ -59,6 +59,19 @@ def show_image_with_boxes(coco: COCO, taco_dir: Path, img_info: dict) -> None:
     plt.show()
 
 
+def get_images_with_all_categories(coco: COCO, category_ids: list[int]) -> list[dict]:
+    """
+    Returns image info dicts for images that contain annotations from ALL of the given category IDs.
+    """
+    required = set(category_ids)
+    img_to_cats: dict[int, set[int]] = {}
+    for ann in coco.dataset["annotations"]:
+        img_to_cats.setdefault(ann["image_id"], set()).add(ann["category_id"])
+
+    img_ids = [img_id for img_id, cats in img_to_cats.items() if required.issubset(cats)]
+    return coco.loadImgs(img_ids)
+
+
 def get_images_with_multiple_classes(coco: COCO) -> list[dict]:
     """
     Returns a list of image info dicts for images that contain annotations
@@ -74,3 +87,5 @@ def get_images_with_multiple_classes(coco: COCO) -> list[dict]:
         img_id for img_id, cats in img_to_cats.items() if len(cats) > 1
     ]
     return coco.loadImgs(multi_class_img_ids)
+
+

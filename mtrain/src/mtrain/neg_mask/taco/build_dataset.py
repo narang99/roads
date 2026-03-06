@@ -9,7 +9,6 @@ import numpy as np
 from pycocotools.coco import COCO
 
 from .extract import load_image, anns_to_mask
-from .query import get_images_with_multiple_classes
 
 
 @dataclass
@@ -34,7 +33,7 @@ def iter_taco_samples(
     """
     taco_dir = Path(taco_dir)
 
-    for img_info in get_images_with_multiple_classes(coco):
+    for img_info in coco.loadImgs(coco.getImgIds()):
         img_id = img_info["id"]
         try:
             img_array = load_image(taco_dir / img_info["file_name"])
@@ -49,7 +48,7 @@ def iter_taco_samples(
         for ann in anns:
             mask = anns_to_mask([ann], h, w)
             mask_resized = cv2.resize(mask, (size, size), interpolation=cv2.INTER_NEAREST)
-            cat_name = coco.loadCats([ann["category_id"]])[0]["name"]
+            cat_name = coco.loadCats([ann["category_id"]])[0]["supercategory"]
             yield TacoSample(
                 image=img_resized,
                 mask=mask_resized,
