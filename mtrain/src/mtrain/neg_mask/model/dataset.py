@@ -1,5 +1,6 @@
 from typing import Callable
-import itertools
+from mtrain.utils import mkdir
+from tqdm import tqdm
 import json
 import numpy as np
 import torch
@@ -23,6 +24,21 @@ MASK_DS_EVAL_TFMS = v2.Compose(
     ]
 )
 
+class ResizeIfLarger:
+    def __init__(self, size: int):
+        self.size = size
+        self.resize = v2.Resize(size, antialias=True)
+
+    def __call__(self, img_and_mask):
+        img, mask = img_and_mask
+        h, w = img.shape[-2], img.shape[-1]
+        if h > self.size or w > self.size:
+            img = self.resize(img)
+        h, w = mask.shape[-2], mask.shape[-1]
+        if h > self.size or w > self.size:
+            mask = self.resize(mask)
+        return img, mask
+
 
 class GenericMaskClassificationDataset(torch.utils.data.Dataset):
     IMAGENET_MEAN = [0.485, 0.456, 0.406]
@@ -38,14 +54,15 @@ class GenericMaskClassificationDataset(torch.utils.data.Dataset):
         pairs_per_dir: int,
         get_pairs: Callable[[Path], list[tuple[np.ndarray, np.ndarray]]],
     ):
-        self.dirs = [d for d in map(Path, dirs) if _is_valid_dir(d)]
+        self.dirs = [d for d in map(Path, dirs)]
         self.labels = labels
         self.label_by_idx = {label: i for i, label in enumerate(self.labels)}
         self.pairs_per_dir = pairs_per_dir
         self.get_pairs = get_pairs
         train_tfms = v2.Compose(
             [
-                v2.Resize(200, antialias=True),
+                ResizeIfLarger(200),
+                # v2.Resize(200, antialias=True),
                 # v2.RandomCrop(130),
                 # v2.RandomHorizontalFlip(p=0.5),
                 v2.CenterCrop(130),
@@ -67,25 +84,24 @@ class GenericMaskClassificationDataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
         d = self.dirs[index]
 
-        img = tv_tensors.Image(Image.open(d / "image.jpg").convert("RGB"))
-        mask = tv_tensors.Mask(Image.open(d / "mask.png").convert("L"))
-        print("oriignal size", img.shape, mask.shape)
         pairs = self.get_pairs(d)
         pairs = [
             (
-                tv_tensors.Image(torch.Tensor(image).permute(2, 0, 1)),
-                tv_tensors.Mask(torch.Tensor(mask.reshape(1, *mask.shape))),
+                tv_tensors.Image(torch.from_numpy(image).permute(2, 0, 1)),
+                tv_tensors.Mask(torch.from_numpy(mask.reshape(1, *mask.shape))),
             )
             for image, mask in pairs
         ]
-        for img, mask in pairs:
-            print("before", img.shape, mask.shape)
-        t_pairs = itertools.chain.from_iterable(
-            [self.tfms(p) for p in pairs]
-        )
-        for t_img, t_mask in t_pairs:
-            print("img", t_img.shape, "mask", t_mask.shape)
-        combined = torch.cat(list(t_pairs), dim=0)
+        t_images, t_masks= [], []
+        for p in pairs:
+            t_img, t_mask = self.tfms(p)
+            t_images.append(t_img)
+            t_masks.append(t_mask)
+        t_res = []
+        t_res.extend(t_images)
+        t_res.extend(t_masks)
+
+        combined = torch.cat(t_res, dim=0)
 
         label = _label_func(d)
         label_idx = self.label_by_idx[label]
@@ -97,14 +113,17 @@ class GenericMaskClassificationDataset(torch.utils.data.Dataset):
     def denormalize(
         cls, combined: torch.Tensor, pairs_per_dir: int = 1
     ) -> list[tuple[np.ndarray, np.ndarray]]:
+        # Layout: [rgb0, rgb1, ..., mask0, mask1, ...]
+        # all images first (3 channels each), then all masks (1 channel each)
         mean = torch.tensor(MASK_DS_IMAGENET_MEAN).view(3, 1, 1)
         std = torch.tensor(MASK_DS_IMAGENET_STD).view(3, 1, 1)
         result = []
         for i in range(pairs_per_dir):
-            rgb = (combined[i * 4 : i * 4 + 3] * std + mean).clamp(0, 1)
+            rgb = (combined[i * 3 : i * 3 + 3] * std + mean).clamp(0, 1)
             img_np = (rgb.permute(1, 2, 0).numpy() * 255).astype(np.uint8)
-            result.append((img_np, combined[i * 4 + 3].numpy()))
+            result.append((img_np, combined[pairs_per_dir * 3 + i].numpy()))
         return result
+
 
 
 class MaskClassificationDataset(torch.utils.data.Dataset):
@@ -270,108 +289,19 @@ def _is_valid_dir(direc: Path):
     return valid
 
 
-class ResizeIfLarger:
-    def __init__(self, size: int):
-        self.size = size
-        self.resize = v2.Resize(size, antialias=True)
-
-    def __call__(self, img_and_mask):
-        img, mask = img_and_mask
-        h, w = img.shape[-2], img.shape[-1]
-        if h > self.size or w > self.size:
-            img = self.resize(img)
-        h, w = mask.shape[-2], mask.shape[-1]
-        if h > self.size or w > self.size:
-            mask = self.resize(mask)
-        return img, mask
+def persist_dataset_to_cache(ds, cache_dir):
+    direc = mkdir(cache_dir)
+    for i, (x, y) in tqdm(enumerate(ds)):
+        torch.save((x, y), direc / f"{i}.pt")
 
 
-class GenericMaskClassificationDataset(torch.utils.data.Dataset):
-    IMAGENET_MEAN = [0.485, 0.456, 0.406]
-    IMAGENET_STD = [0.229, 0.224, 0.225]
-
-    def __init__(
-        self,
-        dirs: list[Path | str],
-        labels: list[
-            str
-        ],  # make sure these are always in the same order, new labels should be appended
-        train: bool,
-        pairs_per_dir: int,
-        get_pairs: Callable[[Path], list[tuple[np.ndarray, np.ndarray]]],
-    ):
-        self.dirs = [d for d in map(Path, dirs) if _is_valid_dir(d)]
-        self.labels = labels
-        self.label_by_idx = {label: i for i, label in enumerate(self.labels)}
-        self.pairs_per_dir = pairs_per_dir
-        self.get_pairs = get_pairs
-        train_tfms = v2.Compose(
-            [
-                ResizeIfLarger(200),
-                # v2.Resize(200, antialias=True),
-                # v2.RandomCrop(130),
-                # v2.RandomHorizontalFlip(p=0.5),
-                v2.CenterCrop(130),
-                v2.ToDtype(torch.float32, scale=True),
-                v2.Normalize(mean=MASK_DS_IMAGENET_MEAN, std=MASK_DS_IMAGENET_STD),
-                v2.ToPureTensor(),
-            ]
-        )
-        self.tfms = train_tfms if train else MASK_DS_EVAL_TFMS
-        _validate_labels_in_dirs(self.dirs, self.label_by_idx)
-
-    @property
-    def num_in_channels(self):
-        return self.pairs_per_dir * 4
+class DirectTensorLoadFromCacheDataset(torch.utils.data.Dataset):
+    def __init__(self, cache_dir, num_in_channels):
+        self.files = sorted(Path(cache_dir).glob("*.pt"))
+        self.num_in_cannels = num_in_channels
 
     def __len__(self):
-        return len(self.dirs)
+        return len(self.files)
 
     def __getitem__(self, index):
-        d = self.dirs[index]
-
-        pairs = self.get_pairs(d)
-        pairs = [
-            (
-                tv_tensors.Image(torch.from_numpy(image).permute(2, 0, 1)),
-                tv_tensors.Mask(torch.from_numpy(mask.reshape(1, *mask.shape))),
-            )
-            for image, mask in pairs
-        ]
-        t_img_and_masks = []
-        for p in pairs:
-            t_img, t_mask = self.tfms(p)
-            t_img_and_masks.append(t_img)
-            t_img_and_masks.append(t_mask)
-
-        combined = torch.cat(t_img_and_masks, dim=0)
-
-        label = _label_func(d)
-        label_idx = self.label_by_idx[label]
-        label_tensor = torch.Tensor([label_idx]).squeeze()
-
-        return (combined, label_tensor)
-
-    @classmethod
-    def denormalize(
-        cls, combined: torch.Tensor, pairs_per_dir: int = 1
-    ) -> list[tuple[np.ndarray, np.ndarray]]:
-        mean = torch.tensor(MASK_DS_IMAGENET_MEAN).view(3, 1, 1)
-        std = torch.tensor(MASK_DS_IMAGENET_STD).view(3, 1, 1)
-        result = []
-        for i in range(pairs_per_dir):
-            rgb = (combined[i * 4 : i * 4 + 3] * std + mean).clamp(0, 1)
-            img_np = (rgb.permute(1, 2, 0).numpy() * 255).astype(np.uint8)
-            result.append((img_np, combined[i * 4 + 3].numpy()))
-        return result
-
-
-class CachedDataset(torch.utils.data.Dataset):
-    def __init__(self, ds):
-        self.cache = [ds[i] for i in range(len(ds))]  # load everything upfront
-
-    def __len__(self):
-        return len(self.cache)
-
-    def __getitem__(self, index):
-        return self.cache[index]
+        return torch.load(self.files[index])

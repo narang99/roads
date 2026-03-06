@@ -1,4 +1,5 @@
 from pathlib import Path
+import itertools
 import numpy as np
 import math
 import matplotlib.pyplot as plt
@@ -74,3 +75,7 @@ def draw_grid(ax, img_shape, cell_size, color="white", lw=0.5, alpha=0.5):
     # horizontal lines
     for y in range(0, h, cell_size):
         ax.axhline(y, color=color, lw=lw, alpha=alpha)
+
+
+def it_chain(iterator):
+    return list(itertools.chain.from_iterable(iterator))
