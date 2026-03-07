@@ -1,3 +1,4 @@
+from mtrain.neg_mask.ipywidgets.save_crops import save_crop_level
 import itertools
 import json
 from pathlib import Path
@@ -45,8 +46,8 @@ def apply_label_to_out_mask(
     In-place: write `label` onto `out_mask` for every foreground pixel of
     `mask` that lies within `bbox`.
     """
-    region_mask = mask[bbox.y:bbox.y2, bbox.x:bbox.x2].astype(bool)
-    out_mask[bbox.y:bbox.y2, bbox.x:bbox.x2][region_mask] = label
+    region_mask = mask[bbox.y : bbox.y2, bbox.x : bbox.x2].astype(bool)
+    out_mask[bbox.y : bbox.y2, bbox.x : bbox.x2][region_mask] = label
 
 
 def get_crops_for_image(image: np.ndarray, mask: np.ndarray, bbox_pad=20, crop_pad=220):
@@ -82,12 +83,13 @@ def get_region_crops(img, mask, padding=20):
         r2 = min(h, rows.max())
         c1 = max(0, cols.min())
         c2 = min(w, cols.max())
-        yield Bbox(c1, r1, c2-c1, r2-r1)
+        yield Bbox(c1, r1, c2 - c1, r2 - r1)
 
 
 # ==================================================================
 # Widget — UI only, delegates all data work to helpers above
 # ==================================================================
+
 
 class LabelWidget:
     """
@@ -114,13 +116,24 @@ class LabelWidget:
     crop_pad   : context padding in pixels added around each bbox (default 40)
     """
 
-    def __init__(self, output_dir: str | Path, crop_pad: int = 220, theme: str = "Dark", learner=None):
+    def __init__(
+        self,
+        output_dir: str | Path,
+        crop_pad: int = 220,
+        theme: str = "Dark",
+        learner=None,
+    ):
         self._out_dir = Path(output_dir)
         self._crop_pad = crop_pad
         self._bg = _THEME_BG[theme]
         self._learner = learner
 
-        for sub in ("dataset", "crop_level/trash", "crop_level/other", "crop_level/unknown"):
+        for sub in (
+            "dataset",
+            "crop_level/trash",
+            "crop_level/other",
+            "crop_level/unknown",
+        ):
             (self._out_dir / sub).mkdir(parents=True, exist_ok=True)
 
         self._done: set[str] = self._load_done()
@@ -143,7 +156,9 @@ class LabelWidget:
     # Public entry point
     # ------------------------------------------------------------------
 
-    def ui(self, source_dir: Path, bboxes: list[Bbox], image: np.ndarray, mask: np.ndarray):
+    def ui(
+        self, source_dir: Path, bboxes: list[Bbox], image: np.ndarray, mask: np.ndarray
+    ):
         """Display the labeling UI for one image.  Call once per cell."""
         self._name = source_dir.name
         self._source_dir = source_dir
@@ -232,28 +247,46 @@ class LabelWidget:
         self._out_model_input.layout.background = self._bg
 
         # Keep original side-by-side layout for crop and full views
-        views = widgets.HBox([self._out_crop, self._out_full], layout=widgets.Layout(gap="12px"))
-        
+        views = widgets.HBox(
+            [self._out_crop, self._out_full], layout=widgets.Layout(gap="12px")
+        )
+
         # Create tabs with main view and model input
         main_view_tab = widgets.VBox([views], layout=widgets.Layout(padding="10px"))
-        model_input_tab = widgets.VBox([self._out_model_input], layout=widgets.Layout(padding="10px"))
-        
+        model_input_tab = widgets.VBox(
+            [self._out_model_input], layout=widgets.Layout(padding="10px")
+        )
+
         tabs = widgets.Tab(children=[main_view_tab, model_input_tab])
         tabs.set_title(0, "Main View")
         tabs.set_title(1, "Model Input")
-        
+
         toggle_row = widgets.HBox(
             [self._overlay_toggle, self._blend_toggle, self._bbox_toggle],
             layout=widgets.Layout(gap="8px", margin="8px 0 0 0"),
         )
         btn_row = widgets.HBox(
-            [self._btn_trash, self._btn_other, self._btn_skip, self._btn_other_all, self._btn_skip_all],
+            [
+                self._btn_trash,
+                self._btn_other,
+                self._btn_skip,
+                self._btn_other_all,
+                self._btn_skip_all,
+            ],
             layout=widgets.Layout(gap="8px", margin="8px 0 0 0"),
         )
-        display(widgets.VBox([toggle_row, btn_row, self._status, self._model_status, tabs]))
+        display(
+            widgets.VBox([toggle_row, btn_row, self._status, self._model_status, tabs])
+        )
 
     def _set_buttons(self, disabled: bool):
-        for btn in (self._btn_trash, self._btn_other, self._btn_skip, self._btn_other_all, self._btn_skip_all):
+        for btn in (
+            self._btn_trash,
+            self._btn_other,
+            self._btn_skip,
+            self._btn_other_all,
+            self._btn_skip_all,
+        ):
             btn.disabled = disabled
 
     # ------------------------------------------------------------------
@@ -300,9 +333,14 @@ class LabelWidget:
     # Model prediction
     # ------------------------------------------------------------------
 
-    def _run_model_pred(self, crop_img: np.ndarray, crop_mask: np.ndarray, bbox) -> tuple[int, float]:
+    def _run_model_pred(
+        self, crop_img: np.ndarray, crop_mask: np.ndarray, bbox
+    ) -> tuple[int, float]:
         from mtrain.neg_mask.model.predict.predict_8ch import run_inference
-        all_probs = run_inference(self._learner, [(self._image, self._mask, bbox)])  # [1, C]
+
+        all_probs = run_inference(
+            self._learner, [(self._image, self._mask, bbox)]
+        )  # [1, C]
         class_idx = all_probs[0].argmax().item()
         prob = all_probs[0, int(class_idx)].item()
         # trash_pred_idx=0 matches the default in predict_trash
@@ -313,26 +351,28 @@ class LabelWidget:
         """Create visualization of the 8-channel tensor input to the model."""
         from mtrain.neg_mask.model.predict.predict_8ch import _prepare_8_channel_tensor
         from mtrain.neg_mask.model.crop_level_dataset import CropLevelDataset2Chan
-        
+
         # Get the 8-channel tensor that would be fed to the model
         tensor_8ch = _prepare_8_channel_tensor(self._image, self._mask, bbox)
-        
-        # Denormalize to get back the image/mask pairs  
-        pairs = CropLevelDataset2Chan.denormalize(tensor_8ch)  # [(img, mask), (img, mask)]
-        
+
+        # Denormalize to get back the image/mask pairs
+        pairs = CropLevelDataset2Chan.denormalize(
+            tensor_8ch
+        )  # [(img, mask), (img, mask)]
+
         # Return individual images with labels for better visualization
         tight_img, tight_mask = pairs[0]
         medium_img, medium_mask = pairs[1]
-        
+
         # Convert masks to 3-channel for visualization
         tight_mask_vis = np.stack([tight_mask] * 3, axis=-1) * 255
         medium_mask_vis = np.stack([medium_mask] * 3, axis=-1) * 255
-        
+
         return [
             ("Tight Crop (RGB)", tight_img.astype(np.uint8)),
-            ("Medium Crop (RGB)", medium_img.astype(np.uint8)), 
+            ("Medium Crop (RGB)", medium_img.astype(np.uint8)),
             ("Tight Mask", tight_mask_vis.astype(np.uint8)),
-            ("Medium Mask", medium_mask_vis.astype(np.uint8))
+            ("Medium Mask", medium_mask_vis.astype(np.uint8)),
         ]
 
     # ------------------------------------------------------------------
@@ -350,8 +390,14 @@ class LabelWidget:
             return
 
         bbox = self._bboxes[self._bbox_idx]
-        alpha = (1.0 if self._blend_toggle.value else 0.4) if self._overlay_toggle.value else 0.0
-        self._status.value = f"{self._name}  —  crop {self._bbox_idx + 1} / {len(self._bboxes)}"
+        alpha = (
+            (1.0 if self._blend_toggle.value else 0.4)
+            if self._overlay_toggle.value
+            else 0.0
+        )
+        self._status.value = (
+            f"{self._name}  —  crop {self._bbox_idx + 1} / {len(self._bboxes)}"
+        )
 
         # Crop view: padded crop with bbox rectangle
         crop_img, y1c, x1c = padded_crop(self._image, bbox, self._crop_pad)
@@ -359,7 +405,9 @@ class LabelWidget:
 
         # Model prediction (cached per bbox so toggles don't re-run inference)
         if self._learner is not None and self._bbox_idx != self._last_pred_idx:
-            self._current_model_pred = self._run_model_pred(crop_img, crop_mask, self._bboxes[self._bbox_idx])
+            self._current_model_pred = self._run_model_pred(
+                crop_img, crop_mask, self._bboxes[self._bbox_idx]
+            )
             self._last_pred_idx = self._bbox_idx
         if self._learner is not None and self._current_model_pred is not None:
             pred_label, pred_prob = self._current_model_pred
@@ -367,8 +415,12 @@ class LabelWidget:
             self._model_status.value = f"Model: {pred_name}  ({pred_prob:.2f})"
         else:
             self._model_status.value = ""
-        crop_overlaid = overlay_mask_on_img(crop_img, crop_mask.astype(bool), alpha).copy()
-        full_overlaid = overlay_mask_on_img(self._image, self._mask.astype(bool), alpha).copy()
+        crop_overlaid = overlay_mask_on_img(
+            crop_img, crop_mask.astype(bool), alpha
+        ).copy()
+        full_overlaid = overlay_mask_on_img(
+            self._image, self._mask.astype(bool), alpha
+        ).copy()
 
         if self._bbox_toggle.value:
             _HOT_PINK = (255, 105, 180)
@@ -377,19 +429,26 @@ class LabelWidget:
                 crop_overlaid,
                 (bbox.x - x1c + inset, bbox.y - y1c + inset),
                 (bbox.x2 - x1c - inset, bbox.y2 - y1c - inset),
-                _HOT_PINK, 1,
+                _HOT_PINK,
+                1,
             )
             cv2.rectangle(
                 full_overlaid,
                 (bbox.x + inset, bbox.y + inset),
                 (bbox.x2 - inset, bbox.y2 - inset),
-                _HOT_PINK, 1,
+                _HOT_PINK,
+                1,
             )
 
         self._out_crop.clear_output(wait=True)
         with self._out_crop:
-            display(widgets.Image(value=arr_to_png_bytes(crop_overlaid), format="png",
-                                  layout=widgets.Layout(width="700px")))
+            display(
+                widgets.Image(
+                    value=arr_to_png_bytes(crop_overlaid),
+                    format="png",
+                    layout=widgets.Layout(width="700px"),
+                )
+            )
 
         self._out_full.clear_output(wait=True)
         with self._out_full:
@@ -403,37 +462,52 @@ class LabelWidget:
                 # Create 2x2 grid layout
                 top_row_widgets = []
                 bottom_row_widgets = []
-                
+
                 for i, (label, img_array) in enumerate(model_inputs):
-                    section = widgets.VBox([
-                        widgets.HTML(value=f"<b>{label}</b>", layout=widgets.Layout(text_align="center")),
-                        widgets.Image(
-                            value=arr_to_png_bytes(img_array), 
-                            format="png",
-                            layout=widgets.Layout(width="300px")
-                        )
-                    ])
-                    
+                    section = widgets.VBox(
+                        [
+                            widgets.HTML(
+                                value=f"<b>{label}</b>",
+                                layout=widgets.Layout(text_align="center"),
+                            ),
+                            widgets.Image(
+                                value=arr_to_png_bytes(img_array),
+                                format="png",
+                                layout=widgets.Layout(width="300px"),
+                            ),
+                        ]
+                    )
+
                     if i < 2:  # First two go in top row
                         top_row_widgets.append(section)
                     else:  # Last two go in bottom row
                         bottom_row_widgets.append(section)
-                
-                top_row = widgets.HBox(top_row_widgets, layout=widgets.Layout(justify_content="space-around"))
-                bottom_row = widgets.HBox(bottom_row_widgets, layout=widgets.Layout(justify_content="space-around"))
-                
+
+                top_row = widgets.HBox(
+                    top_row_widgets,
+                    layout=widgets.Layout(justify_content="space-around"),
+                )
+                bottom_row = widgets.HBox(
+                    bottom_row_widgets,
+                    layout=widgets.Layout(justify_content="space-around"),
+                )
+
                 display(widgets.VBox([top_row, bottom_row]))
         else:
             self._out_model_input.clear_output(wait=True)
             with self._out_model_input:
-                display(widgets.HTML(value="<i>No model loaded - model input visualization unavailable</i>"))
+                display(
+                    widgets.HTML(
+                        value="<i>No model loaded - model input visualization unavailable</i>"
+                    )
+                )
 
     # ------------------------------------------------------------------
     # Button handler
     # ------------------------------------------------------------------
 
     def _on_skip_all(self):
-        for bbox in self._bboxes[self._bbox_idx:]:
+        for bbox in self._bboxes[self._bbox_idx :]:
             apply_label_to_out_mask(self._out_mask, self._mask, bbox, LABEL_UNKNOWN)
             self._save_crop_level(bbox, LABEL_UNKNOWN)
             self._bbox_idx += 1
@@ -441,7 +515,7 @@ class LabelWidget:
         self._finish()
 
     def _on_other_all(self):
-        for bbox in self._bboxes[self._bbox_idx:]:
+        for bbox in self._bboxes[self._bbox_idx :]:
             apply_label_to_out_mask(self._out_mask, self._mask, bbox, LABEL_OTHER)
             self._save_crop_level(bbox, LABEL_OTHER)
             self._bbox_idx += 1
@@ -466,26 +540,24 @@ class LabelWidget:
     # ------------------------------------------------------------------
 
     def _save_crop_level(self, bbox: Bbox, label: int):
-        folder = _LABEL_FOLDER[label]
-        sample_dir = self._out_dir / "crop_level" / folder / f"{self._name}_{self._bbox_idx}"
-        sample_dir.mkdir(parents=True, exist_ok=True)
-
-        crop_img, y1c, x1c = padded_crop(self._image, bbox, self._crop_pad)
-        crop_mask = bbox_only_mask(self._mask, bbox, self._crop_pad)
-
-        Image.fromarray(crop_img).save(sample_dir / "image.jpg")
-        Image.fromarray(crop_mask).save(sample_dir / "mask.png")
-        meta: dict = {"crop_origin": {"x": int(x1c), "y": int(y1c)}}
         if self._current_model_pred is not None:
             pred_label, pred_prob = self._current_model_pred
-            meta["model_pred"] = {"label": pred_label, "prob": round(pred_prob, 4)}
-            if pred_label != label:
-                meta["model_disagreement"] = True
-        (sample_dir / "meta.json").write_text(json.dumps(meta))
-        if self._source_dir is not None:
-            symlink = sample_dir / "source_dir"
-            if not symlink.exists() and not symlink.is_symlink():
-                symlink.symlink_to(self._source_dir)
+        else:
+            pred_label, pred_prob = None, None
+        save_crop_level(
+            self._image,
+            self._mask,
+            self._crop_pad,
+            self._out_dir,
+            self._name,
+            self._bbox_idx,
+            bbox,
+            label,
+            _LABEL_FOLDER,
+            pred_label,
+            pred_prob,
+            self._source_dir,
+        )
 
     def _finish(self):
         self._set_buttons(disabled=True)
@@ -504,7 +576,6 @@ class LabelWidget:
         self._status.value = f"✓ Saved — {self._name}  ({len(self._bboxes)} crops)"
 
 
-
 def parse_top_level_ds(root: Path):
     for d in root.glob("*"):
         if not d.is_dir():
@@ -515,6 +586,7 @@ def parse_top_level_ds(root: Path):
 def parse_crop_level_ds(root: Path):
     def _label_iter(label):
         return zip((root / label).glob("*"), itertools.repeat(label))
+
     other = _label_iter("other")
     trash = _label_iter("trash")
     unknown = _label_iter("unknown")
