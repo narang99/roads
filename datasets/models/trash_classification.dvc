@@ -1,6 +1,6 @@
 outs:
-- md5: ccc695e9a2bb32af4c638cba05e67f0f.dir
-  size: 18484887
-  nfiles: 1
+- md5: 69592a2be111ec3ca5b1c7fd4edfb6c6.dir
+  size: 159272240
+  nfiles: 2
   hash: md5
   path: trash_classification
