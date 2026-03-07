@@ -26,6 +26,8 @@ _LABEL_FOLDER: dict[int, str] = {
     LABEL_TRASH: "trash",
 }
 
+OTHER_THRES = 0.85
+
 
 # ------------------------------------------------------------------
 # Data structures
@@ -43,6 +45,7 @@ class BboxAnnotation:
     human_label: Optional[int] = None  # None = not annotated by human
     is_hard: bool = False
     is_annotated: bool = False
+    model_confident_can_ignore: bool = False
 
     @property
     def final_label(self) -> int:
@@ -70,9 +73,7 @@ class MassAnnotationWidget:
     to review and annotate, saves only hard examples.
     """
 
-    def __init__(
-        self, output_dir: str | Path, learner, crop_pad: int = 220
-    ):
+    def __init__(self, output_dir: str | Path, learner, crop_pad: int = 220):
         self._output_dir = Path(output_dir)
         self._learner = learner
         self._crop_pad = crop_pad
@@ -100,7 +101,7 @@ class MassAnnotationWidget:
         self._selected_bbox_idx: Optional[int] = None
         self._show_trash_overlay = True
         self._show_other_overlay = True
-        
+
         # Matplotlib components
         self._fig = None
         self._ax = None
@@ -154,8 +155,17 @@ class MassAnnotationWidget:
             pred_class = probs.argmax().item()
             pred_prob = probs[pred_class].item()
 
+            if pred_class == LABEL_OTHER:
+                model_confident = pred_prob > OTHER_THRES
+            else:
+                model_confident = False
+
             self._annotations[i] = BboxAnnotation(
-                bbox=bbox, bbox_idx=i, original_pred=pred_class, original_prob=pred_prob
+                bbox=bbox,
+                bbox_idx=i,
+                original_pred=pred_class,
+                original_prob=pred_prob,
+                model_confident_can_ignore=model_confident,
             )
 
         # Reconstruct probability masks
@@ -238,7 +248,6 @@ class MassAnnotationWidget:
         self._selection_status = widgets.Label(value="Click on a region to select it")
         self._model_status = widgets.Label(value="")
         self._stats_status = widgets.Label(value="")
-
 
         # Layout assembly
         overlay_controls = widgets.HBox(
@@ -323,43 +332,53 @@ class MassAnnotationWidget:
         """Handle done button clicks - save hard examples, mark image as done and finish the flow."""
         # Save hard examples first
         self._save_hard_examples()
-        
+
         # Mark image as done
         self._done_tracker.mark_done(self._name)
-        
+
         # Update UI to show completion
         self._done_btn.description = "✓ Done & Saved"
         self._done_btn.button_style = "success"
         self._done_btn.disabled = True
-        
+
         # Disable other controls to indicate completion
         self._annotation_radio.disabled = True
         self._hard_checkbox.disabled = True
         self._trash_overlay_toggle.disabled = True
         self._other_overlay_toggle.disabled = True
-        
-        print(f"Image '{self._name}' marked as done. You can proceed to the next image.")
+
+        print(
+            f"Image '{self._name}' marked as done. You can proceed to the next image."
+        )
 
     def _on_image_click(self, event):
         """Handle clicks on the main image to select bboxes."""
         if event.inaxes != self._ax or event.xdata is None or event.ydata is None:
             return
-            
+
         x, y = int(event.xdata), int(event.ydata)
-        
+
         # Find which bbox contains this point
         clicked_bbox_idx = None
         for i, bbox in enumerate(self._bboxes):
             if bbox.x <= x <= bbox.x2 and bbox.y <= y <= bbox.y2:
                 # Check if the click is within the mask region
-                if (bbox.y <= y < bbox.y2 and bbox.x <= x < bbox.x2 and 
-                    y < self._mask.shape[0] and x < self._mask.shape[1] and
-                    self._mask[y, x]):
+                if (
+                    bbox.y <= y < bbox.y2
+                    and bbox.x <= x < bbox.x2
+                    and y < self._mask.shape[0]
+                    and x < self._mask.shape[1]
+                    and self._mask[y, x]
+                ):
                     clicked_bbox_idx = i
                     break
-        
+
         # Update selection
-        if clicked_bbox_idx is not None:
+        if (
+            clicked_bbox_idx is not None
+            and clicked_bbox_idx < len(self._annotations)
+            and not self._annotations[clicked_bbox_idx].model_confident_can_ignore
+        ):
             self.select_bbox(clicked_bbox_idx)
         else:
             self._clear_selection()
@@ -379,17 +398,17 @@ class MassAnnotationWidget:
         """Render the main image with probability overlays using matplotlib for click interaction."""
         # Clear previous output
         self._out_main_image.clear_output(wait=True)
-        
+
         with self._out_main_image:
             # Create or clear the matplotlib figure
             if self._fig is None:
                 self._fig, self._ax = plt.subplots(figsize=(10, 8))
                 self._canvas = self._fig.canvas
                 # Connect the click event
-                self._canvas.mpl_connect('button_press_event', self._on_image_click)
+                self._canvas.mpl_connect("button_press_event", self._on_image_click)
             else:
                 self._ax.clear()
-            
+
             # Start with original image
             display_image = self._image.copy()
 
@@ -404,25 +423,25 @@ class MassAnnotationWidget:
 
             # Display the image
             self._ax.imshow(display_image)
-            
+
             # Highlight selected bbox if any
             if self._selected_bbox_idx is not None:
                 bbox = self._bboxes[self._selected_bbox_idx]
                 rect = plt.Rectangle(
-                    (bbox.x, bbox.y), 
-                    bbox.x2 - bbox.x, 
+                    (bbox.x, bbox.y),
+                    bbox.x2 - bbox.x,
                     bbox.y2 - bbox.y,
-                    linewidth=3, 
-                    edgecolor='yellow', 
-                    facecolor='none'
+                    linewidth=3,
+                    edgecolor="yellow",
+                    facecolor="none",
                 )
                 self._ax.add_patch(rect)
-            
+
             # Remove axes for cleaner display
             self._ax.set_xticks([])
             self._ax.set_yticks([])
             self._ax.set_title("Click on regions to select them for annotation")
-            
+
             # Display the figure
             plt.tight_layout()
             plt.show()
@@ -665,11 +684,14 @@ class MassAnnotationWidget:
             source_dir=self._source_dir,
         )
         sample_dir = get_sample_dir(
-            final_label, self._name, annotation.bbox_idx, self._output_dir, _LABEL_FOLDER
+            final_label,
+            self._name,
+            annotation.bbox_idx,
+            self._output_dir,
+            _LABEL_FOLDER,
         )
         write_extra_metadata(sample_dir, annotation)
         return sample_dir
-
 
 
 def write_extra_metadata(sample_dir, annotation):
