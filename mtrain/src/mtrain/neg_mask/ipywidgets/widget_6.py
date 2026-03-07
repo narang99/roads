@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 
 import cv2
 import ipywidgets as widgets
+import matplotlib.pyplot as plt
 import numpy as np
 from IPython.display import display
 from PIL import Image
@@ -99,6 +100,11 @@ class MassAnnotationWidget:
         self._selected_bbox_idx: Optional[int] = None
         self._show_trash_overlay = True
         self._show_other_overlay = True
+        
+        # Matplotlib components
+        self._fig = None
+        self._ax = None
+        self._canvas = None
 
     # ------------------------------------------------------------------
     # Public entry point
@@ -220,13 +226,13 @@ class MassAnnotationWidget:
         self._hard_checkbox.observe(self._on_hard_toggle, names="value")
 
         # Action buttons
-        self._save_btn = widgets.Button(
-            description="Save Hard Examples",
+        self._done_btn = widgets.Button(
+            description="Save & Mark Done",
             button_style="success",
-            icon="save",
+            icon="check",
             layout=widgets.Layout(width="180px"),
         )
-        self._save_btn.on_click(self._on_save)
+        self._done_btn.on_click(self._on_done)
 
         # Status displays
         self._selection_status = widgets.Label(value="Click on a region to select it")
@@ -252,7 +258,7 @@ class MassAnnotationWidget:
                 widgets.HTML("<b>Annotation:</b>"),
                 self._annotation_radio,
                 self._hard_checkbox,
-                self._save_btn,
+                self._done_btn,
                 self._stats_status,
             ],
             layout=widgets.Layout(padding="10px", width="350px"),
@@ -313,9 +319,51 @@ class MassAnnotationWidget:
             annotation.is_hard = change["new"]
             self._update_stats()
 
-    def _on_save(self, button):
-        """Handle save button clicks."""
+    def _on_done(self, button):
+        """Handle done button clicks - save hard examples, mark image as done and finish the flow."""
+        # Save hard examples first
         self._save_hard_examples()
+        
+        # Mark image as done
+        self._done_tracker.mark_done(self._name)
+        
+        # Update UI to show completion
+        self._done_btn.description = "✓ Done & Saved"
+        self._done_btn.button_style = "success"
+        self._done_btn.disabled = True
+        
+        # Disable other controls to indicate completion
+        self._annotation_radio.disabled = True
+        self._hard_checkbox.disabled = True
+        self._trash_overlay_toggle.disabled = True
+        self._other_overlay_toggle.disabled = True
+        
+        print(f"Image '{self._name}' marked as done. You can proceed to the next image.")
+
+    def _on_image_click(self, event):
+        """Handle clicks on the main image to select bboxes."""
+        if event.inaxes != self._ax or event.xdata is None or event.ydata is None:
+            return
+            
+        x, y = int(event.xdata), int(event.ydata)
+        
+        # Find which bbox contains this point
+        clicked_bbox_idx = None
+        for i, bbox in enumerate(self._bboxes):
+            if bbox.x <= x <= bbox.x2 and bbox.y <= y <= bbox.y2:
+                # Check if the click is within the mask region
+                if (bbox.y <= y < bbox.y2 and bbox.x <= x < bbox.x2 and 
+                    y < self._mask.shape[0] and x < self._mask.shape[1] and
+                    self._mask[y, x]):
+                    clicked_bbox_idx = i
+                    break
+        
+        # Update selection
+        if clicked_bbox_idx is not None:
+            self.select_bbox(clicked_bbox_idx)
+        else:
+            self._clear_selection()
+            self._render_main_image()
 
     # ------------------------------------------------------------------
     # Rendering
@@ -328,47 +376,56 @@ class MassAnnotationWidget:
         self._clear_selection()
 
     def _render_main_image(self):
-        """Render the main image with probability overlays."""
-        # Start with original image
-        display_image = self._image.copy()
-
-        # Create prediction overlay based on which class has higher probability
-        if (
-            (self._show_trash_overlay or self._show_other_overlay)
-            and self._trash_prob_mask is not None
-            and self._other_prob_mask is not None
-        ):
-            overlay = self._create_prediction_overlay()
-            display_image = self._blend_overlay(display_image, overlay)
-
-        # Highlight selected bbox if any
-        if self._selected_bbox_idx is not None:
-            bbox = self._bboxes[self._selected_bbox_idx]
-            cv2.rectangle(
-                display_image,
-                (bbox.x, bbox.y),
-                (bbox.x2, bbox.y2),
-                (255, 255, 0),  # Yellow highlight
-                3,
-            )
-
-        # Enable click interaction by making image clickable
-        # Note: This is a simplified approach - in practice, you'd need to handle
-        # image coordinates and clicks through custom JavaScript widgets
+        """Render the main image with probability overlays using matplotlib for click interaction."""
+        # Clear previous output
         self._out_main_image.clear_output(wait=True)
+        
         with self._out_main_image:
-            img_widget = widgets.Image(
-                value=arr_to_png_bytes(display_image),
-                format="png",
-                layout=widgets.Layout(max_width="800px"),
-            )
-            display(img_widget)
+            # Create or clear the matplotlib figure
+            if self._fig is None:
+                self._fig, self._ax = plt.subplots(figsize=(10, 8))
+                self._canvas = self._fig.canvas
+                # Connect the click event
+                self._canvas.mpl_connect('button_press_event', self._on_image_click)
+            else:
+                self._ax.clear()
+            
+            # Start with original image
+            display_image = self._image.copy()
 
-            # Add click handler instruction
-            click_instruction = widgets.HTML(
-                value="<i>Click implementation would require custom JavaScript widget for coordinate detection</i>"
-            )
-            display(click_instruction)
+            # Create prediction overlay based on which class has higher probability
+            if (
+                (self._show_trash_overlay or self._show_other_overlay)
+                and self._trash_prob_mask is not None
+                and self._other_prob_mask is not None
+            ):
+                overlay = self._create_prediction_overlay()
+                display_image = self._blend_overlay(display_image, overlay)
+
+            # Display the image
+            self._ax.imshow(display_image)
+            
+            # Highlight selected bbox if any
+            if self._selected_bbox_idx is not None:
+                bbox = self._bboxes[self._selected_bbox_idx]
+                rect = plt.Rectangle(
+                    (bbox.x, bbox.y), 
+                    bbox.x2 - bbox.x, 
+                    bbox.y2 - bbox.y,
+                    linewidth=3, 
+                    edgecolor='yellow', 
+                    facecolor='none'
+                )
+                self._ax.add_patch(rect)
+            
+            # Remove axes for cleaner display
+            self._ax.set_xticks([])
+            self._ax.set_yticks([])
+            self._ax.set_title("Click on regions to select them for annotation")
+            
+            # Display the figure
+            plt.tight_layout()
+            plt.show()
 
     def _create_prediction_overlay(self) -> np.ndarray:
         """Create overlay showing the predicted class (highest probability) for each pixel."""
@@ -553,11 +610,6 @@ class MassAnnotationWidget:
             ann for ann in self._annotations.values() if ann.is_hard_example
         ]
 
-        if not hard_annotations:
-            self._save_btn.description = "No hard examples to save"
-            self._save_btn.button_style = "warning"
-            return
-
         saved_count = 0
         saved_examples = []
 
@@ -588,9 +640,6 @@ class MassAnnotationWidget:
         self._done_tracker.mark_done(self._name)
 
         # Update UI
-        self._save_btn.description = f"Saved {saved_count} hard examples"
-        self._save_btn.button_style = "success"
-
         print(
             f"Successfully saved {saved_count} hard examples for image '{self._name}'"
         )
