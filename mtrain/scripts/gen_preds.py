@@ -1,3 +1,4 @@
+from mtrain.neg_mask.openai_clip import get_images_from_clip_file
 from fastai.vision.all import load_learner
 from tqdm import tqdm
 import numpy as np
@@ -12,19 +13,24 @@ from mtrain.smallnet.unet.predict.strided import single
 from mtrain.tqdm import Progress
 from pathlib import Path
 
-IMAGES = list(
-    Path("/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/neg-masking/V1/rocks/classification/personal").rglob("image.jpg")
+
+# IMAGES = list(
+#     Path("/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/neg-masking/V1/rocks/classification/personal").rglob("image.jpg")
+# )
+CLIP_NAME = "flowers"
+CLIP_FILE = f"/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/neg-masking/V1/trash/clip_{CLIP_NAME}.txt"
+TOTAL_SAMPLES = 50
+DEST_DIR = Path(
+    f"/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/neg-masking/V1/rocks/classification/{CLIP_NAME}"
 )
 
-# 50x50
+
+IMAGES = list(get_images_from_clip_file(CLIP_FILE))[:TOTAL_SAMPLES]
+
 MODEL_PATH = "/Users/hariomnarang/Desktop/gdrive-sync/garbage/experiments/enguled-bbox-levels-crops-v3/log/export_iter_14.pkl"
 SIZE = 100
 STRIDES = [50]
-DEST_DIR = Path(
-    "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/neg-masking/V1/rocks/classification/personal"
-)
 AREA_THRES = 5
-
 
 MAPI_LABELS_TO_EXCLUDE = [
     mapi.Label.PERSON,
@@ -69,7 +75,6 @@ def save_filter_masks(dirs: list[Path]):
     print("STAGE: filter masks")
     for d in tqdm(dirs):
         img = d / "image.jpg"
-
         if not (d / "mapi.png").exists():
             mapi_pred = mapi.cached_predict(img)
             DiskBooleanMask.save(mapi_pred.astype(np.uint8), d / "mapi.png")
@@ -176,8 +181,7 @@ def get_trimmed_mask(mask, elev_pred, mapi_pred):
 
 
 def main():
-    # pred_dirs = predict_pass1(IMAGES, MODEL_PATH, SIZE, STRIDES, DEST_DIR)
-    pred_dirs = [i.parent for i in IMAGES]
+    pred_dirs = predict_pass1(IMAGES, MODEL_PATH, SIZE, STRIDES, DEST_DIR)
     save_filter_masks(pred_dirs)
     save_trimmed_masks(pred_dirs)
 

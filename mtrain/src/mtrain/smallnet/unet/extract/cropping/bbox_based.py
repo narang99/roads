@@ -71,6 +71,16 @@ def get_engulfing_bbox_to_resize(
     target_cell_height: int,
     target_cell_width: int,
 ):
+    jitter = random.randint(-5, 5)
+    target_bbox_height += jitter
+    target_bbox_height = max(target_bbox_height, 0)
+    target_bbox_height = min(target_bbox_height, target_cell_height)
+
+    if target_bbox_height > bbox.h:
+        # we dont size up
+        raise BadDimensionsException("target bbox size cannot be greater than original size")
+        return None
+
     aspect_ratio = target_bbox_height / bbox.h
     target_bbox_width = math.ceil(aspect_ratio * bbox.w)
 

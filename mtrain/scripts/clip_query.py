@@ -19,18 +19,18 @@ from mtrain.utils import mkdir
 SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tiff"}
 
 
-def get_image_paths(directory):
-    directory = Path(directory)
-    return [
-        p for p in directory.rglob("image.jpg")
-        if p.suffix.lower() in SUPPORTED_EXTENSIONS
-    ]
-
 # def get_image_paths(directory):
 #     directory = Path(directory)
 #     return [
-#         p for p in directory.glob("*.jpg")
+#         p for p in directory.rglob("image.jpg")
+#         if p.suffix.lower() in SUPPORTED_EXTENSIONS
 #     ]
+
+def get_image_paths(directory):
+    directory = Path(directory)
+    return [
+        p for p in directory.glob("*.jpg")
+    ]
 
 def load_model(device):
     print(f"Loading CLIP model on {device}...")

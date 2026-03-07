@@ -26,7 +26,7 @@ _LABEL_FOLDER: dict[int, str] = {
     LABEL_TRASH: "trash",
 }
 
-OTHER_THRES = 0.85
+OTHER_THRES = 0.95
 
 
 # ------------------------------------------------------------------
@@ -45,7 +45,6 @@ class BboxAnnotation:
     human_label: Optional[int] = None  # None = not annotated by human
     is_hard: bool = False
     is_annotated: bool = False
-    model_confident_can_ignore: bool = False
 
     @property
     def final_label(self) -> int:
@@ -155,17 +154,11 @@ class MassAnnotationWidget:
             pred_class = probs.argmax().item()
             pred_prob = probs[pred_class].item()
 
-            if pred_class == LABEL_OTHER:
-                model_confident = pred_prob > OTHER_THRES
-            else:
-                model_confident = False
-
             self._annotations[i] = BboxAnnotation(
                 bbox=bbox,
                 bbox_idx=i,
                 original_pred=pred_class,
                 original_prob=pred_prob,
-                model_confident_can_ignore=model_confident,
             )
 
         # Reconstruct probability masks
@@ -353,6 +346,7 @@ class MassAnnotationWidget:
 
     def _on_image_click(self, event):
         """Handle clicks on the main image to select bboxes."""
+        print()
         if event.inaxes != self._ax or event.xdata is None or event.ydata is None:
             return
 
@@ -374,11 +368,16 @@ class MassAnnotationWidget:
                     break
 
         # Update selection
+        should_select = False
         if (
             clicked_bbox_idx is not None
-            and clicked_bbox_idx < len(self._annotations)
-            and not self._annotations[clicked_bbox_idx].model_confident_can_ignore
+            and clicked_bbox_idx in self._annotations
         ):
+            should_select = True
+        else:
+            should_select = False
+        
+        if should_select and clicked_bbox_idx is not None:
             self.select_bbox(clicked_bbox_idx)
         else:
             self._clear_selection()

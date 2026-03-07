@@ -12,7 +12,7 @@ if __name__ == '__main__':
     OUT_DIR = EXP_BASE / "data"
     BIN_OUT = OUT_DIR / "binary"
     WORKERS = 8
-    CROP_SIZE = 50
+    CROP_SIZE = 100
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     coco = COCO(ANN_FILE)
     EXT_DIR = OUT_DIR / "EXT"
@@ -39,5 +39,5 @@ if __name__ == '__main__':
         crop_size=CROP_SIZE,
         crops_per_image=10,
         max_pad_scale=10,
-        min_padding=3000,
+        bbox_heights=[],
     )
