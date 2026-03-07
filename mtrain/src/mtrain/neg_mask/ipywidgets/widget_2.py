@@ -11,6 +11,8 @@ from PIL import Image
 from mtrain.smallnet.unet.extract.draw import overlay_mask_on_img
 from mtrain.neg_mask.crops import Bbox, bbox_only_mask, padded_crop
 from mtrain.neg_mask.ipywidgets.utils import arr_to_png_bytes
+from mtrain.neg_mask.ipywidgets.done_tracker import DoneTracker, SkippedTracker
+from mtrain.neg_mask.ipywidgets.bbox_processing import iter_crops, get_region_crops, apply_label_to_out_mask, get_crops_for_image
 
 # ------------------------------------------------------------------
 # Label constants
@@ -33,57 +35,6 @@ _LABEL_FOLDER: dict[int, str] = {
 
 _BBOX_INSET = 5  # pixels the drawn rectangle is inset from the actual bbox edge
 
-_THEME_BG: dict[str, str] = {
-    "Dark": "#1e1e1e",
-    "Light": "#f5f5f5",
-}
-
-
-def apply_label_to_out_mask(
-    out_mask: np.ndarray, mask: np.ndarray, bbox: Bbox, label: int
-) -> None:
-    """
-    In-place: write `label` onto `out_mask` for every foreground pixel of
-    `mask` that lies within `bbox`.
-    """
-    region_mask = mask[bbox.y : bbox.y2, bbox.x : bbox.x2].astype(bool)
-    out_mask[bbox.y : bbox.y2, bbox.x : bbox.x2][region_mask] = label
-
-
-def get_crops_for_image(image: np.ndarray, mask: np.ndarray, bbox_pad=20, crop_pad=220):
-    bboxes = list(get_region_crops(image, mask, bbox_pad))
-    yield from iter_crops(image, mask, bboxes, crop_pad)
-
-
-def iter_crops(
-    image: np.ndarray,
-    mask: np.ndarray,
-    bboxes: list[Bbox],
-    pad: int = 220,
-):
-    """
-    Yield (image_crop, mask_crop) for each bbox.
-
-    image_crop : padded RGB crop of `image`
-    mask_crop  : uint8 binary mask (0/1); only foreground pixels *inside* the
-                 bbox are kept — the padding region is zeroed out
-    """
-    for bbox in bboxes:
-        crop_img, _, _ = padded_crop(image, bbox, pad)
-        crop_mask = bbox_only_mask(mask, bbox, pad)
-        yield bbox, crop_img, crop_mask
-
-
-def get_region_crops(img, mask, padding=20):
-    _, labels = cv2.connectedComponents(mask)
-    h, w = img.shape[:2]
-    for label in range(1, labels.max() + 1):
-        rows, cols = np.where(labels == label)
-        r1 = max(0, rows.min())
-        r2 = min(h, rows.max())
-        c1 = max(0, cols.min())
-        c2 = min(w, cols.max())
-        yield Bbox(c1, r1, c2 - c1, r2 - r1)
 
 
 # ==================================================================
@@ -120,12 +71,10 @@ class LabelWidget:
         self,
         output_dir: str | Path,
         crop_pad: int = 220,
-        theme: str = "Dark",
         learner=None,
     ):
         self._out_dir = Path(output_dir)
         self._crop_pad = crop_pad
-        self._bg = _THEME_BG[theme]
         self._learner = learner
 
         for sub in (
@@ -136,8 +85,8 @@ class LabelWidget:
         ):
             (self._out_dir / sub).mkdir(parents=True, exist_ok=True)
 
-        self._done: set[str] = self._load_done()
-        self._skipped: set[str] = self._load_skipped()
+        self._done_tracker = DoneTracker(self._out_dir)
+        self._skipped_tracker = SkippedTracker(self._out_dir)
 
         # State — populated by ui()
         self._name: str = ""
@@ -242,9 +191,6 @@ class LabelWidget:
         self._status = widgets.Label(value="")
         self._model_status = widgets.Label(value="")
 
-        self._out_crop.layout.background = self._bg
-        self._out_full.layout.background = self._bg
-        self._out_model_input.layout.background = self._bg
 
         # Keep original side-by-side layout for crop and full views
         views = widgets.HBox(
@@ -293,41 +239,13 @@ class LabelWidget:
     # Done tracking
     # ------------------------------------------------------------------
 
-    @property
-    def _done_file(self) -> Path:
-        return self._out_dir / "done_names.txt"
-
-    def _load_done(self) -> set[str]:
-        if self._done_file.exists():
-            return set(self._done_file.read_text().splitlines())
-        return set()
-
-    def _mark_done(self, name: str) -> None:
-        self._done.add(name)
-        with self._done_file.open("a") as f:
-            f.write(name + "\n")
-
     def is_done(self, name: str) -> bool:
         """Return True if this image name has already been fully labelled."""
-        return name in self._done
-
-    @property
-    def _skipped_file(self) -> Path:
-        return self._out_dir / "skipped_images.txt"
-
-    def _load_skipped(self) -> set[str]:
-        if self._skipped_file.exists():
-            return set(self._skipped_file.read_text().splitlines())
-        return set()
-
-    def _mark_skipped(self, name: str) -> None:
-        self._skipped.add(name)
-        with self._skipped_file.open("a") as f:
-            f.write(name + "\n")
+        return self._done_tracker.is_done(name)
 
     def is_skipped(self, name: str) -> bool:
         """Return True if this image was fully skipped via Skip Image."""
-        return name in self._skipped
+        return self._skipped_tracker.is_skipped(name)
 
     # ------------------------------------------------------------------
     # Model prediction
@@ -511,7 +429,7 @@ class LabelWidget:
             apply_label_to_out_mask(self._out_mask, self._mask, bbox, LABEL_UNKNOWN)
             self._save_crop_level(bbox, LABEL_UNKNOWN)
             self._bbox_idx += 1
-        self._mark_skipped(self._name)
+        self._skipped_tracker.mark_skipped(self._name)
         self._finish()
 
     def _on_other_all(self):
@@ -569,7 +487,7 @@ class LabelWidget:
         Image.fromarray((self._mask.astype(np.uint8))).save(sample_dir / "in_mask.png")
         Image.fromarray(self._out_mask).save(sample_dir / "out_mask.png")
 
-        self._mark_done(self._name)
+        self._done_tracker.mark_done(self._name)
 
         for out in (self._out_crop, self._out_full, self._out_model_input):
             out.clear_output()

@@ -19,10 +19,8 @@ def save_crop_level(
     pred_prob=None,
     source_dir=None,
 ):
-    folder = label_by_folder[label]
-    sample_dir = out_dir / "crop_level" / folder / f"{name}_{bbox_idx}"
-    sample_dir.mkdir(parents=True, exist_ok=True)
-
+    sample_dir = get_sample_dir(label, name, bbox_idx, out_dir, label_by_folder)
+    
     crop_img, y1c, x1c = padded_crop(image, bbox, crop_pad)
     crop_mask = bbox_only_mask(mask, bbox, crop_pad)
 
@@ -39,3 +37,10 @@ def save_crop_level(
         symlink = sample_dir / "source_dir"
         if not symlink.exists() and not symlink.is_symlink():
             symlink.symlink_to(source_dir)
+
+
+def get_sample_dir(label, name, bbox_idx, out_dir, label_by_folder):
+    folder = label_by_folder[label]
+    sample_dir = out_dir / "crop_level" / folder / f"{name}_{bbox_idx}"
+    sample_dir.mkdir(parents=True, exist_ok=True)
+    return sample_dir
