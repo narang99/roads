@@ -1,11 +1,14 @@
 import torch
 import numpy as np
-from .dataset import MaskInferenceDataset, MASK_DS_EVAL_TFMS
-from fastai.vision.all import default_device
-from mtrain.neg_mask.crops import get_crops_for_image
+from ..dataset import MASK_DS_EVAL_TFMS
 from mtrain.neg_mask.leveled_cropping import create_crop_level_sample, make_crop_level_pairs_v2
-from pathlib import Path
 from torchvision import tv_tensors
+from .common import (
+    run_inference_common, 
+    predict_trash_common, 
+    predict_class_common,
+    predict_and_reconstruct_mask_common
+)
 
 
 def _prepare_12_channel_tensor(image: np.ndarray, mask: np.ndarray, bbox, tight_pad=20, medium_pad=130) -> torch.Tensor:
@@ -59,11 +62,6 @@ def run_inference(learn, crop_data_list, device=None) -> torch.Tensor:
     Returns:
         Softmax probabilities for all classes, shape [N, C]
     """
-    from torch.utils.data import TensorDataset, DataLoader as TorchDataLoader
-
-    if device is None:
-        device = default_device()
-
     # Convert crop data to 12-channel tensors
     tensors = []
     for image, mask, bbox in crop_data_list:
@@ -73,21 +71,7 @@ def run_inference(learn, crop_data_list, device=None) -> torch.Tensor:
     # Stack into batch
     batch_tensor = torch.stack(tensors)  # Shape: [N, 12, 130, 130]
     
-    # Create dataset and dataloader
-    ds = TensorDataset(batch_tensor)
-    dl = TorchDataLoader(ds, batch_size=64, shuffle=False, num_workers=0)
-
-    learn.model.eval()
-    learn.model.to(device)
-
-    all_probs = []
-    with torch.no_grad():
-        for (x,) in dl:
-            x = x.to(device)
-            probs = learn.model(x).softmax(dim=1)
-            all_probs.append(probs.cpu())
-
-    return torch.cat(all_probs)
+    return run_inference_common(learn, batch_tensor, device)
 
 
 def predict_trash(learn, crop_data_list, trash_pred_idx=1, threshold=0.25, device=None):
@@ -106,9 +90,7 @@ def predict_trash(learn, crop_data_list, trash_pred_idx=1, threshold=0.25, devic
         trash_probs: Probability scores for trash class
     """
     all_probs = run_inference(learn, crop_data_list, device=device)
-    trash_probs = all_probs[:, trash_pred_idx]
-    predicted_trash = trash_probs >= threshold
-    return predicted_trash, trash_probs
+    return predict_trash_common(all_probs, trash_pred_idx, threshold)
 
 
 def predict_class(learn, crop_data_list, device=None):
@@ -125,8 +107,7 @@ def predict_class(learn, crop_data_list, device=None):
         all_probs: All class probabilities, shape [N, C]
     """
     all_probs = run_inference(learn, crop_data_list, device=device)
-    predicted_classes = all_probs.argmax(dim=1)
-    return predicted_classes, all_probs
+    return predict_class_common(all_probs)
 
 
 def predict_and_reconstruct_mask(
@@ -151,31 +132,9 @@ def predict_and_reconstruct_mask(
     Returns:
         reconstructed: Float mask with trash probabilities
     """
-    # Generate bboxes for connected components
-    crop_data = []
-    bboxes = []
-    for bbox, crop_img, crop_mask in get_crops_for_image(image, mask, bbox_pad, crop_pad):
-        crop_data.append((image, mask, bbox))  # Pass full image/mask + bbox
-        bboxes.append(bbox)
+    def predict_trash_fn(crop_data_list, trash_pred_idx, threshold):
+        return predict_trash(learn, crop_data_list, trash_pred_idx, threshold)
     
-    if not bboxes:
-        return mask.copy().astype(np.float32)
-
-    _, trash_probs = predict_trash(
-        learn, crop_data, trash_pred_idx=trash_pred_idx, threshold=0
+    return predict_and_reconstruct_mask_common(
+        predict_trash_fn, image, mask, trash_pred_idx, bbox_pad, crop_pad
     )
-
-    reconstructed = mask.copy().astype(np.float32)
-    for bbox, prob in zip(bboxes, trash_probs):
-        x, y, w, h = bbox.x, bbox.y, bbox.w, bbox.h
-        region = reconstructed[y : y + h, x : x + w]
-        region[region == 1] = prob.item()
-
-    return reconstructed
-
-
-def get_trash_mask(reconstructed: np.ndarray, threshold=0.25) -> np.ndarray:
-    result = reconstructed.copy()
-    result[(reconstructed > 0) & (reconstructed < threshold)] = 2
-    result[reconstructed >= threshold] = 1
-    return result

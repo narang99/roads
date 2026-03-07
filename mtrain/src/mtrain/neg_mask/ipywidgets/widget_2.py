@@ -165,6 +165,7 @@ class LabelWidget:
     def _build_ui(self):
         self._out_crop = widgets.Output()
         self._out_full = widgets.Output()
+        self._out_model_input = widgets.Output()
 
         self._overlay_toggle = widgets.ToggleButton(
             value=True,
@@ -228,8 +229,19 @@ class LabelWidget:
 
         self._out_crop.layout.background = self._bg
         self._out_full.layout.background = self._bg
+        self._out_model_input.layout.background = self._bg
 
+        # Keep original side-by-side layout for crop and full views
         views = widgets.HBox([self._out_crop, self._out_full], layout=widgets.Layout(gap="12px"))
+        
+        # Create tabs with main view and model input
+        main_view_tab = widgets.VBox([views], layout=widgets.Layout(padding="10px"))
+        model_input_tab = widgets.VBox([self._out_model_input], layout=widgets.Layout(padding="10px"))
+        
+        tabs = widgets.Tab(children=[main_view_tab, model_input_tab])
+        tabs.set_title(0, "Main View")
+        tabs.set_title(1, "Model Input")
+        
         toggle_row = widgets.HBox(
             [self._overlay_toggle, self._blend_toggle, self._bbox_toggle],
             layout=widgets.Layout(gap="8px", margin="8px 0 0 0"),
@@ -238,7 +250,7 @@ class LabelWidget:
             [self._btn_trash, self._btn_other, self._btn_skip, self._btn_other_all, self._btn_skip_all],
             layout=widgets.Layout(gap="8px", margin="8px 0 0 0"),
         )
-        display(widgets.VBox([toggle_row, btn_row, self._status, self._model_status, views]))
+        display(widgets.VBox([toggle_row, btn_row, self._status, self._model_status, tabs]))
 
     def _set_buttons(self, disabled: bool):
         for btn in (self._btn_trash, self._btn_other, self._btn_skip, self._btn_other_all, self._btn_skip_all):
@@ -289,13 +301,39 @@ class LabelWidget:
     # ------------------------------------------------------------------
 
     def _run_model_pred(self, crop_img: np.ndarray, crop_mask: np.ndarray, bbox) -> tuple[int, float]:
-        from mtrain.neg_mask.model.predict import run_inference
-        all_probs = run_inference(self._learner, [(crop_img, crop_mask, bbox)])  # [1, C]
+        from mtrain.neg_mask.model.predict.predict_8ch import run_inference
+        all_probs = run_inference(self._learner, [(self._image, self._mask, bbox)])  # [1, C]
         class_idx = all_probs[0].argmax().item()
         prob = all_probs[0, int(class_idx)].item()
         # trash_pred_idx=0 matches the default in predict_trash
         label = LABEL_TRASH if class_idx == 1 else LABEL_OTHER
         return label, prob
+
+    def _visualize_model_input(self, bbox) -> list[tuple[str, np.ndarray]]:
+        """Create visualization of the 8-channel tensor input to the model."""
+        from mtrain.neg_mask.model.predict.predict_8ch import _prepare_8_channel_tensor
+        from mtrain.neg_mask.model.crop_level_dataset import CropLevelDataset2Chan
+        
+        # Get the 8-channel tensor that would be fed to the model
+        tensor_8ch = _prepare_8_channel_tensor(self._image, self._mask, bbox)
+        
+        # Denormalize to get back the image/mask pairs  
+        pairs = CropLevelDataset2Chan.denormalize(tensor_8ch)  # [(img, mask), (img, mask)]
+        
+        # Return individual images with labels for better visualization
+        tight_img, tight_mask = pairs[0]
+        medium_img, medium_mask = pairs[1]
+        
+        # Convert masks to 3-channel for visualization
+        tight_mask_vis = np.stack([tight_mask] * 3, axis=-1) * 255
+        medium_mask_vis = np.stack([medium_mask] * 3, axis=-1) * 255
+        
+        return [
+            ("Tight Crop (RGB)", tight_img.astype(np.uint8)),
+            ("Medium Crop (RGB)", medium_img.astype(np.uint8)), 
+            ("Tight Mask", tight_mask_vis.astype(np.uint8)),
+            ("Medium Mask", medium_mask_vis.astype(np.uint8))
+        ]
 
     # ------------------------------------------------------------------
     # Rendering
@@ -356,6 +394,39 @@ class LabelWidget:
         self._out_full.clear_output(wait=True)
         with self._out_full:
             display(widgets.Image(value=arr_to_png_bytes(full_overlaid), format="png"))
+
+        # Render model input visualization
+        if self._learner is not None:
+            model_inputs = self._visualize_model_input(bbox)
+            self._out_model_input.clear_output(wait=True)
+            with self._out_model_input:
+                # Create 2x2 grid layout
+                top_row_widgets = []
+                bottom_row_widgets = []
+                
+                for i, (label, img_array) in enumerate(model_inputs):
+                    section = widgets.VBox([
+                        widgets.HTML(value=f"<b>{label}</b>", layout=widgets.Layout(text_align="center")),
+                        widgets.Image(
+                            value=arr_to_png_bytes(img_array), 
+                            format="png",
+                            layout=widgets.Layout(width="300px")
+                        )
+                    ])
+                    
+                    if i < 2:  # First two go in top row
+                        top_row_widgets.append(section)
+                    else:  # Last two go in bottom row
+                        bottom_row_widgets.append(section)
+                
+                top_row = widgets.HBox(top_row_widgets, layout=widgets.Layout(justify_content="space-around"))
+                bottom_row = widgets.HBox(bottom_row_widgets, layout=widgets.Layout(justify_content="space-around"))
+                
+                display(widgets.VBox([top_row, bottom_row]))
+        else:
+            self._out_model_input.clear_output(wait=True)
+            with self._out_model_input:
+                display(widgets.HTML(value="<i>No model loaded - model input visualization unavailable</i>"))
 
     # ------------------------------------------------------------------
     # Button handler
@@ -428,7 +499,7 @@ class LabelWidget:
 
         self._mark_done(self._name)
 
-        for out in (self._out_crop, self._out_full):
+        for out in (self._out_crop, self._out_full, self._out_model_input):
             out.clear_output()
         self._status.value = f"✓ Saved — {self._name}  ({len(self._bboxes)} crops)"
 

@@ -140,8 +140,8 @@ def _random_medium_crop(
     if random.random() < center_prob:
         # Use original centered crop
         return _centered_medium_crop(image, mask, bbox, medium_pad)
-    else:
-        return _centered_medium_crop(image, mask, bbox, medium_pad)
+    # else:
+    #     return _centered_medium_crop(image, mask, bbox, medium_pad)
     
     total_vert_pad = 2*medium_pad
     total_horiz_pad = 2*medium_pad

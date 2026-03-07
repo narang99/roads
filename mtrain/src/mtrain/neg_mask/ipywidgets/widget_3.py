@@ -6,7 +6,7 @@ from IPython.display import display
 
 from mtrain.disk import DiskImage, DiskBooleanMask
 from mtrain.smallnet.unet.extract.draw import overlay_mask_on_img
-from mtrain.neg_mask.model.predict import predict_and_reconstruct_mask, get_trash_mask
+from mtrain.neg_mask.model.predict.predict_12ch import predict_and_reconstruct_mask
 from mtrain.neg_mask.ipywidgets.utils import arr_to_png_bytes
 
 
