@@ -1,4 +1,5 @@
 from mtrain.disk import DiskBooleanMask
+import os
 from typing import Callable, Optional
 from dataclasses import dataclass
 from pathlib import Path
@@ -55,7 +56,10 @@ def load_crop_level_sample_from_directory(
     # Load metadata and full image
     meta = json.loads((d / "meta.json").read_text())
     ox, oy = meta["crop_origin"]["x"], meta["crop_origin"]["y"]
-    source_dir = (d / "source_dir").resolve()
+    if (d / "source_dir").is_symlink():
+        source_dir = Path(os.readlink(d / "source_dir")).resolve()
+    else:
+        source_dir = Path(d / "source_dir").resolve()
     full_img = np.array(Image.open(source_dir / "image.jpg").convert("RGB"))
 
     # Create full mask by placing stored mask at crop origin

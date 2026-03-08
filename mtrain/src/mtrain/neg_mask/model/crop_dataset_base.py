@@ -177,12 +177,12 @@ def create_strong_source_augmentations() -> A.Compose:
         additional_targets={"mask": "mask"},
     )
 
-def create_std_transforms() -> v2.Compose:
+def create_std_transforms(size) -> v2.Compose:
     """Create standard training transforms."""
     return v2.Compose(
         [
-            ResizeIfLarger(129, 130),
-            v2.CenterCrop(130),
+            ResizeIfLarger(size-1, size),
+            v2.CenterCrop(size),
             v2.ToDtype(torch.float32, scale=True),
             v2.Normalize(mean=MASK_DS_IMAGENET_MEAN, std=MASK_DS_IMAGENET_STD),
             v2.ToPureTensor(),

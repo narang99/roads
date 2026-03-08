@@ -1,10 +1,23 @@
+from contextlib import contextmanager
+import torch
 from dataclasses import dataclass
+import time
 from collections import defaultdict
 from itertools import batched, chain
 from PIL import Image
 import numpy as np
 from mtrain.smallnet.tile import split_image_into_tiles
 
+
+@contextmanager
+def timed(label="Block"):
+    start_time = time.perf_counter() # Use perf_counter for precision
+    try:
+        yield
+    finally:
+        end_time = time.perf_counter()
+        duration = end_time - start_time
+        print(f"'{label}' time: {duration:.3f} seconds")
 
 @dataclass
 class TileTag:
@@ -16,11 +29,12 @@ class TileTag:
 def _do_batch(batch, learner):
     images = [Image.fromarray(arr) for (arr, _) in batch]
 
-    tdl = learner.dls.test_dl(test_items=images, with_labels=False)
-    preds, _ = learner.get_preds(dl=tdl)
-    masks = preds.argmax(dim=1)
+    with torch.no_grad():
+        tdl = learner.dls.test_dl(test_items=images, with_labels=False, num_workers=4)
+        preds, _ = learner.get_preds(dl=tdl)
+        masks = preds.argmax(dim=1).cpu().numpy()
 
-    return [(mask.numpy(), tag) for mask, (_, tag) in zip(masks, batch)]
+    return [(mask, tag) for mask, (_, tag) in zip(masks, batch)]
 
 
 def predict_unet_only_mask(img_arr, sz, learner, bs):
@@ -68,7 +82,7 @@ def strided_predict_unet_only_mask(
     tile_size,
     learner,
     strides=None,
-    bs=4,
+    bs=128,
 ):
     if strides is None:
         strides = []
@@ -79,19 +93,20 @@ def strided_predict_unet_only_mask(
         for img_idx, img_arr in enumerate(img_arrs)
     ))
 
-    batches = list(batched(all_tiles, bs))
     all_results = list(chain.from_iterable(
-        _do_batch(batch, learner) for batch in batches
+        _do_batch(batch, learner) for batch in batched(all_tiles, bs)
     ))
 
     img_by_tagged_masks = defaultdict(list)
     for mask, tag in all_results:
         img_by_tagged_masks[tag.img_idx].append((mask, tag))
 
-    return [
+    combined  = [
         _recombine_strided(img_by_tagged_masks[i], img_arr, tile_size, strides)
         for i, img_arr in enumerate(img_arrs)
     ]
+
+    return combined
 
 
 def _shift_mask(mask, orig_h, orig_w, shift_y, shift_x):

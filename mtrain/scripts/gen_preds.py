@@ -1,37 +1,71 @@
 from mtrain.neg_mask.openai_clip import get_images_from_clip_file
-from fastai.vision.all import load_learner
+from itertools import batched
+from mtrain.neg_mask.model.predict.full_image_8chan import (
+    predict_and_return_probs,
+)
+from fastai.vision.all import (
+    load_learner,
+    vision_learner,
+    DataLoaders,
+    resnet18,
+    accuracy,
+    F1Score,
+    CrossEntropyLossFlat,
+    ProgressCallback,
+)
 from tqdm import tqdm
 import numpy as np
-from mtrain.utils import mkdir
 import cv2
 from mtrain.disk import DiskImage, DiskBooleanMask
 from mtrain.seg import mapillary as mapi, elevated_vegetation as elev
+from mtrain.neg_mask.model.learner import dummy_dls
+from mtrain.neg_mask.model.crop_level_dataset import CropLevelDataset2Chan
 import shutil
-from PIL import Image
-import matplotlib.pyplot as plt
-from mtrain.smallnet.unet.predict.strided import single
-from mtrain.tqdm import Progress
+from mtrain.smallnet.unet.predict.strided import single, multiple
 from pathlib import Path
 
-
+################################# input images parameters #################################################
+############# users should change this ############################
 # IMAGES = list(
 #     Path("/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/neg-masking/V1/rocks/classification/personal").rglob("image.jpg")
 # )
-CLIP_NAME = "flowers"
+CLIP_NAME = "delhi_litter"
 CLIP_FILE = f"/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/neg-masking/V1/trash/clip_{CLIP_NAME}.txt"
-TOTAL_SAMPLES = 50
+CLS_DIR = Path("/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/neg-masking/V1/rocks/classification/crop_level")
+
+
+TOTAL_SAMPLES = 100
 DEST_DIR = Path(
-    f"/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/neg-masking/V1/rocks/classification/{CLIP_NAME}"
+    "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/neg-masking/V1/rocks/full_image_runs/delhi_litter"
 )
 
+def get_images_not_in_train_set():
+    images = get_images_from_clip_file(CLIP_FILE)
+    all_dirs = set()
+    for label in ["other", "trash"]:
+        sample_names_without_crop_idx = (p.name.split("_")[0] for p in (CLS_DIR / label).glob("*") if p.is_dir())
+        for s in sample_names_without_crop_idx:
+            all_dirs.add(s)
+    return [img for img in images if img.stem not in all_dirs]
+    
 
-IMAGES = list(get_images_from_clip_file(CLIP_FILE))[:TOTAL_SAMPLES]
+IMAGES = list(get_images_not_in_train_set())[:TOTAL_SAMPLES]
+##########################################################################################################
 
-MODEL_PATH = "/Users/hariomnarang/Desktop/gdrive-sync/garbage/experiments/enguled-bbox-levels-crops-v3/log/export_iter_14.pkl"
-SIZE = 100
-STRIDES = [50]
-AREA_THRES = 5
 
+############### model definitions ############################
+SMALLNET_MODEL_PATH = "/Users/hariomnarang/Desktop/gdrive-sync/garbage/experiments/enguled-bbox-levels-crops-v3/log/export_iter_14.pkl"
+SMALLNET_SIZE = 100
+SMALLNET_STRIDES = [50]
+SMALLNET_AREA_THRES = 5
+
+NEG_MASK_MODEL_PATH = Path(
+    "/Users/hariomnarang/Desktop/personal/roads/datasets/models/trash_classification/resnet18-size_220-chan_8-with_augs-iter_15"
+)
+################## done #######################################
+
+
+##################### segmentation parameters ###########################
 MAPI_LABELS_TO_EXCLUDE = [
     mapi.Label.PERSON,
     mapi.Label.MOTORCYCLIST,
@@ -69,6 +103,7 @@ MAPI_LABELS_TO_EXCLUDE = [
 ]
 
 ELEV_LABELS_TO_EXCLUDE = [elev.Label.ELEVATED_VEGETATION]
+##################### segmentation parameters ###########################
 
 
 def save_filter_masks(dirs: list[Path]):
@@ -83,18 +118,23 @@ def save_filter_masks(dirs: list[Path]):
             DiskBooleanMask.save(elev_pred.astype(np.uint8), d / "elev.png")
 
 
+def _load_and_resize_single_image(image_path):
+    img_arr = DiskImage.load(image_path)
+    if img_arr.shape[0] > 1024 or img_arr.shape[1] > 1024:
+        img_arr = cv2.resize(img_arr, (1024, 1024), interpolation=cv2.INTER_CUBIC)
+    return img_arr
+
+
 def predict_pass1(images, model_path, size, strides, dest_dir):
-    learner = load_learner(MODEL_PATH)
+    learner = load_learner(model_path)
     dirs_created = []
 
     print("STAGE: First pass preds")
-    for i, img in tqdm(enumerate(images)):
+    for i, img in tqdm(enumerate(list(images))):
         img = Path(img)
 
-        img_arr = DiskImage.load(img)
-        if img_arr.shape[0] > 1024 or img_arr.shape[1] > 1024:
-            img_arr = cv2.resize(img_arr, (1024, 1024), interpolation=cv2.INTER_CUBIC)
-        
+        img_arr = _load_and_resize_single_image(img)
+
         mask = single.strided_predict_unet_only_mask(img_arr, size, learner, strides)
         dest = dest_dir / img.stem
         if dest.exists():
@@ -157,7 +197,7 @@ def save_trimmed_masks(dirs):
             elev_pred = DiskBooleanMask.load(d / "elev.png")
             mapi_pred = DiskBooleanMask.load(d / "mapi.png")
             mask = get_trimmed_mask(mask, elev_pred, mapi_pred)
-            mask = get_mask_with_area_greater(mask, AREA_THRES)
+            mask = get_mask_with_area_greater(mask, SMALLNET_AREA_THRES)
             DiskBooleanMask.save(mask, d / "m2.png")
         except Exception as ex:
             print(f"WARN: failure in saving trimmed mask for d={d} cause={ex}")
@@ -180,10 +220,53 @@ def get_trimmed_mask(mask, elev_pred, mapi_pred):
     return mask & (~mapi_exclude_mask) & (~elev_exclude_mask)
 
 
+def _load_neg_mask_model(model_path):
+    LABELS = ["other", "trash"]
+    DataLoaders.from_dsets(
+        CropLevelDataset2Chan([], LABELS, True, medium_pad=220),
+        CropLevelDataset2Chan([], LABELS, False, medium_pad=220),
+    )
+
+    learner = vision_learner(
+        dummy_dls(LABELS),
+        resnet18,
+        n_in=8,
+        metrics=[accuracy, F1Score(average="macro")],
+        loss_func=CrossEntropyLossFlat(),
+        n_out=len(LABELS),
+        normalize=False,
+    )
+    learner = learner.remove_cb(ProgressCallback)
+
+    learner = learner.load(NEG_MASK_MODEL_PATH)
+    return learner
+
+
+def save_neg_mask_probs(pred_dirs):
+    print(f"STAGE: negmask, total directories={len(pred_dirs)}")
+    learner = _load_neg_mask_model(NEG_MASK_MODEL_PATH)
+    for d in tqdm(pred_dirs):
+        image, mask = (
+            DiskImage.load(d / "image.jpg"),
+            DiskBooleanMask.load(d / "mask.png"),
+        )
+        trash_probs, other_probs = predict_and_return_probs(
+            image,
+            mask,
+            learner,
+            220,
+        )
+        np.save(d / "trash_probs.npy", trash_probs)
+        np.save(d / "other_probs.npy", other_probs)
+
+
 def main():
-    pred_dirs = predict_pass1(IMAGES, MODEL_PATH, SIZE, STRIDES, DEST_DIR)
+    pred_dirs = predict_pass1(
+        IMAGES, SMALLNET_MODEL_PATH, SMALLNET_SIZE, SMALLNET_STRIDES, DEST_DIR
+    )
     save_filter_masks(pred_dirs)
     save_trimmed_masks(pred_dirs)
+    save_neg_mask_probs(pred_dirs)
 
 
 if __name__ == "__main__":

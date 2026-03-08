@@ -56,7 +56,7 @@ class CropLevelDataset(torch.utils.data.Dataset):
         if custom_transforms is not None:
             self.tfms = custom_transforms
         else:
-            self.tfms = create_std_transforms()
+            self.tfms = create_std_transforms(self.medium_pad)
 
         validate_labels(self.dirs, labels)
 

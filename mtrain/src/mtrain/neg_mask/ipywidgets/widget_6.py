@@ -147,7 +147,7 @@ class MassAnnotationWidget:
         crop_data_list = [(self._image, self._mask, bbox) for bbox in self._bboxes]
 
         # Run batch inference
-        all_probs = run_inference(self._learner, crop_data_list)  # Shape: [N, C]
+        all_probs = run_inference(self._learner, crop_data_list, self._crop_pad)  # Shape: [N, C]
 
         # Create annotations from predictions
         for i, (bbox, probs) in enumerate(zip(self._bboxes, all_probs)):
@@ -568,7 +568,7 @@ class MassAnnotationWidget:
         from mtrain.neg_mask.model.predict.predict_8ch import _prepare_8_channel_tensor
 
         # Get the 8-channel tensor and denormalize to get crops
-        tensor_8ch = _prepare_8_channel_tensor(self._image, self._mask, bbox)
+        tensor_8ch = _prepare_8_channel_tensor(self._image, self._mask, bbox, medium_pad=self._crop_pad)
         pairs = CropLevelDataset2Chan.denormalize(tensor_8ch)
 
         tight_img, tight_mask = pairs[0]

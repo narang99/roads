@@ -72,10 +72,12 @@ class LabelWidget:
         output_dir: str | Path,
         crop_pad: int = 220,
         learner=None,
+        model_other_skip_threshold=None,
     ):
         self._out_dir = Path(output_dir)
         self._crop_pad = crop_pad
         self._learner = learner
+        self._other_threshold = model_other_skip_threshold
 
         for sub in (
             "dataset",
@@ -251,13 +253,11 @@ class LabelWidget:
     # Model prediction
     # ------------------------------------------------------------------
 
-    def _run_model_pred(
-        self, crop_img: np.ndarray, crop_mask: np.ndarray, bbox
-    ) -> tuple[int, float]:
+    def _run_model_pred(self, bbox) -> tuple[int, float]:
         from mtrain.neg_mask.model.predict.predict_8ch import run_inference
 
         all_probs = run_inference(
-            self._learner, [(self._image, self._mask, bbox)]
+            self._learner, [(self._image, self._mask, bbox)], self._crop_pad
         )  # [1, C]
         class_idx = all_probs[0].argmax().item()
         prob = all_probs[0, int(class_idx)].item()
@@ -324,11 +324,15 @@ class LabelWidget:
         # Model prediction (cached per bbox so toggles don't re-run inference)
         if self._learner is not None and self._bbox_idx != self._last_pred_idx:
             self._current_model_pred = self._run_model_pred(
-                crop_img, crop_mask, self._bboxes[self._bbox_idx]
+                self._bboxes[self._bbox_idx]
             )
             self._last_pred_idx = self._bbox_idx
         if self._learner is not None and self._current_model_pred is not None:
             pred_label, pred_prob = self._current_model_pred
+            if self._other_threshold is not None and pred_label == LABEL_OTHER and pred_prob > self._other_threshold:
+                # skip this image
+                self._on_label(LABEL_UNKNOWN)
+                return
             pred_name = "Trash" if pred_label == LABEL_TRASH else "Other"
             self._model_status.value = f"Model: {pred_name}  ({pred_prob:.2f})"
         else:
