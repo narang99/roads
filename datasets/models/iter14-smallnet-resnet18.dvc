@@ -1,0 +1,6 @@
+outs:
+- md5: 1569d3eb6da8016891c7b93eb41c2133.dir
+  size: 186014810
+  nfiles: 1
+  hash: md5
+  path: iter14-smallnet-resnet18
