@@ -1,0 +1,16 @@
+{
+  "layer_name": "layers.7.conv1.1",
+  "layer_type": "conv",
+  "shape": [
+    1,
+    96,
+    50,
+    50
+  ],
+  "dtype": "float32",
+  "min_value": 0.0,
+  "max_value": 21.186182022094727,
+  "mean_value": 0.2528565526008606,
+  "std_value": 1.3155229091644287,
+  "num_elements": 240000
+}

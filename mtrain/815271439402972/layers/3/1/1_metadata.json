@@ -1,0 +1,16 @@
+{
+  "layer_name": "layers.3.1.1",
+  "layer_type": "unknown",
+  "shape": [
+    1,
+    512,
+    4,
+    4
+  ],
+  "dtype": "float32",
+  "min_value": 0.0,
+  "max_value": 7.8146467208862305,
+  "mean_value": 0.15302205085754395,
+  "std_value": 0.6431207060813904,
+  "num_elements": 8192
+}

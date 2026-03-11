@@ -1,0 +1,14 @@
+{
+  "layer_name": "layers.0.7.0.downsample.0.weight",
+  "layer_type": "unknown",
+  "shape": [
+    512,
+    256,
+    1,
+    1
+  ],
+  "dtype": "float32",
+  "requires_grad": true,
+  "device": "cpu",
+  "num_parameters": 131072
+}

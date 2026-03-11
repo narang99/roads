@@ -1,0 +1,11 @@
+{
+  "layer_name": "layers.6.shuf.0.0.bias",
+  "layer_type": "unknown",
+  "shape": [
+    768
+  ],
+  "dtype": "float32",
+  "requires_grad": true,
+  "device": "cpu",
+  "num_parameters": 768
+}

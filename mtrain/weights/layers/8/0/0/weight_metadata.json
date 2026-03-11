@@ -1,0 +1,14 @@
+{
+  "layer_name": "layers.8.0.0.weight",
+  "layer_type": "unknown",
+  "shape": [
+    384,
+    96,
+    1,
+    1
+  ],
+  "dtype": "float32",
+  "requires_grad": true,
+  "device": "cpu",
+  "num_parameters": 36864
+}

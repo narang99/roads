@@ -1,0 +1,16 @@
+{
+  "layer_name": "layers.11.act",
+  "layer_type": "unknown",
+  "shape": [
+    1,
+    99,
+    100,
+    100
+  ],
+  "dtype": "float32",
+  "min_value": 0.0,
+  "max_value": 34.87743377685547,
+  "mean_value": 1.3886284828186035,
+  "std_value": 4.07114315032959,
+  "num_elements": 990000
+}

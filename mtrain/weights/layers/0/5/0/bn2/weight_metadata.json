@@ -1,0 +1,11 @@
+{
+  "layer_name": "layers.0.5.0.bn2.weight",
+  "layer_type": "batch_norm",
+  "shape": [
+    128
+  ],
+  "dtype": "float32",
+  "requires_grad": true,
+  "device": "cpu",
+  "num_parameters": 128
+}

@@ -7,6 +7,11 @@ import random
 import string
 import json
 import cv2
+import matplotlib.colors as mcolors
+from mtrain.disk import DiskImage, DiskBooleanMask
+
+colors = ["red", "black", "green"]
+rd_bk_gn = mcolors.LinearSegmentedColormap.from_list("RdBkGn", ["red", "black", "green"])
 
 
 def mkdir(p: Path | str):
@@ -46,19 +51,21 @@ def random_filename(k, suffix=None):
     else:
         return f"{name}{suffix}"
 
-def show(crops, figsize=None, ncols=2, axis="on"):
+def show(crops, figsize=None, ncols=2, axis="on", cmap=None):
     crops = list(crops)
     rows = math.ceil(len(crops) / ncols)
     if figsize is None:
         figsize = (10 * rows, 10 * rows)
-        print("figsize", figsize)
     _, axs = plt.subplots(rows, ncols, figsize=figsize)
     if len(crops) > 1:
         axs = axs.flatten()
     else:
         axs = [axs]
     for i, c in enumerate(crops):
-        axs[i].imshow(c)
+        if cmap is not None:
+            axs[i].imshow(c, cmap=cmap)
+        else:
+            axs[i].imshow(c)
         axs[i].axis(axis)
     plt.tight_layout()
     plt.show()
@@ -122,3 +129,114 @@ def draw_grid(ax, img_shape, cell_size, color="white", lw=0.5, alpha=0.5):
     # horizontal lines
     for y in range(0, h, cell_size):
         ax.axhline(y, color=color, lw=lw, alpha=alpha)
+
+def show_with_custom_limit(
+    crops, figsize=None, ncols=2, axis="on", cmap=None, limit_getter=None,
+):
+    crops = list(crops)
+    rows = math.ceil(len(crops) / ncols)
+    if figsize is None:
+        figsize = (5 * rows, 5 * rows)
+        print("figsize", figsize)
+    _, axs = plt.subplots(rows, ncols, figsize=figsize)
+    if len(crops) > 1:
+        axs = axs.flatten()
+    else:
+        axs = [axs]
+    for i, c in enumerate(crops):
+        params = {}
+        if cmap is not None:
+            params["cmap"] = cmap
+        if limit_getter is not None:
+            vmin, vmax = limit_getter(c)
+            params["vmin"] = vmin
+            params["vmax"] = vmax
+
+        axs[i].imshow(c, **params)
+        axs[i].axis(axis)
+    plt.tight_layout()
+    plt.show()
+
+def get_local_image_limits(img):
+    # return (img.min(), img.max())
+    mx, mn = img.max(), img.min()
+    mx = max(abs(mx), abs(mn))
+    lim = (-mx, mx)
+    return lim
+
+
+def show_single_channel_red_green_black(images, figsize=None, ncols=2, axis="on", viztype="global"):
+    # 1. Stack them or just find the global min/max across the whole set
+    if not images:
+        return
+    if images[0].dtype == np.uint8:
+        images = [img.astype(np.float32) for img in images]
+    all_min = min(img.min() for img in images)
+    all_max = max(img.max() for img in images)
+
+    # 2. Find the absolute "furthest" value from zero
+    v_limit = max(abs(all_min), abs(all_max))
+    if viztype == "gray":
+        show(images, figsize=figsize, ncols=ncols, axis=axis, cmap="gray")
+        return
+    else:
+        if viztype == "global":
+            limit_getter = lambda _: (-v_limit, v_limit)
+        elif viztype == "local":
+            limit_getter = get_local_image_limits
+        else:
+            raise Exception(f"invalid viztype {viztype}")
+        show_with_custom_limit(images, figsize, ncols, axis, rd_bk_gn, limit_getter)
+
+
+def save_single_channel_red_green_black(images, output_path, figsize=None, ncols=2, axis="on", viztype="global"):
+    if not images:
+        return
+    if images[0].dtype == np.uint8:
+        images = [img.astype(np.float32) for img in images]
+    all_min = min(img.min() for img in images)
+    all_max = max(img.max() for img in images)
+
+    v_limit = max(abs(all_min), abs(all_max))
+    
+    images = list(images)
+    rows = math.ceil(len(images) / ncols)
+    if figsize is None:
+        figsize = (5 * rows, 5 * rows)
+    
+    _, axs = plt.subplots(rows, ncols, figsize=figsize)
+    if len(images) > 1:
+        axs = axs.flatten()
+    else:
+        axs = [axs]
+    
+    for i, img in enumerate(images):
+        params = {}
+        if viztype == "gray":
+            params["cmap"] = "gray"
+        else:
+            params["cmap"] = rd_bk_gn
+            if viztype == "global":
+                params["vmin"], params["vmax"] = -v_limit, v_limit
+            elif viztype == "local":
+                params["vmin"], params["vmax"] = get_local_image_limits(img)
+            else:
+                raise Exception(f"invalid viztype {viztype}")
+        
+        axs[i].imshow(img, **params)
+        axs[i].axis(axis)
+    
+    plt.tight_layout()
+    plt.savefig(output_path, bbox_inches='tight', dpi=150)
+    plt.close()
+
+
+def stack_batch(lofarrays):
+    import torch
+    tns = []
+    for arr in lofarrays:
+        if isinstance(arr, torch.Tensor):
+            tns.append(arr.detach().clone())
+        else:
+            tns.append(torch.tensor(arr))
+    return torch.stack(tns).unsqueeze(0)

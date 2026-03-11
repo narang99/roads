@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from fastai.vision.all import default_device
 import torch
 from dataclasses import dataclass
 import time
@@ -30,7 +31,7 @@ def _do_batch(batch, learner):
     images = [Image.fromarray(arr) for (arr, _) in batch]
 
     with torch.no_grad():
-        tdl = learner.dls.test_dl(test_items=images, with_labels=False, num_workers=4)
+        tdl = learner.dls.test_dl(test_items=images, with_labels=False, num_workers=4, device=default_device())
         preds, _ = learner.get_preds(dl=tdl)
         masks = preds.argmax(dim=1).cpu().numpy()
 

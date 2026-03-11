@@ -1,0 +1,11 @@
+{
+  "layer_name": "layers.0.6.0.bn1.bias",
+  "layer_type": "batch_norm",
+  "shape": [
+    256
+  ],
+  "dtype": "float32",
+  "requires_grad": true,
+  "device": "cpu",
+  "num_parameters": 256
+}

@@ -1,0 +1,11 @@
+{
+  "layer_name": "layers.0.1.bias",
+  "layer_type": "unknown",
+  "shape": [
+    64
+  ],
+  "dtype": "float32",
+  "requires_grad": true,
+  "device": "cpu",
+  "num_parameters": 64
+}

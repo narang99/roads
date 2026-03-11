@@ -6,7 +6,7 @@ def split_image_into_tiles(
 ) -> list[tuple[np.ndarray, tuple[int, int]]]:
     """
     Split an image into tiles of size tile_size x tile_size.
-    Edge tiles are full-sized and may overlap with previous tiles.
+    Edge tiles may be smaller.
 
     Parameters
     ----------
@@ -24,19 +24,17 @@ def split_image_into_tiles(
     H, W = img.shape[:2]
     tiles = []
 
-    # Calculate number of full tiles that fit
-    y_positions = list(range(0, H, tile_size))
-    x_positions = list(range(0, W, tile_size))
-    
-    # Add final positions to ensure full tiles at edges
-    if y_positions[-1] + tile_size < H:
-        y_positions.append(H - tile_size)
-    if x_positions[-1] + tile_size < W:
-        x_positions.append(W - tile_size)
+    for y in range(0, H, tile_size):
+        for x in range(0, W, tile_size):
+            y0, y1 = y, y+tile_size
+            if y1 > H:
+                y0, y1 = H-tile_size, H
+            x0,x1 = x, x + tile_size
+            if x1 > W:
+                x0,x1 = W-tile_size, W
 
-    for y in y_positions:
-        for x in x_positions:
-            tile = img[y : y + tile_size, x : x + tile_size]
+            # tile = img[y : y + tile_size, x : x + tile_size]
+            tile = img[y0:y1, x0:x1]
             tiles.append((tile, (y, x)))
 
     return tiles

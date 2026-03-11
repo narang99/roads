@@ -1,0 +1,16 @@
+{
+  "layer_name": "layers.0.7.1.bn1",
+  "layer_type": "batch_norm",
+  "shape": [
+    1,
+    512,
+    4,
+    4
+  ],
+  "dtype": "float32",
+  "min_value": 0.0,
+  "max_value": 0.7159247398376465,
+  "mean_value": 0.024648912250995636,
+  "std_value": 0.06526435911655426,
+  "num_elements": 8192
+}

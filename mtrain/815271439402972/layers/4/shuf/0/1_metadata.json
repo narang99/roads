@@ -1,0 +1,16 @@
+{
+  "layer_name": "layers.4.shuf.0.1",
+  "layer_type": "unknown",
+  "shape": [
+    1,
+    1024,
+    4,
+    4
+  ],
+  "dtype": "float32",
+  "min_value": 0.0,
+  "max_value": 5.476895809173584,
+  "mean_value": 0.008285174146294594,
+  "std_value": 0.11703905463218689,
+  "num_elements": 16384
+}

@@ -1,0 +1,14 @@
+{
+  "layer_name": "layers.11.convpath.1.0.weight",
+  "layer_type": "conv",
+  "shape": [
+    99,
+    99,
+    3,
+    3
+  ],
+  "dtype": "float32",
+  "requires_grad": true,
+  "device": "cpu",
+  "num_parameters": 88209
+}

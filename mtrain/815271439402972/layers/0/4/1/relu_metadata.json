@@ -1,0 +1,16 @@
+{
+  "layer_name": "layers.0.4.1.relu",
+  "layer_type": "unknown",
+  "shape": [
+    1,
+    64,
+    25,
+    25
+  ],
+  "dtype": "float32",
+  "min_value": 0.0,
+  "max_value": 3.5328049659729004,
+  "mean_value": 0.500313937664032,
+  "std_value": 0.48768454790115356,
+  "num_elements": 40000
+}

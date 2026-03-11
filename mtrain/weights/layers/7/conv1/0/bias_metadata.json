@@ -1,0 +1,11 @@
+{
+  "layer_name": "layers.7.conv1.0.bias",
+  "layer_type": "conv",
+  "shape": [
+    96
+  ],
+  "dtype": "float32",
+  "requires_grad": true,
+  "device": "cpu",
+  "num_parameters": 96
+}
