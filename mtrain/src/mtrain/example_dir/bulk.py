@@ -1,13 +1,14 @@
 from pathlib import Path
 from tqdm import tqdm
 from typing import List, Union
-from .core import ExampleDir, get_default_smallnet_learner, get_default_negmask_learner
+from .core import ExampleDir, get_default_smallnet_learner, get_default_negmask_learner, get_default_flower_learner
 
 
 def run_bulk_inference(
     directories: list[Path | str | ExampleDir],
     smallnet_learner=None,
     negmask_learner=None,
+    flower_learner=None,
     mapillary_segformer=None,
     elev_segformer=None,
     verbose=True
@@ -19,6 +20,7 @@ def run_bulk_inference(
         directories: List of directory paths that contain image.jpg files
         smallnet_learner: Optional smallnet learner, defaults to get_default_smallnet_learner()
         negmask_learner: Optional negmask learner, defaults to get_default_negmask_learner()
+        flower_learner: Optional flower learner, defaults to get_default_flower_learner()
         mapillary_segformer: Optional mapillary segformer
         elev_segformer: Optional elevation segformer
         verbose: Whether to show progress bars and stage information
@@ -37,6 +39,11 @@ def run_bulk_inference(
             print("Loading default negmask learner...")
         negmask_learner = get_default_negmask_learner()
     
+    if flower_learner is None:
+        if verbose:
+            print("Loading default flower learner...")
+        flower_learner = get_default_flower_learner()
+    
     # Create ExampleDir instances
     if verbose:
         print("Setting up ExampleDir instances...")
@@ -50,6 +57,7 @@ def run_bulk_inference(
                     directory,
                     smallnet_learner=smallnet_learner,
                     negmask_learner=negmask_learner,
+                    flower_learner=flower_learner,
                     mapillary_segformer=mapillary_segformer,
                     elev_segformer=elev_segformer
                 )
@@ -63,6 +71,7 @@ def run_bulk_inference(
     generate_segmentation_masks(example_dirs, verbose)
     generate_trimmed_masks(example_dirs, verbose)
     generate_negmask_probs(example_dirs, verbose)
+    generate_flower_probs(example_dirs, verbose)
     
     if verbose:
         print(f"Bulk inference complete for {len(example_dirs)} directories")
@@ -126,4 +135,19 @@ def generate_negmask_probs(example_dirs: List[ExampleDir], verbose: bool):
         except Exception as e:
             if verbose:
                 print(f"Warning: Failed to generate negmask probabilities for {example_dir.d}: {e}")
+
+
+def generate_flower_probs(example_dirs: List[ExampleDir], verbose: bool):
+    """Pass 5: Generate flower probabilities"""
+    if verbose:
+        print("STAGE: Pass 5 - Flower probabilities")
+    
+    iterator = tqdm(example_dirs) if verbose else example_dirs
+    for example_dir in iterator:
+        try:
+            example_dir.flower_pos_probs_path()  # This generates both pos and neg probs
+            example_dir.flower_neg_probs_path()
+        except Exception as e:
+            if verbose:
+                print(f"Warning: Failed to generate flower probabilities for {example_dir.d}: {e}")
 

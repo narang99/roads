@@ -1,5 +1,4 @@
 from pathlib import Path
-import shutil
 import functools
 import numpy as np
 import cv2
@@ -15,14 +14,15 @@ from fastai.vision.all import (
 from mtrain.disk import DiskImage, DiskBooleanMask
 from mtrain.seg import mapillary as mapi, elevated_vegetation as elev
 from mtrain.neg_mask.model.learner import dummy_dls
-from mtrain.neg_mask.model.predict.full_image_8chan import predict_and_return_probs
+from mtrain.neg_mask.model.predict import trash as pred_trash, flower as pred_flower
 from mtrain.smallnet.unet.predict.strided import single
 
 SMALLNET_SIZE = 100
 SMALLNET_STRIDES = [50]
 SMALLNET_AREA_THRES = 5
 
-NEGMASK_SIZE = 220
+NEGMASK_SIZE = 130
+FLOWER_CROP_SIZE = 60
 
 MAPI_LABELS_TO_EXCLUDE = [
     mapi.Label.PERSON,
@@ -112,8 +112,9 @@ def get_default_smallnet_learner():
 @functools.lru_cache(maxsize=1)
 def get_default_negmask_learner():
     """Load default negmask learner from gen_preds.py path and setup"""
+    print("yaahhhahahah")
     NEG_MASK_MODEL_PATH = Path(
-        "/Users/hariomnarang/Desktop/personal/roads/datasets/models/trash_classification/resnet18-size_220-chan_8-with_augs-iter_15"
+        "/Users/hariomnarang/Desktop/personal/roads/datasets/models/trash_classification/resnet18-size_130-chan_8-with_augs-iter_40"
     )
     LABELS = ["other", "trash"]
     learner = vision_learner(
@@ -130,12 +131,20 @@ def get_default_negmask_learner():
     return learner
 
 
+@functools.lru_cache(maxsize=1)
+def get_default_flower_learner():
+    """Load default flower learner"""
+    FLOWER_MODEL_PATH = "/Users/hariomnarang/Desktop/personal/roads/datasets/flowers/inat/train/size-100_crop-60/models/with-aug-tfms-iter-15.pkl"
+    return load_learner(FLOWER_MODEL_PATH)
+
+
 class ExampleDir:
     def __init__(
         self,
         direc: Path | str,
         smallnet_learner=None,
         negmask_learner=None,
+        flower_learner=None,
         mapillary_segformer=None,
         elev_segformer=None,
     ):
@@ -143,35 +152,27 @@ class ExampleDir:
         if not (self.d / "image.jpg").exists():
             raise Exception(f"image {self.d / 'image.jpg'} does not exist")
 
-        self.smallnet_learner = smallnet_learner if smallnet_learner is not None else get_default_smallnet_learner()
-        self.negmask_learner = negmask_learner if negmask_learner is not None else get_default_negmask_learner()
+        self.smallnet_learner = (
+            smallnet_learner
+            if smallnet_learner is not None
+            else get_default_smallnet_learner()
+        )
+        self.negmask_learner = (
+            negmask_learner
+            if negmask_learner is not None
+            else get_default_negmask_learner()
+        )
+        self.flower_learner = (
+            flower_learner
+            if flower_learner is not None
+            else get_default_flower_learner()
+        )
         self.mapillary_segformer = mapillary_segformer
         self.elev_segformer = elev_segformer
 
     @property
     def image_path(self):
         return self.d / "image.jpg"
-
-# def setup_directories(images, dest_dir):
-#     """Setup directory structure and copy images"""
-#     print("STAGE: Setting up directories")
-#     directories = []
-    
-#     for img in images:
-#         img = Path(img)
-#         dest = dest_dir / img.stem
-        
-#         if dest.exists():
-#             shutil.rmtree(dest)
-#         dest.mkdir(parents=True, exist_ok=True)
-        
-#         # Copy image to destination
-#         shutil.copy2(img, dest / "image.jpg")
-        
-#         directories.append(dest)
-    
-#     return directories
-        pass
 
     def _load_and_resize_image(self):
         """Load and resize image if needed (from gen_preds.py logic)"""
@@ -272,14 +273,13 @@ class ExampleDir:
         DiskBooleanMask.save(trimmed, self.d / "m2.png")
         return trimmed
 
-
     def _generate_negmask_probs(self):
         """Generate trash/other probability arrays"""
 
         image = DiskImage.load(self.image_path)
         mask = DiskBooleanMask.load(self.trimmed_mask_path())
 
-        trash_probs, other_probs = predict_and_return_probs(
+        trash_probs, other_probs = pred_trash.predict_and_return_prob_masks(
             image, mask, self.negmask_learner, NEGMASK_SIZE
         )
 
@@ -288,31 +288,54 @@ class ExampleDir:
 
         return trash_probs, other_probs
 
+    def _generate_flower_probs(self):
+        """Generate flower pos/neg probability arrays using 3-channel ResNet"""
+
+        image = DiskImage.load(self.image_path)
+        mask = DiskBooleanMask.load(self.trimmed_mask_path())
+
+        flower_neg_probs, flower_pos_probs = pred_flower.predict_and_return_prob_masks(
+            image, mask, self.flower_learner, FLOWER_CROP_SIZE
+        )
+
+        np.save(self.d / "flower_pos_probs.npy", flower_pos_probs)
+        np.save(self.d / "flower_neg_probs.npy", flower_neg_probs)
+
+        return flower_pos_probs, flower_neg_probs
+
     # Public functions that return paths and generate if missing
-    def smallnet_mask_path(self):
+    def smallnet_mask_path(self, force=False):
         """Return path to smallnet mask, generate if missing"""
         path = self.d / "mask.png"
+        if path.exists() and force:
+            path.unlink()
         if not path.exists():
             self._generate_smallnet_mask()
         return path
 
-    def mapi_mask_path(self):
+    def mapi_mask_path(self, force=False):
         """Return path to mapillary mask, generate if missing"""
         path = self.d / "mapi.png"
+        if path.exists() and force:
+            path.unlink()
         if not path.exists():
             self._generate_mapi_mask()
         return path
 
-    def elev_mask_path(self):
+    def elev_mask_path(self, force=False):
         """Return path to elevation mask, generate if missing"""
         path = self.d / "elev.png"
+        if path.exists() and force:
+            path.unlink()
         if not path.exists():
             self._generate_elev_mask()
         return path
 
-    def trimmed_mask_path(self):
+    def trimmed_mask_path(self, force=False):
         """Return path to trimmed mask (m2.png), generate if missing"""
         path = self.d / "m2.png"
+        if path.exists() and force:
+            path.unlink()
         if not path.exists():
             # Ensure dependencies exist first
             self.smallnet_mask_path()
@@ -321,19 +344,66 @@ class ExampleDir:
             self._generate_trimmed_mask()
         return path
 
-    def trash_probs_path(self):
+    def trash_probs_path(self, force=False):
         """Return path to trash probabilities, generate if missing"""
         path = self.d / "trash_probs.npy"
+        if path.exists() and force:
+            path.unlink()
         if not path.exists():
             # Ensure dependencies exist first
             self._generate_negmask_probs()
         return path
 
-    def other_probs_path(self):
+    def other_probs_path(self, force=False):
         """Return path to other probabilities, generate if missing"""
         path = self.d / "other_probs.npy"
+        if path.exists() and force:
+            path.unlink()
         if not path.exists():
             # Ensure dependencies exist first
             self.smallnet_mask_path()
             self._generate_negmask_probs()
         return path
+
+    def flower_pos_probs_path(self, force=False):
+        """Return path to flower positive probabilities, generate if missing"""
+        path = self.d / "flower_pos_probs.npy"
+        if path.exists() and force:
+            path.unlink()
+        if not path.exists():
+            # Ensure dependencies exist first
+            self.trimmed_mask_path()
+            self._generate_flower_probs()
+        return path
+
+    def flower_neg_probs_path(self):
+        """Return path to flower negative probabilities, generate if missing"""
+        path = self.d / "flower_neg_probs.npy"
+        if not path.exists():
+            # Ensure dependencies exist first
+            self.trimmed_mask_path()
+            self._generate_flower_probs()
+        return path
+
+    # def final_mask(self, trash_thres=0, flower_thres=0):
+    #     # always precomputes the last part, always "forced" basically
+    #     mask = self.trimmed_mask_path()
+    #     trash = self.trash_probs_path()
+    #     other = self.other_probs_path()
+
+    #     flower_pos = self.flower_pos_probs_path()
+    #     flower_neg = self.flower_neg_probs_path()
+
+    #     flower_pos, flower_neg = np.load(flower_pos), np.load(flower_neg)
+    #     above_neg, _, _ = get_flower_mask_above_threshold_and_neg(
+    #         flower_pos, flower_neg, flower_thres
+    #     )
+
+    #     trash, other = np.load(trash), np.load(other)
+    #     above_other, _, _ = get_trash_mask_above_threshold_and_other(
+    #         trash, other, trash_thres
+    #     )
+
+    #     mask = DiskBooleanMask.load(mask)
+
+    #     return mask.astype(bool) & above_neg.astype(bool) & above_other.astype(bool)
