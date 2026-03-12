@@ -51,12 +51,12 @@ def random_filename(k, suffix=None):
     else:
         return f"{name}{suffix}"
 
-def show(crops, figsize=None, ncols=2, axis="on", cmap=None):
+def _plot(crops, figsize=None, ncols=2, axis="on", cmap=None):
     crops = list(crops)
     rows = math.ceil(len(crops) / ncols)
     if figsize is None:
         figsize = (10 * rows, 10 * rows)
-    _, axs = plt.subplots(rows, ncols, figsize=figsize)
+    fig, axs = plt.subplots(rows, ncols, figsize=figsize)
     if len(crops) > 1:
         axs = axs.flatten()
     else:
@@ -68,7 +68,18 @@ def show(crops, figsize=None, ncols=2, axis="on", cmap=None):
             axs[i].imshow(c)
         axs[i].axis(axis)
     plt.tight_layout()
+    return fig, axs
+
+
+def show(crops, figsize=None, ncols=2, axis="on", cmap=None):
+    fig, axs = _plot(crops, figsize, ncols, axis, cmap)
     plt.show()
+
+
+def save(crops, output_path, figsize=None, ncols=2, axis="on", cmap=None):
+    fig, axs = _plot(crops, figsize, ncols, axis, cmap)
+    plt.savefig(output_path, bbox_inches='tight', dpi=150)
+    plt.close()
 
 
 def draw_grid_cv2(img, cell_size, color=(255, 255, 255), thickness=1, alpha=0.5):
@@ -165,38 +176,15 @@ def get_local_image_limits(img):
     return lim
 
 
-def show_single_channel_red_green_black(images, figsize=None, ncols=2, axis="on", viztype="global"):
-    # 1. Stack them or just find the global min/max across the whole set
+def _plot_single_channel_red_green_black(images, figsize=None, ncols=2, axis="on", viztype="global"):
     if not images:
-        return
+        return None, None, None
+    
     if images[0].dtype == np.uint8:
         images = [img.astype(np.float32) for img in images]
+    
     all_min = min(img.min() for img in images)
     all_max = max(img.max() for img in images)
-
-    # 2. Find the absolute "furthest" value from zero
-    v_limit = max(abs(all_min), abs(all_max))
-    if viztype == "gray":
-        show(images, figsize=figsize, ncols=ncols, axis=axis, cmap="gray")
-        return
-    else:
-        if viztype == "global":
-            limit_getter = lambda _: (-v_limit, v_limit)
-        elif viztype == "local":
-            limit_getter = get_local_image_limits
-        else:
-            raise Exception(f"invalid viztype {viztype}")
-        show_with_custom_limit(images, figsize, ncols, axis, rd_bk_gn, limit_getter)
-
-
-def save_single_channel_red_green_black(images, output_path, figsize=None, ncols=2, axis="on", viztype="global"):
-    if not images:
-        return
-    if images[0].dtype == np.uint8:
-        images = [img.astype(np.float32) for img in images]
-    all_min = min(img.min() for img in images)
-    all_max = max(img.max() for img in images)
-
     v_limit = max(abs(all_min), abs(all_max))
     
     images = list(images)
@@ -204,7 +192,7 @@ def save_single_channel_red_green_black(images, output_path, figsize=None, ncols
     if figsize is None:
         figsize = (5 * rows, 5 * rows)
     
-    _, axs = plt.subplots(rows, ncols, figsize=figsize)
+    fig, axs = plt.subplots(rows, ncols, figsize=figsize)
     if len(images) > 1:
         axs = axs.flatten()
     else:
@@ -227,8 +215,28 @@ def save_single_channel_red_green_black(images, output_path, figsize=None, ncols
         axs[i].axis(axis)
     
     plt.tight_layout()
-    plt.savefig(output_path, bbox_inches='tight', dpi=150)
-    plt.close()
+    return fig, axs, v_limit
+
+
+def show_single_channel_red_green_black(images, figsize=None, ncols=2, axis="on", viztype="global"):
+    if viztype == "gray":
+        show(images, figsize=figsize, ncols=ncols, axis=axis, cmap="gray")
+        return
+    
+    fig, axs, v_limit = _plot_single_channel_red_green_black(images, figsize, ncols, axis, viztype)
+    if fig is not None:
+        plt.show()
+
+
+def save_single_channel_red_green_black(images, output_path, figsize=None, ncols=2, axis="on", viztype="global"):
+    if viztype == "gray":
+        save(images, output_path, figsize=figsize, ncols=ncols, axis=axis, cmap="gray")
+        return
+    
+    fig, axs, v_limit = _plot_single_channel_red_green_black(images, figsize, ncols, axis, viztype)
+    if fig is not None:
+        plt.savefig(output_path, bbox_inches='tight', dpi=150)
+        plt.close()
 
 
 def stack_batch(lofarrays):

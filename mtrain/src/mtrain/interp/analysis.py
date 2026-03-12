@@ -1,5 +1,5 @@
 from pathlib import Path
-from mtrain.utils import show_single_channel_red_green_black
+from mtrain.utils import show_single_channel_red_green_black, save_single_channel_red_green_black
 from typing import Literal, TypedDict
 import numpy as np
 import json
@@ -472,6 +472,48 @@ def run_and_show_for_input(
     }
 
 
+def run_and_save_for_input(
+    layer_id,
+    input_tensor,
+    model,
+    kernel_idx,
+    output_path,
+    figsize=None,
+    viztype: Literal["global", "local", "gray"] = "global",
+) -> RunResult:
+    layer = model.get_submodule(layer_id)
+    kernel = layer.weight[kernel_idx].detach().numpy()
+    o0_batch = run_on_layer(layer_id, input_tensor, model)
+    o0 = o0_batch[0][kernel_idx]
+    per_chan_conv = get_per_channel_conv(layer_id, input_tensor, model, kernel_idx)[0]
+
+    manual_sum = per_chan_conv.sum(dim=0)
+    are_equal = torch.allclose(o0, manual_sum, atol=1e-6)
+    if not are_equal:
+        raise Exception(f"manual sum not equal to actual layer output, manual={manual_sum} auto={o0}")
+    o0 = o0.numpy()
+
+    to_show_input = [w for w in input_tensor[0].numpy()]
+    ktoshow = [k for k in kernel]
+    if len(ktoshow) != len(to_show_input):
+        raise Exception(
+            f"WARN: kernel length is not the same as the input length, kernel-length={len(ktoshow)} input-length={len(to_show_input)}"
+        )
+    ncols = len(to_show_input)
+    per_chan_to_show = [c for c in per_chan_conv.numpy()]
+    to_show = to_show_input + per_chan_to_show + ktoshow + [o0]
+    save_single_channel_red_green_black(
+        to_show, output_path, figsize=figsize, ncols=ncols, viztype=viztype
+    )
+
+    return {
+        "input": to_show_input,
+        "per_chan": per_chan_to_show,
+        "kernel": ktoshow,
+        "output": o0,
+    }
+
+
 def run_on_layer(layer_id, input_batch, model):
     layer = model.get_submodule(layer_id)
     device = next(layer.parameters()).device
@@ -509,3 +551,97 @@ def print_conv_stats(res: RunResult):
 
     print("\nOutput raw sum", res["output"].sum())
     print("\nOutput abs sum", np.abs(res["output"]).sum())
+
+
+def test_for_path_with_report(p, layer_id, original_learner, learner, dest_dir, prefix="", viztype="local"):
+      from pathlib import Path
+      import shutil
+
+      dest_path = Path(dest_dir)
+      dest_path.mkdir(exist_ok=True, parents=True)
+
+      # Create unique prefix for this path
+      path_name = Path(p).stem
+      if prefix:
+          file_prefix = f"{prefix}_{path_name}"
+      else:
+          file_prefix = path_name
+
+      # Copy original image to dest (only once, no prefix needed)
+      original_img_path = dest_path / f"{path_name}_original.png"
+      if not original_img_path.exists():
+          shutil.copy2(p, original_img_path)
+
+      # Process the image
+      t0 = original_learner.dls.test_dl([p]).one_batch()[0]
+
+      # Save original kernel behavior
+      original_analysis_path = dest_path / f"{file_prefix}_original_analysis.png"
+      res_original = run_and_save_for_input(
+          layer_id, t0, original_learner.model, 0,
+          original_analysis_path, viztype=viztype
+      )
+
+      # Save new kernel behavior
+      new_analysis_path = dest_path / f"{file_prefix}_new_analysis.png"
+      res_test = run_and_save_for_input(
+          layer_id, t0, learner.model, 0,
+          new_analysis_path, viztype=viztype
+      )
+
+      # Save per channel comparison
+      comparison_path = dest_path / f"{file_prefix}_comparison.png"
+      save_single_channel_red_green_black(
+          [
+              res_original["per_chan"][0],
+              res_original["per_chan"][1],
+              res_test["per_chan"][0],
+              res_test["per_chan"][1],
+              res_original["output"],
+              res_test["output"],
+          ],
+          comparison_path,
+          figsize=(15, 15),
+          viztype=viztype,
+      )
+
+      # Create markdown report for this image
+      md_content = f"""# Analysis Report: {path_name} ({viztype})
+
+**Layer:** `{layer_id}`
+**Visualization Type:** `{viztype}`
+
+## Original Image
+<img src="{path_name}_original.png" alt="Original" width="200" height="200" style="image-rendering: pixelated;">
+
+## Original Kernel Analysis
+![Original Analysis]({file_prefix}_original_analysis.png)
+
+## New Kernel Analysis
+![New Analysis]({file_prefix}_new_analysis.png)
+
+## Per Channel Comparison
+![Comparison]({file_prefix}_comparison.png)
+"""
+
+      # Write markdown report
+      report_path = dest_path / f"{file_prefix}_report.md"
+      with open(report_path, 'w') as f:
+          f.write(md_content)
+
+      return report_path, res_original, res_test
+
+
+def test_for_path_all_viztypes(p, layer_id, original_learner, learner, dest_dir):
+    """Generate reports for all visualization types: gray, global, and local"""
+    viztypes = ["gray", "global", "local"]
+    reports = []
+    
+    for viztype in viztypes:
+        report_path, res_original, res_test = test_for_path_with_report(
+            p, layer_id, original_learner, learner, dest_dir, 
+            prefix=viztype, viztype=viztype
+        )
+        reports.append((viztype, report_path, res_original, res_test))
+    
+    return reports
