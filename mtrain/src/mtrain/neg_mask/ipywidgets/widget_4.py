@@ -4,9 +4,43 @@ import ipywidgets as widgets
 from IPython.display import display
 
 from mtrain.smallnet.unet.extract.draw import overlay_mask_on_img
-from mtrain.neg_mask.model.dataset import MaskClassificationDataset, denormalize
-from mtrain.neg_mask.model.inference import get_preds_for_ds
+from mtrain.neg_mask.model.datasets.dataset import (
+    MaskClassificationDataset,
+    denormalize,
+)
 from mtrain.neg_mask.ipywidgets.utils import arr_to_png_bytes
+
+
+def get_preds_for_ds(learn, ds, device=None, bs=4):
+    from torch.utils.data import DataLoader as TorchDataLoader
+    import torch.nn.functional as F
+    import torch
+    from fastai.vision.all import default_device
+
+    if device is None:
+        device = default_device()
+
+    loader = TorchDataLoader(ds, batch_size=bs, shuffle=False)
+    learn.model.eval()
+    learn.model.to(device)
+    all_preds, all_targs, all_losses = [], [], []
+    with torch.no_grad():
+        for x, y in loader:
+            x = x.to(device)
+            logits = learn.model(x)
+            preds = logits.softmax(dim=1)
+            losses = F.cross_entropy(logits, y.to(device), reduction="none")
+            all_preds.append(preds.cpu())
+            all_targs.append(y.cpu())
+            all_losses.append(losses.cpu())
+    all_preds = torch.cat(all_preds)
+    all_targs = torch.cat(all_targs)
+    all_losses = torch.cat(all_losses)
+    decoded = all_preds.argmax(dim=1)
+    TRASH, OTHER = 0, 1
+    fp_idxs = ((all_targs == OTHER) & (decoded == TRASH)).nonzero().squeeze()
+    fn_idxs = ((all_targs == TRASH) & (decoded == OTHER)).nonzero().squeeze()
+    return all_preds, all_targs, decoded, fp_idxs, fn_idxs, all_losses
 
 
 _LABEL_BUTTON_STYLE: dict[str, str] = {
@@ -57,10 +91,10 @@ class LossWidget:
 
         print("Running inference…")
         preds, targs, decoded, _, _, losses = get_preds_for_ds(learn, ds, bs=bs)
-        self._preds = preds      # [N, C]
-        self._targs = targs      # [N]
+        self._preds = preds  # [N, C]
+        self._targs = targs  # [N]
         self._decoded = decoded  # [N]
-        self._losses = losses    # [N]
+        self._losses = losses  # [N]
 
         sorted_idxs = losses.argsort(descending=descending)
         self._sorted_idxs = sorted_idxs[:n].tolist()
@@ -138,14 +172,18 @@ class LossWidget:
             layout=widgets.Layout(gap="8px", margin="8px 0 0 0"),
         )
 
-        display(widgets.VBox([
-            self._lbl_status,
-            self._lbl_info,
-            nav_row,
-            label_row,
-            self._lbl_action,
-            self._out_img,
-        ]))
+        display(
+            widgets.VBox(
+                [
+                    self._lbl_status,
+                    self._lbl_info,
+                    nav_row,
+                    label_row,
+                    self._lbl_action,
+                    self._out_img,
+                ]
+            )
+        )
 
     # ------------------------------------------------------------------
     # Rendering
@@ -191,11 +229,13 @@ class LossWidget:
 
         self._out_img.clear_output(wait=True)
         with self._out_img:
-            display(widgets.Image(
-                value=arr_to_png_bytes(overlaid),
-                format="png",
-                layout=widgets.Layout(width="400px"),
-            ))
+            display(
+                widgets.Image(
+                    value=arr_to_png_bytes(overlaid),
+                    format="png",
+                    layout=widgets.Layout(width="400px"),
+                )
+            )
 
         self._btn_prev.disabled = pos == 0
         self._btn_next.disabled = pos == self._n - 1

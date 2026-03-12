@@ -1,4 +1,4 @@
-from mtrain.neg_mask.model.dataset import MaskClassificationDataset
+from mtrain.neg_mask.model.datasets.dataset import MaskClassificationDataset
 from pathlib import Path
 
 def load_our_learner(dls, model_arch, weights, labels, pth_path=None):
