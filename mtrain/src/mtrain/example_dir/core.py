@@ -1,7 +1,10 @@
 from pathlib import Path
+import shutil
+import functools
 import numpy as np
 import cv2
 from fastai.vision.all import (
+    load_learner,
     vision_learner,
     resnet18,
     accuracy,
@@ -99,6 +102,34 @@ MAPI_LABELS_TO_EXCLUDE = [
 ELEV_LABELS_TO_EXCLUDE = [elev.Label.ELEVATED_VEGETATION]
 
 
+@functools.lru_cache(maxsize=1)
+def get_default_smallnet_learner():
+    """Load default smallnet learner from gen_preds.py path"""
+    SMALLNET_MODEL_PATH = "/Users/hariomnarang/Desktop/gdrive-sync/garbage/experiments/enguled-bbox-levels-crops-v3/log/export_iter_14.pkl"
+    return load_learner(SMALLNET_MODEL_PATH)
+
+
+@functools.lru_cache(maxsize=1)
+def get_default_negmask_learner():
+    """Load default negmask learner from gen_preds.py path and setup"""
+    NEG_MASK_MODEL_PATH = Path(
+        "/Users/hariomnarang/Desktop/personal/roads/datasets/models/trash_classification/resnet18-size_220-chan_8-with_augs-iter_15"
+    )
+    LABELS = ["other", "trash"]
+    learner = vision_learner(
+        dummy_dls(LABELS),
+        resnet18,
+        n_in=8,
+        metrics=[accuracy, F1Score(average="macro")],
+        loss_func=CrossEntropyLossFlat(),
+        n_out=len(LABELS),
+        normalize=False,
+    )
+    learner = learner.remove_cb(ProgressCallback)
+    learner = learner.load(NEG_MASK_MODEL_PATH)
+    return learner
+
+
 class ExampleDir:
     def __init__(
         self,
@@ -112,14 +143,35 @@ class ExampleDir:
         if not (self.d / "image.jpg").exists():
             raise Exception(f"image {self.d / 'image.jpg'} does not exist")
 
-        self.smallnet_learner = smallnet_learner
-        self.negmask_learner = negmask_learner
+        self.smallnet_learner = smallnet_learner if smallnet_learner is not None else get_default_smallnet_learner()
+        self.negmask_learner = negmask_learner if negmask_learner is not None else get_default_negmask_learner()
         self.mapillary_segformer = mapillary_segformer
         self.elev_segformer = elev_segformer
 
     @property
     def image_path(self):
         return self.d / "image.jpg"
+
+# def setup_directories(images, dest_dir):
+#     """Setup directory structure and copy images"""
+#     print("STAGE: Setting up directories")
+#     directories = []
+    
+#     for img in images:
+#         img = Path(img)
+#         dest = dest_dir / img.stem
+        
+#         if dest.exists():
+#             shutil.rmtree(dest)
+#         dest.mkdir(parents=True, exist_ok=True)
+        
+#         # Copy image to destination
+#         shutil.copy2(img, dest / "image.jpg")
+        
+#         directories.append(dest)
+    
+#     return directories
+        pass
 
     def _load_and_resize_image(self):
         """Load and resize image if needed (from gen_preds.py logic)"""
@@ -130,8 +182,6 @@ class ExampleDir:
 
     def _generate_smallnet_mask(self):
         """Generate initial mask using smallnet model"""
-        if self.smallnet_learner is None:
-            raise ValueError("smallnet_learner required to generate mask")
 
         img_arr = self._load_and_resize_image()
         mask = single.strided_predict_unet_only_mask(
@@ -222,26 +272,9 @@ class ExampleDir:
         DiskBooleanMask.save(trimmed, self.d / "m2.png")
         return trimmed
 
-    def _load_negmask_model(self, model_path):
-        """Load neg mask model (from gen_preds.py)"""
-        LABELS = ["other", "trash"]
-        learner = vision_learner(
-            dummy_dls(LABELS),
-            resnet18,
-            n_in=8,
-            metrics=[accuracy, F1Score(average="macro")],
-            loss_func=CrossEntropyLossFlat(),
-            n_out=len(LABELS),
-            normalize=False,
-        )
-        learner = learner.remove_cb(ProgressCallback)
-        learner = learner.load(model_path)
-        return learner
 
     def _generate_negmask_probs(self):
         """Generate trash/other probability arrays"""
-        if self.negmask_learner is None:
-            raise ValueError("negmask_learner required to generate probabilities")
 
         image = DiskImage.load(self.image_path)
         mask = DiskBooleanMask.load(self.trimmed_mask_path())
