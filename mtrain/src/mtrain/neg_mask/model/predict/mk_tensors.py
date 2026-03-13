@@ -6,7 +6,7 @@ from mtrain.neg_mask.leveled_cropping import (
     create_crop_level_sample,
     make_crop_level_pairs_v2,
 )
-from ..crop_dataset_base import create_std_transforms
+from mtrain.neg_mask.model.datasets.crop_dataset_base import create_std_transforms
 
 
 def mk_8_chan(

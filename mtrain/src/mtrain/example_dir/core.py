@@ -114,7 +114,7 @@ def get_default_negmask_learner():
     """Load default negmask learner from gen_preds.py path and setup"""
     print("yaahhhahahah")
     NEG_MASK_MODEL_PATH = Path(
-        "/Users/hariomnarang/Desktop/personal/roads/datasets/models/trash_classification/resnet18-size_130-chan_8-with_augs-iter_40"
+        "/Users/hariomnarang/Desktop/personal/roads/datasets/models/trash_classification/resnet18-size_130-chan_8-with_augs-iter_30"
     )
     LABELS = ["other", "trash"]
     learner = vision_learner(
@@ -279,7 +279,7 @@ class ExampleDir:
         image = DiskImage.load(self.image_path)
         mask = DiskBooleanMask.load(self.trimmed_mask_path())
 
-        trash_probs, other_probs = pred_trash.predict_and_return_prob_masks(
+        other_probs, trash_probs = pred_trash.predict_and_return_prob_masks(
             image, mask, self.negmask_learner, NEGMASK_SIZE
         )
 
@@ -376,9 +376,11 @@ class ExampleDir:
             self._generate_flower_probs()
         return path
 
-    def flower_neg_probs_path(self):
+    def flower_neg_probs_path(self, force=False):
         """Return path to flower negative probabilities, generate if missing"""
         path = self.d / "flower_neg_probs.npy"
+        if path.exists() and force:
+            path.unlink()
         if not path.exists():
             # Ensure dependencies exist first
             self.trimmed_mask_path()
