@@ -46,8 +46,6 @@ class BlurPadDataset(Dataset):
                 v2.Resize(size=self.crop_size - 1, max_size=self.crop_size),
                 v2.CenterCrop(self.crop_size),
                 v2.RandomHorizontalFlip(p=0.5),
-                # v2.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
-                # v2.RandomRotation([0,10]),
                 v2.ToDtype(torch.float32, scale=True),
                 v2.Normalize(mean=MASK_DS_IMAGENET_MEAN, std=MASK_DS_IMAGENET_STD),
                 v2.ToPureTensor(),
@@ -72,34 +70,45 @@ class BlurPadDataset(Dataset):
         return len(self.image_paths)
 
     def __getitem__(self, index):
-        image_path = self.image_paths[index]
-        image = DiskImage.load(image_path)
-        full_mask = DiskBooleanMask.load(self.mask_paths[index])
-
-        bbox, inner_bbox = self.img_name_by_bbox[image_path.stem]
-
-        crop = image[bbox.y : bbox.y2, bbox.x : bbox.x2]
-        cropped_mask = full_mask[bbox.y:bbox.y2, bbox.x:bbox.x2]
-
-        if self.max_noise is not None:
-            noisy = np.random.randint(
-                0, self.max_noise, crop.shape, dtype=np.uint8
-            )
-            y,y2,x,x2 = inner_bbox.y, inner_bbox.y2, inner_bbox.x, inner_bbox.x2
-            noisy[y:y2, x:x2] = crop[y:y2, x:x2]
-            crop = noisy
-
-        crop = tv_tensors.Image(crop).permute([2,0,1])
-        cropped_mask = tv_tensors.Mask(cropped_mask.reshape(1, *cropped_mask.shape))
-
-        label = self._labels[index]
-        label_idx = self.LABEL_BY_IDX[label]
-        label_tensor = torch.tensor(label_idx, dtype=torch.long)
         tfms = self._valid_tfms if self.is_valid else self._train_tfms
-
-        t_crop, t_mask = tfms((crop, cropped_mask))
-    
+        t_crop, t_mask = get_transformed_pair(
+            self.image_paths[index],
+            self.mask_paths[index],
+            self.img_name_by_bbox,
+            self.max_noise,
+            tfms
+        )
+        label_tensor = get_label_tensor(self._labels[index], self.LABEL_BY_IDX)
         return t_crop, label_tensor
+
+
+def get_label_tensor(label, label_by_idx):
+    label_idx = label_by_idx[label]
+    return torch.tensor(label_idx, dtype=torch.long)
+
+def get_transformed_pair(image_path, mask_path, img_name_by_bbox, max_noise, tfms):
+    image = DiskImage.load(image_path)
+    full_mask = DiskBooleanMask.load(mask_path)
+
+    bbox, inner_bbox = img_name_by_bbox[image_path.stem]
+
+    crop = image[bbox.y : bbox.y2, bbox.x : bbox.x2]
+    cropped_mask = full_mask[bbox.y:bbox.y2, bbox.x:bbox.x2]
+
+    if max_noise is not None:
+        noisy = np.random.randint(
+            0, max_noise, crop.shape, dtype=np.uint8
+        )
+        y,y2,x,x2 = inner_bbox.y, inner_bbox.y2, inner_bbox.x, inner_bbox.x2
+        noisy[y:y2, x:x2] = crop[y:y2, x:x2]
+        crop = noisy
+
+    crop = tv_tensors.Image(crop).permute([2,0,1])
+    cropped_mask = tv_tensors.Mask(cropped_mask.reshape(1, *cropped_mask.shape))
+
+    t_crop, t_mask = tfms((crop, cropped_mask))
+
+    return t_crop, t_mask
 
 
 def get_image_mask_and_bbox(image_paths, mask_dir, crop_size):
