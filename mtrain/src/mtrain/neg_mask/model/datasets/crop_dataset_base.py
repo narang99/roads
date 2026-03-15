@@ -33,6 +33,19 @@ class ResizeIfLarger:
             mask = self.resize(mask)
         return img, mask
 
+class ResizeIfLargerOnlyImage:
+    """Conditionally resize only if image exceeds size threshold."""
+
+    def __init__(self, size: int, max_size: int):
+        self.size = size
+        self.resize = v2.Resize(size, max_size=max_size, antialias=True)
+
+    def __call__(self, img):
+        h, w = img.shape[-2], img.shape[-1]
+        if h > self.size or w > self.size:
+            img = self.resize(img)
+        return img
+
 
 def denormalize(
     combined: torch.Tensor, pairs_per_dir: int

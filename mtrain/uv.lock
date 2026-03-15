@@ -1599,6 +1599,23 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d7/a5/bbbc3b74a94fbdbd7915e7ad030f16539bfdc1362f7e9003b594f0537950/glob2-0.7.tar.gz", hash = "sha256:85c3dbd07c8aa26d63d7aacee34fa86e9a91a3873bc30bf62ec46e531f92ab8c", size = 10697, upload-time = "2019-06-10T23:33:48.308Z" }
 
 [[package]]
+name = "grad-cam"
+version = "1.5.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "matplotlib" },
+    { name = "numpy" },
+    { name = "opencv-python" },
+    { name = "pillow" },
+    { name = "scikit-learn" },
+    { name = "torch" },
+    { name = "torchvision" },
+    { name = "tqdm" },
+    { name = "ttach" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ee/b3/e8b060e69d4de4b4d8a86868762dbc1ecaa58affa538a8af201a38a408ef/grad-cam-1.5.5.tar.gz", hash = "sha256:690c433d226d35c89c9eb170462db204909cb06b39c7381e6880a49b6fc37015", size = 7783293, upload-time = "2025-04-07T05:13:54.984Z" }
+
+[[package]]
 name = "graphql-core"
 version = "3.2.7"
 source = { registry = "https://pypi.org/simple" }
@@ -2853,6 +2870,7 @@ dependencies = [
     { name = "fastprogress" },
     { name = "fiftyone" },
     { name = "ftfy" },
+    { name = "grad-cam" },
     { name = "ipykernel" },
     { name = "ipympl" },
     { name = "ipywidgets" },
@@ -2882,6 +2900,7 @@ requires-dist = [
     { name = "fastprogress", specifier = ">=1.1.3" },
     { name = "fiftyone", specifier = ">=1.11.1" },
     { name = "ftfy", specifier = ">=6.3.1" },
+    { name = "grad-cam", specifier = ">=1.5.5" },
     { name = "ipykernel", specifier = ">=7.1.0" },
     { name = "ipympl", specifier = ">=0.10.0" },
     { name = "ipywidgets", specifier = ">=8.1.8" },
@@ -5673,6 +5692,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/37/92/e97fcc6b2c27cdb87ce5ee063d77f8f26f19f06916aa680464c8104ef0f6/triton-3.5.1-cp313-cp313t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:0b4d2c70127fca6a23e247f9348b8adde979d2e7a20391bfbabaac6aebc7e6a8", size = 170579924, upload-time = "2025-11-11T17:41:12.455Z" },
     { url = "https://files.pythonhosted.org/packages/a4/e6/c595c35e5c50c4bc56a7bac96493dad321e9e29b953b526bbbe20f9911d0/triton-3.5.1-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:d0637b1efb1db599a8e9dc960d53ab6e4637db7d4ab6630a0974705d77b14b60", size = 170480488, upload-time = "2025-11-11T17:41:18.222Z" },
     { url = "https://files.pythonhosted.org/packages/16/b5/b0d3d8b901b6a04ca38df5e24c27e53afb15b93624d7fd7d658c7cd9352a/triton-3.5.1-cp314-cp314t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:bac7f7d959ad0f48c0e97d6643a1cc0fd5786fe61cb1f83b537c6b2d54776478", size = 170582192, upload-time = "2025-11-11T17:41:23.963Z" },
+]
+
+[[package]]
+name = "ttach"
+version = "0.0.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/91/5d/4c49e0eca4206bc25eff4ba89cee51b781466e2e3aad2f1057fd5d2634be/ttach-0.0.3.tar.gz", hash = "sha256:120c4dd881feb0e9c8dd63b154f2655891c3e20689b68a94d162bfd5557bcb48", size = 9600, upload-time = "2020-07-09T14:44:09.035Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8d/a3/ee48a184a185c1897c582c72240c2c8a0d0aeb5f8051a71d4e4cd930c52d/ttach-0.0.3-py3-none-any.whl", hash = "sha256:7000bb4334f856b0c79a341df386c92f1c76faf091043cc3cd7f541d2149faf8", size = 9839, upload-time = "2020-07-09T14:44:08.006Z" },
 ]
 
 [[package]]

@@ -43,7 +43,7 @@ def iter_crops(
         yield bbox, crop_img, crop_mask
 
 
-def get_region_crops(img, mask, padding=20):
+def get_region_crops(img, mask):
     _, labels = cv2.connectedComponents(mask)
     h, w = img.shape[:2]
     for label in range(1, labels.max() + 1):

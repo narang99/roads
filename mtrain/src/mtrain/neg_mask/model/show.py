@@ -28,7 +28,7 @@ import torch.nn.functional as F
 from fastai.vision.all import default_device
 from torch.utils.data import DataLoader as TorchDataLoader
 
-from .dataset import MaskClassificationDataset, _label_func
+from .datasets.dataset import MaskClassificationDataset, _label_func
 from mtrain.utils import show
 
 
