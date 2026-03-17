@@ -1,0 +1,5 @@
+outs:
+- md5: 89737636bcfc8490b8ed3adfeb5ba46e
+  size: 25932800
+  hash: md5
+  path: small_crops.tar
