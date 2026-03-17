@@ -4,6 +4,9 @@ import numpy as np
 import cv2
 
 
+def fixed_cat_id(cat_id):
+    return cat_id + 1
+
 def extract_mask_for_image_id(img_id, coco, taco_dir):
     image_path = taco_dir / coco.loadImgs(img_id)[0]["file_name"]
     annIds = coco.getAnnIds(imgIds=img_id, catIds=[], iscrowd=None)
@@ -44,10 +47,12 @@ def get_orientation_tag():
     return None
 
 
-def anns_to_mask(anns_sel, height, width, value=1):
+def anns_to_mask(anns_sel, height, width, value=None):
     mask = np.zeros((height, width), dtype=np.uint8)
     for ann in anns_sel:
         for seg in ann["segmentation"]:
             poly = np.array(seg, dtype=np.int32).reshape(-1, 2)
+            if value is None:
+                value = fixed_cat_id(ann["category_id"])
             cv2.fillPoly(mask, [poly], value)
     return mask

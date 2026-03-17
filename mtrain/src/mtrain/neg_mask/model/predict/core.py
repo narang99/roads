@@ -46,7 +46,7 @@ def reconstruct_probability_masks(image, mask, all_probs, bboxes):
     for i, bbox in enumerate(bboxes):
         for label_idx in range(num_labels):
             current_prob = all_probs[i, label_idx].item()
-            bbox_mask = mask[bbox.y : bbox.y2, bbox.x : bbox.x2]
+            bbox_mask = mask[bbox.y : bbox.y2, bbox.x : bbox.x2].astype(bool)
             res_masks[label_idx][bbox.y : bbox.y2, bbox.x : bbox.x2][bbox_mask] = (
                 current_prob
             )
@@ -55,6 +55,6 @@ def reconstruct_probability_masks(image, mask, all_probs, bboxes):
 
 
 def get_crop_data_list(image, mask):
-    bboxes = list(get_region_crops(image, mask))
+    bboxes = list(get_region_crops(mask))
     crop_data_list = [(image, mask, bbox) for bbox in bboxes]
     return crop_data_list

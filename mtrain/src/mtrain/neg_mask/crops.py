@@ -20,7 +20,7 @@ class Bbox:
 
 
 def get_crops_for_image(image: np.ndarray, mask: np.ndarray, bbox_pad=20, crop_pad=220):
-    bboxes = list(get_region_crops(image, mask, bbox_pad))
+    bboxes = list(get_region_crops(mask))
     yield from iter_crops(image, mask, bboxes, crop_pad)
 
 
@@ -43,9 +43,9 @@ def iter_crops(
         yield bbox, crop_img, crop_mask
 
 
-def get_region_crops(img, mask):
+def get_region_crops(mask):
     _, labels = cv2.connectedComponents(mask)
-    h, w = img.shape[:2]
+    h, w = mask.shape[:2]
     for label in range(1, labels.max() + 1):
         rows, cols = np.where(labels == label)
         r1 = max(0, rows.min())

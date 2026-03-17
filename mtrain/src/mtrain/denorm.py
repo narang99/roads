@@ -30,3 +30,10 @@ def denormalize_imagenet(tensor):
     denorm_tensor = torch.clamp(denorm_tensor, 0, 1)
     
     return denorm_tensor
+
+
+def denormalize_4chan_imagenet(tensor):
+    image = tensor[:3,:,:]
+    denorm_image = denormalize_imagenet(image)
+    mask = tensor[3]
+    return denorm_image, mask

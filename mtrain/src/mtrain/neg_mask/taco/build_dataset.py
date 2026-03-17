@@ -67,7 +67,7 @@ def iter_taco_samples(
             )
             cat_name = coco.loadCats([ann["category_id"]])[0]["supercategory"]
 
-            bboxes = list(get_region_crops(img_array, mask))
+            bboxes = list(get_region_crops(mask))
             if not bboxes:
                 print(
                     f"  [skip] img_id={img_id} ann_id={ann['id']}: empty mask after resize"

@@ -20,7 +20,7 @@ def mk_8_chan(
     - Channels 3-5: medium crop RGB
     - Channels 6-7: corresponding masks (tight, medium)
     """
-    tensor_pairs = _get_tensor_pairs(image, mask, bbox, tight_pad, medium_pad)
+    tensor_pairs = get_crop_pairs_from_full_image(image, mask, bbox, tight_pad, medium_pad)
     t_images, t_masks = _get_transformed(tensor_pairs, medium_pad)
     t_res = t_images + t_masks
     combined = torch.cat(t_res, dim=0)  # Shape: [8, 130, 130]
@@ -36,12 +36,20 @@ def mk_3_chan(
     Returns tensor of shape [3, medium_pad, medium_pad] where:
     - Channels 0-2: tight crop RGB
     """
-    tensor_pairs = _get_tensor_pairs(image, mask, bbox, tight_pad, medium_pad)
+    tensor_pairs = get_crop_pairs_from_full_image(image, mask, bbox, tight_pad, medium_pad)
     t_images, _ = _get_transformed(tensor_pairs[:1], medium_pad)
     return t_images[0]
 
 
-def _get_tensor_pairs(image, mask, bbox, tight_pad, medium_pad):
+def get_crop_pairs_from_full_image(image, mask, bbox, tight_pad, medium_pad):
+    """Given a full image, a full mask (interpolated) and a bbox, return CropLevel pairs
+
+    the pairs object would have a tight image, which would simply be the image with bbox+tight_pad
+    Then you would have bbox+medium_pad
+    then full image
+
+    The mask would only contain the values inside the bbox
+    """
     sample = create_crop_level_sample(image, mask, bbox)
     pairs_obj = make_crop_level_pairs_v2(sample, tight_pad, medium_pad)
 

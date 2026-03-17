@@ -117,11 +117,11 @@ class ChunkCropper:
                 self.crop_size,
                 self.crop_size,
             )
-            for idx, (rsz_img, rsz_mask) in enumerate(it):
+            for idx, (lvl, (rsz_img, rsz_mask)) in enumerate(it):
                 if rsz_img is None:
                     failures += 1
                 else:
-                    fname = f"{fname_prefix}_{idx}"
+                    fname = f"{lvl}_{fname_prefix}_{idx}"
                     _save_crop(
                         rsz_img,
                         rsz_mask,

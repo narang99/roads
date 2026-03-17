@@ -1,3 +1,6 @@
+import torch
+from fastai.basics import DataLoaders, default_device, Precision
+from mtrain.neg_mask.model.datasets.blur_pad_dl import BlurPadDataset
 from pathlib import Path
 import functools
 import numpy as np
@@ -22,7 +25,16 @@ SMALLNET_STRIDES = [50]
 SMALLNET_AREA_THRES = 5
 
 NEGMASK_SIZE = 130
+NEGMASK_BLUR_KERNEL_SZ = 13
+NEGMASK_BLUR_KERNEL_SIGMA = 4
+NEGMASK_BBOX_PAD = 10
+NEGMASK_STEP_EDGE_MAX_NOISE = 30
+
+NEG_MASK_UNBLURRED_MODEL_PATH = "/Users/hariomnarang/Desktop/personal/roads/datasets/models/unblurred/v2/blurpad/fullset-p10-iter100-verified.pt"
+NEG_MASK_STEP_EDGE_MODEL_PATH = "/Users/hariomnarang/Desktop/personal/roads/datasets/models/unblurred/v2/clean-with-subtract/fullset-p10-iter5.pt"
+
 FLOWER_CROP_SIZE = 60
+
 
 MAPI_LABELS_TO_EXCLUDE = [
     mapi.Label.PERSON,
@@ -110,25 +122,34 @@ def get_default_smallnet_learner():
 
 
 @functools.lru_cache(maxsize=1)
-def get_default_negmask_learner():
-    """Load default negmask learner from gen_preds.py path and setup"""
-    print("yaahhhahahah")
-    NEG_MASK_MODEL_PATH = Path(
-        "/Users/hariomnarang/Desktop/personal/roads/datasets/models/trash_classification/resnet18-size_130-chan_8-with_augs-iter_30"
+def get_default_negmask_learner(model_path):
+    # dummy dls
+    train_ds = BlurPadDataset([], Path("./masks"), 130, False, max_noise=None)
+    valid_ds = BlurPadDataset([], Path("./masks"), 130, True, max_noise=None)
+    dls = DataLoaders.from_dsets(
+        train_ds,
+        valid_ds,
+        device=default_device(),
+        num_workers=4,
+        bs=16,
+        persistent_workers=True,
     )
-    LABELS = ["other", "trash"]
-    learner = vision_learner(
-        dummy_dls(LABELS),
+    learn = vision_learner(
+        dls,
         resnet18,
-        n_in=8,
-        metrics=[accuracy, F1Score(average="macro")],
+        metrics=[Precision()],
         loss_func=CrossEntropyLossFlat(),
-        n_out=len(LABELS),
+        n_out=2,
         normalize=False,
+        n_in=3,
     )
-    learner = learner.remove_cb(ProgressCallback)
-    learner = learner.load(NEG_MASK_MODEL_PATH)
-    return learner
+
+    # load statedict
+    learn = learn.remove_cb(ProgressCallback)
+    state_dict = torch.load(model_path, map_location=default_device())
+    learn.model.load_state_dict(state_dict, strict=True)
+    learn.model.eval()
+    return learn
 
 
 @functools.lru_cache(maxsize=1)
@@ -160,7 +181,7 @@ class ExampleDir:
         self.negmask_learner = (
             negmask_learner
             if negmask_learner is not None
-            else get_default_negmask_learner()
+            else get_default_negmask_learner(NEG_MASK_UNBLURRED_MODEL_PATH)
         )
         self.flower_learner = (
             flower_learner
@@ -273,14 +294,22 @@ class ExampleDir:
         DiskBooleanMask.save(trimmed, self.d / "m2.png")
         return trimmed
 
-    def _generate_negmask_probs(self):
+    def generate_negmask_probs(self):
         """Generate trash/other probability arrays"""
 
         image = DiskImage.load(self.image_path)
         mask = DiskBooleanMask.load(self.trimmed_mask_path())
 
-        other_probs, trash_probs = pred_trash.predict_and_return_prob_masks(
-            image, mask, self.negmask_learner, NEGMASK_SIZE
+        other_probs, trash_probs = (
+            pred_trash.predict_and_return_prob_masks_using_unblurred(
+                image,
+                mask,
+                self.negmask_learner,
+                crop_size=NEGMASK_SIZE,
+                blur_kernel_sz=NEGMASK_BLUR_KERNEL_SZ,
+                blur_sigma=NEGMASK_BLUR_KERNEL_SIGMA,
+                bbox_pad=NEGMASK_BBOX_PAD,
+            )
         )
 
         np.save(self.d / "trash_probs.npy", trash_probs)
@@ -351,7 +380,7 @@ class ExampleDir:
             path.unlink()
         if not path.exists():
             # Ensure dependencies exist first
-            self._generate_negmask_probs()
+            self.generate_negmask_probs()
         return path
 
     def other_probs_path(self, force=False):
@@ -362,7 +391,7 @@ class ExampleDir:
         if not path.exists():
             # Ensure dependencies exist first
             self.smallnet_mask_path()
-            self._generate_negmask_probs()
+            self.generate_negmask_probs()
         return path
 
     def flower_pos_probs_path(self, force=False):
@@ -386,6 +415,13 @@ class ExampleDir:
             self.trimmed_mask_path()
             self._generate_flower_probs()
         return path
+
+    def final_mask(self):
+        mask = DiskBooleanMask.load(self.trimmed_mask_path())
+        trash = np.load(self.trash_probs_path())
+        other = np.load(self.other_probs_path())
+
+        return mask.astype(bool) & (trash > other)
 
     # def final_mask(self, trash_thres=0, flower_thres=0):
     #     # always precomputes the last part, always "forced" basically
