@@ -1,0 +1,5 @@
+outs:
+- md5: 56ed14f8922d616da0706cd66a041e7e
+  size: 87278592
+  hash: md5
+  path: crops.tar
