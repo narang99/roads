@@ -1,0 +1,5 @@
+outs:
+- md5: 422bf9222572c984f9fd16a348d1b19a
+  size: 191355904
+  hash: md5
+  path: 50x50-all-data.tar
