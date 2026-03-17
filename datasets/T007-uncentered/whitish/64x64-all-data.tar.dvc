@@ -1,0 +1,5 @@
+outs:
+- md5: bfd8f385083b3d2a4ba85fab0f37ffb0
+  size: 191355904
+  hash: md5
+  path: 64x64-all-data.tar
