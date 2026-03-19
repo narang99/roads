@@ -18,6 +18,9 @@ class Bbox:
     def y2(self) -> int:
         return self.y + self.h
 
+    def area(self) -> int:
+        return self.h * self.w
+
 
 def get_crops_for_image(image: np.ndarray, mask: np.ndarray, bbox_pad=20, crop_pad=220):
     bboxes = list(get_region_crops(mask))
@@ -53,6 +56,16 @@ def get_region_crops(mask):
         c1 = max(0, cols.min())
         c2 = min(w, cols.max())
         yield Bbox(c1, r1, c2 - c1, r2 - r1)
+
+
+def padded_bbox(bbox, bbox_pad, shape):
+    H, W = shape
+    x2 = min(bbox.x2 + bbox_pad, W)
+    y2 = min(bbox.y2 + bbox_pad, H)
+    x1 = max(0, bbox.x - bbox_pad)
+    y1 = max(0, bbox.y - bbox_pad)
+
+    return Bbox(x1, y1, x2-x1, y2-y1)
 
 
 @dataclass

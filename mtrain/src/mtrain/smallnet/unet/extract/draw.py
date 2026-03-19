@@ -18,12 +18,14 @@ def show(crops, figsize=None, ncols=2):
     plt.tight_layout()
     plt.show()
 
-def get_batch_from_extracted_dataset(d, n=8, img_id=None):
+def get_batch_from_extracted_dataset(d, n=8, img_id=None, filterer=None):
     ims, msks = d / "images", d / "masks"
     res = []
     it = ims.glob("*")
     if img_id is not None:
         it = _filter_only_img_id_in_path(it, img_id)
+    if filterer is not None:
+        it = filter(filterer, it)
     ims = list(it)
     random.shuffle(ims)
     for im in ims[:n]:
@@ -31,8 +33,8 @@ def get_batch_from_extracted_dataset(d, n=8, img_id=None):
         res.append((im, msk))
     return res
 
-def show_extracted_dataset(d, n=8, img_id=None, mode=None):
-    res = get_batch_from_extracted_dataset(d, n, img_id)
+def show_extracted_dataset(d, n=8, img_id=None, mode=None, filterer=None):
+    res = get_batch_from_extracted_dataset(d, n, img_id, filterer)
     _show_images_and_masks(n, res)
 
 

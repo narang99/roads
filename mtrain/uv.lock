@@ -587,6 +587,18 @@ wheels = [
 ]
 
 [[package]]
+name = "blur-detector"
+version = "0.0.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "opencv-python" },
+    { name = "scikit-image" },
+    { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e2/62/f4e82ffd1c4ff37ae09ad91b2e6eaf9eb3c3ca63ba28d5e26fdd972d0ecf/blur-detector-0.0.6.tar.gz", hash = "sha256:d0e591e1ad690c8a99336f47fb6ae15719aed19195c81764314f3eef24f87f3a", size = 5949, upload-time = "2023-01-27T21:26:24.369Z" }
+
+[[package]]
 name = "boto3"
 version = "1.42.38"
 source = { registry = "https://pypi.org/simple" }
@@ -2861,6 +2873,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "albumentations" },
+    { name = "blur-detector" },
     { name = "cachetools" },
     { name = "clip" },
     { name = "datasets" },
@@ -2891,6 +2904,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "albumentations", specifier = ">=2.0.8" },
+    { name = "blur-detector", specifier = ">=0.0.6" },
     { name = "cachetools", specifier = ">=6.2.4" },
     { name = "clip", git = "https://github.com/openai/CLIP.git" },
     { name = "datasets", specifier = ">=4.5.0" },

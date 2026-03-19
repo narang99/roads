@@ -104,8 +104,8 @@ class DualCropDataset(torch.utils.data.Dataset):
             self.tfms = custom_transforms
         elif train:
             self.tfms = v2.Compose([
-                ResizeIfLarger(129,130),
-                v2.CenterCrop(130),
+                ResizeIfLarger(127,128),
+                v2.CenterCrop(128),
                 # Add augmentations here when ready
                 # v2.RandomHorizontalFlip(p=0.5),
                 # v2.ColorJitter(brightness=0.1, contrast=0.1),

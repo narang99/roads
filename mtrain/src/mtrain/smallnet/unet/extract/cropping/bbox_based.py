@@ -24,14 +24,14 @@ class Bbox:
 
 
 def extract_crops_for_single_image(
-    img: np.ndarray, mask: np.ndarray, bbox_heights: list[int], crop_height, crop_width
+    img: np.ndarray, mask: np.ndarray, bbox_heights: list[int], crop_height, crop_width, min_area=0
 ) -> Iterator[tuple[np.ndarray, np.ndarray]]:
     bboxes = get_bounding_boxes_connected(mask)
     blurred = img
     for bbox in bboxes:
         for bb_h in bbox_heights:
             res = get_engulfing_bbox_to_resize(
-                mask, bbox, bb_h, crop_height, crop_width
+                mask, bbox, bb_h, crop_height, crop_width, min_area
             )
             if res is None:
                 continue
@@ -85,6 +85,7 @@ def get_engulfing_bbox_to_resize(
     target_bbox_height: int,
     target_cell_height: int,
     target_cell_width: int,
+    min_area: int,
 ):
     if target_bbox_height > 5:
         jitter = random.randint(-5, 5)
@@ -104,6 +105,9 @@ def get_engulfing_bbox_to_resize(
 
     aspect_ratio = target_bbox_height / bbox.h
     target_bbox_width = math.ceil(aspect_ratio * bbox.w)
+
+    if target_bbox_width * target_bbox_height < min_area:
+        return None
 
     if target_bbox_height > target_cell_height:
         return None
