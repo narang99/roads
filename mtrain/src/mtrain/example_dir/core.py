@@ -44,7 +44,8 @@ NEGMASK_UNBLURRED_MODEL_PATH = "/Users/hariomnarang/Desktop/personal/roads/datas
 NEG_MASKSTEP_EDGE_MODEL_PATH = "/Users/hariomnarang/Desktop/personal/roads/datasets/models/successive-unblur/tfm-stepdown_ratio-5_samples-all-xresnet18_iter-20.pth"
 # NEGMASK_BASELINE = "/Users/hariomnarang/Desktop/personal/roads/datasets/models/neg-baseline/baseline-pad-10-crop-size-64-iter-20.pt"
 # NEGMASK_224_STEP_EDGE = "/Users/hariomnarang/Desktop/personal/roads/datasets/models/successive-224/st_ed_tfm0-final-all-data-iter-20.pth"
-NEGMASK_224_STEP_EDGE = "/Users/hariomnarang/Desktop/personal/roads/datasets/models/successive-224/st_ed_tfm0-final-all-data-with-taco-iter-10.pth"
+# NEGMASK_224_STEP_EDGE = "/Users/hariomnarang/Desktop/personal/roads/datasets/models/successive-224/st_ed_tfm0-final-all-data-with-taco-iter-10.pth"
+NEGMASK_224_STEP_EDGE = "/Users/hariomnarang/Desktop/personal/roads/datasets/models/successive-224/st_ed_tfm0-final-all-data-with-taco-iter-15.pth"
 
 FLOWER_CROP_SIZE = 60
 
