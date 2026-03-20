@@ -1,0 +1,6 @@
+outs:
+- md5: 5e9c7c002ba9d2cda5c67a451de43a61.dir
+  size: 124648124
+  nfiles: 1
+  hash: md5
+  path: smallnet-128x128

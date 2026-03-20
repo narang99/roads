@@ -1,0 +1,6 @@
+outs:
+- md5: 31f6836991c6c7a334fb3d5ffb7061a6.dir
+  size: 250994583
+  nfiles: 2
+  hash: md5
+  path: smallnet-64x64
