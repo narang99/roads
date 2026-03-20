@@ -1,0 +1,5 @@
+outs:
+- md5: 0e4ffda4123fdd63a452c116c5f86c2c
+  size: 20395008
+  hash: md5
+  path: useful-taco-filtered.tar

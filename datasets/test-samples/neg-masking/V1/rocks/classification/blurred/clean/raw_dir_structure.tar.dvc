@@ -1,0 +1,5 @@
+outs:
+- md5: 933bae5f70f6389fa35ef8464d004bcc
+  size: 204950016
+  hash: md5
+  path: raw_dir_structure.tar

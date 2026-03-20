@@ -1,2 +1,10 @@
 /train.tar
+/train
 /taco.tar
+/masks.tar
+/raw_dir_structure.tar
+/useful-taco-filtered.tar
+/masks/
+/raw_dir_structure/
+/taco/
+/useful-taco-filtered/

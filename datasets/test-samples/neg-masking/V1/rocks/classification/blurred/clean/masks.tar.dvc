@@ -1,0 +1,5 @@
+outs:
+- md5: 5b9503bd902ebe4b55c2886b21ff9cac
+  size: 26068480
+  hash: md5
+  path: masks.tar
