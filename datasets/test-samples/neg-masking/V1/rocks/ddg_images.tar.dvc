@@ -1,0 +1,5 @@
+outs:
+- md5: 2531c030b1865188823c7da138cc3551
+  size: 47557120
+  hash: md5
+  path: ddg_images.tar

@@ -1,0 +1,5 @@
+outs:
+- md5: 0823ee6f2601f8be0b0697ca45910ecd
+  size: 9221632
+  hash: md5
+  path: flowers.tar
