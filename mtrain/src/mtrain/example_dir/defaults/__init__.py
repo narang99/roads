@@ -1,0 +1,2 @@
+from .smallnet import default_smallnet_learners
+from .negmask import default_negmask_learners

@@ -1,3 +1,6 @@
+from functools import partial
+from mtrain.example_dir.core import NEGMASK_224_STEP_EDGE, step_down_edge_tfm
+from mtrain.example_dir import get_default_negmask_learner
 import numpy as np
 import ipywidgets as widgets
 from IPython.display import display
@@ -9,6 +12,9 @@ from mtrain.disk import DiskBooleanMask, DiskImage
 from mtrain.neg_mask.ipywidgets.utils import arr_to_png_bytes
 from mtrain.utils import overlay_mask_on_img
 from mtrain.neg_mask.ipywidgets.done_tracker import DoneTracker
+from mtrain.neg_mask.model.predict.trash import (
+    predict_and_return_prob_masks_using_unblurred,
+)
 
 
 class MissedExampleWidget:
@@ -24,6 +30,7 @@ class MissedExampleWidget:
         self._dir_idx = 0
         self._crop_idx = 0
         self._crops: list[tuple[np.ndarray, np.ndarray]] = []
+        self._latest_results = []
 
         self._advance_to_next_dir()
         self._build_ui()
@@ -33,17 +40,21 @@ class MissedExampleWidget:
         miss_mask_path = self.dirs[index] / "negmask-miss.png"
         image_path = self.dirs[index] / "image.jpg"
         if not miss_mask_path.exists():
-            return None
+            return None, None
         mask = DiskBooleanMask.load(miss_mask_path)
         image = DiskImage.load(image_path)
         bboxes = list(get_region_crops(mask))
+        # latest_mask = get_latest_model_results(image, mask)
 
+        latest_results = []
         res = []
         for bbox in bboxes:
             crop, _, _ = padded_crop(image, bbox, self.pad)
             crop_mask = bbox_only_mask(mask, bbox, self.pad)
+            # latest_result_mask = bbox_only_mask(latest_mask, bbox, self.pad)
             res.append((crop, crop_mask))
-        return res
+            # latest_results.append(latest_result_mask)
+        return res, latest_results
 
     def save_to_dest_dir(self, crop, crop_mask, label: Literal["trash", "other"]):
         train_dir = self.dest_dir / "train"
@@ -68,11 +79,14 @@ class MissedExampleWidget:
             if self._done_tracker.is_done(dir_name):
                 self._dir_idx += 1
                 continue
-            crops = self.get_crops_for_single_dir(self._dir_idx)
+            crops, latest_results = self.get_crops_for_single_dir(self._dir_idx)
             if crops:
                 self._crops = crops
+                self._latest_results = latest_results
                 self._crop_idx = 0
                 return True
+            else:
+                self._done_tracker.mark_done(dir_name)
             self._dir_idx += 1
         self._crops = []
         return False
@@ -122,13 +136,13 @@ class MissedExampleWidget:
             [self._btn_trash, self._btn_other, self._btn_skip],
             layout=widgets.Layout(gap="8px", margin="8px 0"),
         )
-        
+
         # Three panels side-by-side
         img_row = widgets.HBox(
             [self._out_original, self._out_overlay, self._out_mask],
-            layout=widgets.Layout(gap="12px")
+            layout=widgets.Layout(gap="12px"),
         )
-        
+
         display(widgets.VBox([self._status, btn_row, img_row]))
 
     def _set_buttons(self, disabled: bool):
@@ -158,33 +172,35 @@ class MissedExampleWidget:
                 widgets.Image(
                     value=arr_to_png_bytes(crop),
                     format="png",
-                    layout=widgets.Layout(max_width="400px"),
+                    layout=widgets.Layout(max_width="350px"),
                 )
             )
 
         # Panel 2: Crop with overlay
-        crop_with_overlay = overlay_mask_on_img(crop, crop_mask.astype(bool), alpha=0.4, color=[0, 255, 0])
-        
+        crop_with_overlay = overlay_mask_on_img(
+            crop, crop_mask.astype(bool), alpha=0.4, color=[0, 255, 0]
+        )
+
         self._out_overlay.clear_output(wait=True)
         with self._out_overlay:
             display(
                 widgets.Image(
                     value=arr_to_png_bytes(crop_with_overlay),
                     format="png",
-                    layout=widgets.Layout(max_width="400px"),
+                    layout=widgets.Layout(max_width="350px"),
                 )
             )
 
         # Panel 3: Mask only (convert to 3-channel for display)
         mask_viz = (crop_mask[:, :, None] * np.array([255, 255, 255])).astype(np.uint8)
-        
+
         self._out_mask.clear_output(wait=True)
         with self._out_mask:
             display(
                 widgets.Image(
                     value=arr_to_png_bytes(mask_viz),
                     format="png",
-                    layout=widgets.Layout(max_width="400px"),
+                    layout=widgets.Layout(max_width="350px"),
                 )
             )
 
@@ -200,3 +216,15 @@ class MissedExampleWidget:
         self.save_to_dest_dir(crop, crop_mask, label)
         self._advance_crop()
 
+
+def get_latest_model_results(image, mask):
+    learner = get_default_negmask_learner(NEGMASK_224_STEP_EDGE)
+    other, trash =  predict_and_return_prob_masks_using_unblurred(
+        image,
+        mask,
+        learner,
+        224,
+        bbox_pad=10,
+        mutator=partial(step_down_edge_tfm, ratio=0.5),
+    )
+    return trash > other

@@ -12,7 +12,7 @@ from mtrain.cache import DEFAULT_SYNTH_CACHE
 
 @DEFAULT_SYNTH_CACHE.decorator(
     output_arg="out_dir",
-    key_args=["ann_file", "taco_dir", "should_collapse_mask_to_binary", "num_samples"],
+    key_args=["ann_file", "taco_dir", "should_collapse_mask_to_binary", "num_samples", "cat_ids_to_add"],
 )
 def extract_taco_dataset(
     ann_file: Path,
@@ -20,6 +20,7 @@ def extract_taco_dataset(
     out_dir: Path,
     should_collapse_mask_to_binary: bool,
     num_samples: int = -1,
+    cat_ids_to_add=None,
 ):
     coco = COCO(ann_file)
     images_out, masks_out = out_dir / "images", out_dir / "masks"
@@ -32,7 +33,7 @@ def extract_taco_dataset(
     progress = Progress(len(img_ids), "Extract TACO", 5)
 
     for i, img_id in enumerate(img_ids):
-        img, mask = extract_mask_for_image_id(img_id, coco, taco_dir)
+        img, mask = extract_mask_for_image_id(img_id, coco, taco_dir, cat_ids_to_add)
         mask = _collapse_mask_if_binary_needed(mask, should_collapse_mask_to_binary)
         fname = str(img_id)
         Image.fromarray(img, "RGB").save(images_out / f"{fname}.jpeg")
@@ -86,10 +87,12 @@ def _collapse_mask_if_binary_needed(mask, need_binary):
         return mask
 
 
-def extract_mask_for_image_id(img_id, coco, taco_dir):
+def extract_mask_for_image_id(img_id, coco, taco_dir, cat_ids_to_add=None):
     image_path = taco_dir / coco.loadImgs(img_id)[0]["file_name"]
     annIds = coco.getAnnIds(imgIds=img_id, catIds=[], iscrowd=None)
     anns_sel = coco.loadAnns(annIds)
+    if cat_ids_to_add is not None:
+        anns_sel = [a for a in anns_sel if a['category_id'] in cat_ids_to_add]
     img_array = load_image(image_path)
     h, w = img_array.shape[:2]
     mask = anns_to_mask(anns_sel, h, w)

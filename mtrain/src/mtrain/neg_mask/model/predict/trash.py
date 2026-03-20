@@ -91,11 +91,11 @@ def predict_and_return_prob_masks_using_unblurred(
     bbox_pad=5,
     mutator=id_mutator,
 ):
-    # mutator = partial(step_down_gauss_tfm, min_value=gaussian_step_down_min_val)
-    # mutator = partial(step_down_edge_tfm, ratio=0.5)
     crops, masks, bboxes, inner_bboxes = get_crops_masks_bboxes(
         image, mask, crop_size, bbox_pad
     )
+    if not bboxes:
+        return np.zeros(mask.shape), np.zeros(mask.shape)
 
     ds = BlurPadInferDataset(
         crops,

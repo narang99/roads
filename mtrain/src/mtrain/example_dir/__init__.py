@@ -1,4 +1,4 @@
-from .core import ExampleDir, get_default_smallnet_learner, get_default_negmask_learner
+from .core import ExampleDir, load_npz
 from pathlib import Path
 import shutil
 from .bulk import run_bulk_inference
