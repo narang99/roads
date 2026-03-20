@@ -1,0 +1,5 @@
+outs:
+- md5: 53c9d5670c11f0b47412cc4ebebfea70
+  size: 2256040448
+  hash: md5
+  path: inat.tar

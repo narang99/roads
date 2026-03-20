@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat /Users/hariomnarang/Desktop/personal/roads/mtrain/src/mtrain/neg_mask/ipywidgets/widget_6.py)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
