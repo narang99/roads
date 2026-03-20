@@ -30,11 +30,22 @@ def extract_regions(mask: np.ndarray) -> list[dict]:
     return regions
 
 
-def get_mask_with_area_greater(mask, threshold):
+def get_mask_with_area_in_range(mask, lo, hi):
     """Filter mask by area threshold (from gen_preds.py)"""
     mask = mask.astype(bool)
     regions = extract_regions(mask)
-    regions = [r for r in regions if r["area"] >= threshold]
+
+    def _is_valid_area(area):
+        if lo is not None:
+            if area < lo:
+                return False
+        if hi is not None:
+            if area > hi:
+                return False
+        return True
+            
+
+    regions = [r for r in regions if _is_valid_area(r["area"])]
     res = np.zeros(mask.shape, bool)
     for r in regions:
         res |= r["component_mask"].astype(bool)

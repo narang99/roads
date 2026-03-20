@@ -91,6 +91,27 @@ def predict_and_return_prob_masks_using_unblurred(
     bbox_pad=5,
     mutator=id_mutator,
 ):
+    # crops, masks, bboxes, inner_bboxes = get_crops_masks_bboxes(
+    #     image, mask, crop_size, bbox_pad
+    # )
+    # if not bboxes:
+    #     return np.zeros(mask.shape), np.zeros(mask.shape)
+    # ds = BlurPadInferDataset(
+    #     crops,
+    #     masks,
+    #     inner_bboxes,
+    #     crop_size,
+    #     mutator,
+    # )
+
+    ds, bboxes = get_model_inputs(image, mask, crop_size, bbox_pad, mutator)
+    if not bboxes:
+        return np.zeros(mask.shape), np.zeros(mask.shape)
+
+    return _predict_and_return_probs(ds, learner, image, mask, bboxes)
+
+
+def get_model_inputs(image, mask, crop_size, bbox_pad, mutator):
     crops, masks, bboxes, inner_bboxes = get_crops_masks_bboxes(
         image, mask, crop_size, bbox_pad
     )
@@ -104,7 +125,7 @@ def predict_and_return_prob_masks_using_unblurred(
         crop_size,
         mutator,
     )
-    return _predict_and_return_probs(ds, learner, image, mask, bboxes)
+    return ds, bboxes
 
 
 def _predict_and_return_probs(ds, learner, image, mask, bboxes):

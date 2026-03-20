@@ -1,5 +1,5 @@
 from mtrain.example_dir.learners import SmallnetLearner, NegmaskLearner
-from mtrain.example_dir.trim import get_mask_with_area_greater
+from mtrain.example_dir.trim import get_mask_with_area_in_range
 from mtrain.example_dir.mapi_cons import MAPI_LABELS_TO_EXCLUDE, ELEV_LABELS_TO_EXCLUDE
 from pathlib import Path
 import numpy as np
@@ -65,9 +65,10 @@ class ExampleDir:
     def image_path(self):
         return self.d / "image.jpg"
 
-    def load_and_resize_image(self):
+    @classmethod
+    def load_and_resize_image(cls, image_path):
         """Load and resize image if needed (from gen_preds.py logic)"""
-        img_arr = DiskImage.load(self.image_path)
+        img_arr = DiskImage.load(image_path)
         if img_arr.shape[0] > 1024 or img_arr.shape[1] > 1024:
             img_arr = cv2.resize(img_arr, (1024, 1024), interpolation=cv2.INTER_CUBIC)
         return img_arr
@@ -76,7 +77,7 @@ class ExampleDir:
         smn = self.label_by_smallnet[label]
         path = _unlinked_if_force(self.d / smn.pathname, force)
         if not path.exists():
-            img_arr = self.load_and_resize_image()
+            img_arr = self.load_and_resize_image(self.image_path)
             mask = smn.predict(img_arr)
             DiskBooleanMask.save(mask, path)
         return path
@@ -88,7 +89,7 @@ class ExampleDir:
         if not path.exists():
             mask = DiskBooleanMask.load(prev)
             trimmed = self._get_trimmed_mask(mask)
-            trimmed = get_mask_with_area_greater(trimmed, smn.area_thres)
+            trimmed = get_mask_with_area_in_range(trimmed, smn.area_low, smn.area_high)
             DiskBooleanMask.save(trimmed, path)
         return path
 

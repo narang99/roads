@@ -14,7 +14,8 @@ class SmallnetLearner:
     bs: int
     tile_size: int
     strides: list[int]
-    area_thres: int
+    area_low: int | None
+    area_high: int | None
 
     def predict(self, image):
         return single.strided_predict_unet_only_mask(

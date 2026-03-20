@@ -180,12 +180,12 @@ class BlurPadDataset(Dataset):
     LABEL_BY_IDX = DEFAULT_LABEL_BY_IDX
 
     def __init__(
-        self, image_paths, mask_dir, crop_size, is_valid, crop_mutator=_id_crop_mutator, bbox_pad=0, min_area=35, min_bbox_length=3,
+        self, image_paths, mask_dir, crop_size, is_valid, crop_mutator=_id_crop_mutator, bbox_pad=0, min_area=35, min_bbox_length=3, max_area=None,
     ):
         self.crop_size = crop_size
         self.min_area = min_area
         self.image_paths, self.mask_paths, self.img_name_by_bbox = (
-            get_image_mask_and_bbox(image_paths, mask_dir, crop_size, bbox_pad, min_area, min_bbox_length)
+            get_image_mask_and_bbox(image_paths, mask_dir, crop_size, bbox_pad, min_area, min_bbox_length, max_area)
         )
         self._labels = [label_func(i.name) for i in self.image_paths]
         self.is_valid = is_valid
@@ -495,10 +495,10 @@ class CropTfmsOutsideBbox:
         return CropTfmsOutsideBbox(crop.astype(np.uint8), self.inner_bbox)
 
 
-def get_image_mask_and_bbox(image_paths, mask_dir, crop_size, bbox_pad, min_area, min_bbox_length):
+def get_image_mask_and_bbox(image_paths, mask_dir, crop_size, bbox_pad, min_area, min_bbox_length, max_area):
     image_paths = list(image_paths)
     mask_paths = [mask_dir / f"{i.stem}.png" for i in image_paths]
-    img_name_by_bbox = get_coords_for_set(mask_paths, crop_size, bbox_pad, min_area, min_bbox_length)
+    img_name_by_bbox = get_coords_for_set(mask_paths, crop_size, bbox_pad, min_area, min_bbox_length, max_area)
     image_paths, mask_paths = get_filtered_images_and_masks(
         image_paths, mask_paths, img_name_by_bbox
     )
@@ -516,11 +516,11 @@ def get_filtered_images_and_masks(image_paths, mask_paths, img_name_by_bbox):
     return images, masks
 
 
-def get_coords_for_set(mask_paths, crop_size, bbox_pad, min_area, min_bbox_length) -> dict[str, Bbox]:
+def get_coords_for_set(mask_paths, crop_size, bbox_pad, min_area, min_bbox_length, max_area) -> dict[str, Bbox]:
     res = {}
     for m in tqdm(mask_paths, desc="Getting Crop Coords"):
         bbox, inner_bbox = get_center_crop_coords_from_mask(
-            DiskBooleanMask.load(m), crop_size, bbox_pad, min_area, min_bbox_length
+            DiskBooleanMask.load(m), crop_size, bbox_pad, min_area, min_bbox_length, max_area
         )
         if bbox is None:
             print(f"SKIP: empty mask or too less area {m}")
@@ -547,7 +547,7 @@ def get_max_area_bbox(bboxes: list[Bbox]):
         raise Exception("bboxes cannot be empty for get_max_area_bbox")
     return max([(bb.h * bb.w, bb) for bb in bboxes])[1]
 
-def get_center_crop_coords_from_mask(mask, crop_size, bbox_pad, min_area, min_bbox_length):
+def get_center_crop_coords_from_mask(mask, crop_size, bbox_pad, min_area, min_bbox_length, max_area):
     bboxes = list(get_region_crops(mask))
     bboxes = [padded_bbox(bbox, bbox_pad, mask.shape) for bbox in bboxes]
     if not bboxes:
@@ -555,6 +555,11 @@ def get_center_crop_coords_from_mask(mask, crop_size, bbox_pad, min_area, min_bb
 
     bbox = max([(bb.h * bb.w, bb) for bb in bboxes])[1]
     if bbox.area() < min_area:
+        print("bbox area too less", bbox.area(), min_area)
+        return None, None
+    if max_area is not None and bbox.area() > max_area:
+        print("bbox area too high", bbox.area(), max_area)
+        return None, None
         return None, None
     if bbox.h < min_bbox_length or bbox.w < min_bbox_length:
         return None, None
