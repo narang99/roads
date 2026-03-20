@@ -1,0 +1,5 @@
+outs:
+- md5: d8486d6b2ee94cb007041a9632f1e134
+  size: 426127360
+  hash: md5
+  path: delhi_sample_500_results_test.tar

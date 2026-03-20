@@ -1,0 +1,5 @@
+outs:
+- md5: f80da33910737ec1fe023ed6e8a75a46
+  size: 23880704
+  hash: md5
+  path: test_set.tar

@@ -1,0 +1,5 @@
+outs:
+- md5: 7f03059aa569e538d114d7de225459d7
+  size: 12283392
+  hash: md5
+  path: dakor_test_set.tar
