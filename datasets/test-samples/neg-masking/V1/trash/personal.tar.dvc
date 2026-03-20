@@ -1,0 +1,5 @@
+outs:
+- md5: c22b52420567c561a5723fcaf1585453
+  size: 3688448
+  hash: md5
+  path: personal.tar
