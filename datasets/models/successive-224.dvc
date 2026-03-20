@@ -1,0 +1,6 @@
+outs:
+- md5: 88e4f67540d343986487f76bc1699063.dir
+  size: 517003711
+  nfiles: 11
+  hash: md5
+  path: successive-224

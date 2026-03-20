@@ -1,0 +1,6 @@
+outs:
+- md5: a0667bbae8701a64d4d4f5e957ba31a6.dir
+  size: 47001399
+  nfiles: 1
+  hash: md5
+  path: successive-128

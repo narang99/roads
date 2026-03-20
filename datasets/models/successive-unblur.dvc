@@ -1,0 +1,6 @@
+outs:
+- md5: c5a6c776a6bd06819f8720188d161ea7.dir
+  size: 329016243
+  nfiles: 7
+  hash: md5
+  path: successive-unblur

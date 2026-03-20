@@ -1,6 +1,6 @@
 outs:
-- md5: d3419ec84f0d94cbdacedbb5b297a1cf.dir
-  size: 252436522
-  nfiles: 2
+- md5: 483e67ba6d87b266c5ab5f86a20aeece.dir
+  size: 127876831
+  nfiles: 1
   hash: md5
   path: iter_4_engulf_t009_more-skew-resnet18-50x50-v2

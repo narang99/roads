@@ -1,0 +1,6 @@
+outs:
+- md5: de25b1cf3ab6ee617804d5d544cfb8e6.dir
+  size: 124303461
+  nfiles: 3
+  hash: md5
+  path: taco_pretrained_mask_classifier

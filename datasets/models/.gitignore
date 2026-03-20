@@ -5,3 +5,12 @@
 /smallnet-128x128
 /smallnet-64x64
 /smallnet-100x100
+/successive-224
+/neg-baseline
+/successive-128
+/taco_pretrained_mask_classifier
+/unblurred
+/interp
+/dummy_smallnet_data
+/flower
+/successive-unblur

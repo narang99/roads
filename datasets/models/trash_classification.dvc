@@ -1,6 +1,6 @@
 outs:
-- md5: 5460240b48beb1d301961607f4746930.dir
-  size: 1112771581
-  nfiles: 21
+- md5: 1eb4ba5992575dc08c903e62d68e2028.dir
+  size: 1725112032
+  nfiles: 28
   hash: md5
   path: trash_classification

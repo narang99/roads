@@ -1,0 +1,6 @@
+outs:
+- md5: f75975d1df00f89fcfa175f6777b0e41.dir
+  size: 1404327
+  nfiles: 512
+  hash: md5
+  path: dummy_smallnet_data

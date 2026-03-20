@@ -1,0 +1,6 @@
+outs:
+- md5: 1f8eaf4f0d90aa38f61fe82e43c57573.dir
+  size: 846386690
+  nfiles: 18
+  hash: md5
+  path: unblurred
