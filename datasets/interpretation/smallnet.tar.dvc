@@ -1,0 +1,5 @@
+outs:
+- md5: 9c0656ef7855abf6e3e9cf1bc75b17be
+  size: 335183872
+  hash: md5
+  path: smallnet.tar

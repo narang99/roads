@@ -1,0 +1,5 @@
+outs:
+- md5: db47454f0255b793228b4f1c3457c46a
+  size: 49400832
+  hash: md5
+  path: simplenet.tar
