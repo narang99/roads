@@ -1,0 +1,5 @@
+outs:
+- md5: ae374525833262a1fbfbc19bb80d555d
+  size: 34213888
+  hash: md5
+  path: simple_crop_level.tar

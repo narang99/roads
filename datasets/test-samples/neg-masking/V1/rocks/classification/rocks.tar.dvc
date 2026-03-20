@@ -1,0 +1,5 @@
+outs:
+- md5: f04013c25ea69280c8bec7bcb6ebd9a4
+  size: 7280128
+  hash: md5
+  path: rocks.tar
