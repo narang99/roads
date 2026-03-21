@@ -11,3 +11,4 @@ negmask assume similar speed along with segmask. So assume 300 images per minute
 
 Once we are done with a chunk. we tar and push it.  We can use the dvctar script for that. Will need some testing, but its okay. We push to the same location.  
 
+Inference is ridiculously slow. on gpu. big batch sizes too. Ill nede to debug it tomorrow, for now im gonna let it run and eat some compute units

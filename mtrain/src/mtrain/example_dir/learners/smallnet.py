@@ -74,4 +74,5 @@ def get_smallnet_learner(
         device = default_device()
     sd = torch.load(pth_path, device)
     learner.model.load_state_dict(sd)
+    learner.model.eval()
     return learner
