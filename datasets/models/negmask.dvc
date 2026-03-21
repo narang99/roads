@@ -1,6 +1,6 @@
 outs:
-- md5: 84c022f87a220952941938735471d03c.dir
-  size: 140918865
-  nfiles: 3
+- md5: d90ba90c47004a20c2bda7357e453bd1.dir
+  size: 234938013
+  nfiles: 5
   hash: md5
   path: negmask
