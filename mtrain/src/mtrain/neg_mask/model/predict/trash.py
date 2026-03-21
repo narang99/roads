@@ -70,10 +70,12 @@ def step_down_gauss_tfm(cropped_image, mask, inner_bbox, min_value):
     tfm = tfm.step_down_gaussian(min_value)
     return tfm.crop
 
+
 def step_down_edge_tfm(cropped_image, mask, inner_bbox, ratio):
     tfm = CropTfmsOutsideBbox(cropped_image, inner_bbox)
     tfm = tfm.step_down(ratio)
     return tfm.crop
+
 
 def zero_overwriter(crop, crop_mask, inner_bbox):
     return CropTfmsOutsideBbox(crop, inner_bbox).overwrite_with_zeros().crop
@@ -83,26 +85,16 @@ def id_mutator(crop, mask, bbox):
     return crop
 
 
-def batch_predict_and_return_prob_masks(
-    all_images,
-    all_masks,
-    learner,
-    crop_size=130,
-    device=None,
-    bbox_pad=5,
-    mutator=id_mutator,
-    bs=128,
-):
-    total_crops, total_masks, total_bboxes, total_inner_bboxes = [],[],[],[]
+def _prepare_batched_input(all_images, all_masks, crop_size, bbox_pad):
+    total_crops, total_masks, total_bboxes, total_inner_bboxes = [], [], [], []
     crop_to_image = {}
     image_idx_to_bboxes = {}
-
     for i, (image, mask) in enumerate(zip(all_images, all_masks)):
         crops, masks, bboxes, inner_bboxes = get_crops_masks_bboxes(
             image, mask, crop_size, bbox_pad
         )
         image_idx_to_bboxes[i] = bboxes
-        for (crop,mask,bbox,inner_bbox) in zip(crops, masks, bboxes, inner_bboxes):
+        for crop, mask, bbox, inner_bbox in zip(crops, masks, bboxes, inner_bboxes):
             total_crops.append(crop)
             total_masks.append(mask)
             total_bboxes.append(bbox)
@@ -111,19 +103,19 @@ def batch_predict_and_return_prob_masks(
             cur_idx = len(total_crops) - 1
             crop_to_image[cur_idx] = i
 
-    ds = BlurPadInferDataset(
-        total_crops,
-        total_masks,
-        total_inner_bboxes,
-        crop_size,
-        mutator,
-    )
-    dl = DataLoader(ds, bs)
-    learner.eval()
-    with torch.no_grad():
-        res = [learner.model(b).softmax(dim=1) for b in dl]
-        total_probs = list(itertools.chain.from_iterable(res))
+    return {
+        "total_crops": total_crops,
+        "total_masks": total_masks,
+        "total_bboxes": total_bboxes,
+        "total_inner_bboxes": total_inner_bboxes,
+        "crop_to_image": crop_to_image,
+        "image_idx_to_bboxes": image_idx_to_bboxes,
+    }
 
+
+def _reconstruct_masks_of_batch(
+    all_images, all_masks, total_probs, crop_to_image, image_idx_to_bboxes
+):
     probs_list = [[] for _ in range(len(all_images))]
     for prob_idx, prob in enumerate(total_probs):
         image_idx = crop_to_image[prob_idx]
@@ -137,11 +129,45 @@ def batch_predict_and_return_prob_masks(
         else:
             probs = torch.stack(probs)
             other_mask, trash_mask = reconstruct_probability_masks(
-                all_images[image_idx], all_masks[image_idx], probs, image_idx_to_bboxes[image_idx]
+                all_images[image_idx],
+                all_masks[image_idx],
+                probs,
+                image_idx_to_bboxes[image_idx],
             )
             reconstructed_masks.append((other_mask, trash_mask))
 
     return reconstructed_masks
+
+
+def batch_predict_and_return_prob_masks(
+    all_images,
+    all_masks,
+    learner,
+    crop_size=130,
+    device=None,
+    bbox_pad=5,
+    mutator=id_mutator,
+    bs=128,
+):
+    inputs = _prepare_batched_input(all_images, all_masks, crop_size, bbox_pad)
+    ds = BlurPadInferDataset(
+        inputs["total_crops"],
+        inputs["total_masks"],
+        inputs["total_inner_bboxes"],
+        crop_size,
+        mutator,
+    )
+    dl = DataLoader(ds, bs)
+
+    learner.eval()
+    with torch.no_grad():
+        res = [learner.model(b).softmax(dim=1) for b in dl]
+        total_probs = list(itertools.chain.from_iterable(res))
+
+    return _reconstruct_masks_of_batch(
+        all_images, all_masks, total_probs, inputs["crop_to_image"], inputs["image_idx_to_bboxes"]
+    )
+
 
 def predict_and_return_prob_masks_using_unblurred(
     image,
