@@ -111,13 +111,6 @@ def batch_predict_and_return_prob_masks(
             cur_idx = len(total_crops) - 1
             crop_to_image[cur_idx] = i
 
-    if not total_crops:
-        # No crops found in any image, return empty masks for all
-        reconstructed_masks = []
-        for mask in all_masks:
-            reconstructed_masks.append((np.zeros(mask.shape), np.zeros(mask.shape)))
-        return reconstructed_masks
-
     ds = BlurPadInferDataset(
         total_crops,
         total_masks,
@@ -129,7 +122,7 @@ def batch_predict_and_return_prob_masks(
     learner.eval()
     with torch.no_grad():
         res = [learner.model(b).softmax(dim=1) for b in dl]
-        total_probs = torch.cat(res, dim=0)
+        total_probs = list(itertools.chain.from_iterable(res))
 
     probs_list = [[] for _ in range(len(all_images))]
     for prob_idx, prob in enumerate(total_probs):
@@ -159,40 +152,34 @@ def predict_and_return_prob_masks_using_unblurred(
     bbox_pad=5,
     mutator=id_mutator,
 ):
-    blur_ds, bboxes = get_model_inputs(image, mask, crop_size, bbox_pad, mutator)
-    if len(bboxes) == 0:
+    inputs = get_model_inputs(image, mask, crop_size, bbox_pad, mutator)
+    if inputs is None:
         return np.zeros(mask.shape), np.zeros(mask.shape)
-
-    return _predict_and_return_probs(blur_ds, learner, image, mask, bboxes)
+    ds, bboxes = inputs
+    return _predict_and_return_probs(ds, learner, image, mask, bboxes)
 
 
 def get_model_inputs(image, mask, crop_size, bbox_pad, mutator):
     crops, masks, bboxes, inner_bboxes = get_crops_masks_bboxes(
         image, mask, crop_size, bbox_pad
     )
-    if len(bboxes) == 0:
-        return np.zeros(mask.shape), np.zeros(mask.shape)
+    if not bboxes:
+        return None
 
-    blur_ds = BlurPadInferDataset(
+    ds = BlurPadInferDataset(
         crops,
         masks,
         inner_bboxes,
         crop_size,
         mutator,
     )
-    return blur_ds, bboxes
+    return ds, bboxes
 
 
 def _predict_and_return_probs(ds, learner, image, mask, bboxes):
-    dl = DataLoader(ds, batch_size=12)
-    for i in range(len(ds)):
-        print("item shape", ds[i].shape)
+    dl = DataLoader(ds, 4)
     learner.eval()
     with torch.no_grad():
-        # res = []
-        for b in dl:
-            print('batch shpe', b.shape)
-        #     res.append(learner.model(b).softmax(dim=1))
         res = [learner.model(b).softmax(dim=1) for b in dl]
         probs = torch.stack(list(itertools.chain.from_iterable(res)))
         other_mask, trash_mask = reconstruct_probability_masks(
