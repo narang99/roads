@@ -100,6 +100,23 @@ class ExampleDir:
             mask_path = edir._get_smallnet_mask_path(sml.label)
             DiskBooleanMask.save(mask, mask_path)
 
+    @classmethod
+    def batch_predict_negmask_masks(cls, nml: NegmaskLearner, edirs: list["ExampleDir"], from_smallnet_label: str, bs=256) -> None:
+        """Batch predict negmask probabilities for multiple ExampleDirs"""
+        results = []
+        for batch in batched(edirs, bs):
+            images = [cls.load_and_resize_image(edir.image_path) for edir in batch]
+            masks = [DiskBooleanMask.load(edir.trimmed_mask_path(from_smallnet_label)) for edir in batch]
+            results.extend(NegmaskLearner.batch_predict(nml, images, masks))
+        if len(results) != len(edirs):
+            raise Exception(f"mismatch in predicted results length, results={len(results)} edirs={len(edirs)}")
+        for (other_probs, trash_probs), edir in zip(results, edirs):
+            other_path_name, trash_path_name = nml.pathnames
+            other_path = edir.d / other_path_name
+            trash_path = edir.d / trash_path_name
+            save_npz(other_path, other_probs)
+            save_npz(trash_path, trash_probs)
+
     def trimmed_mask_path(self, label, force=False):
         smn = self.label_by_smallnet[label]
         prev = self.smallnet_mask_path(label)

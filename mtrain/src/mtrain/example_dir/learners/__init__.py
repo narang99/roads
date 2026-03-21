@@ -54,6 +54,18 @@ class NegmaskLearner:
             mutator=self.mutator,
         )
 
+    @classmethod
+    def batch_predict(cls, nml: "NegmaskLearner", images: list[np.ndarray], masks: list[np.ndarray]):
+        return pred_trash.batch_predict_and_return_prob_masks(
+            images,
+            masks,
+            nml.learner,
+            nml.crop_size,
+            bbox_pad=nml.bbox_pad,
+            mutator=nml.mutator,
+            bs=nml.bs,
+        )
+
     @property
     def pathnames(self):
         return (f"negmask-other-{self.label}.npz", f"negmask-trash-{self.label}.npz")
