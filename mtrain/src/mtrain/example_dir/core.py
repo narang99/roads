@@ -89,32 +89,83 @@ class ExampleDir:
         return path
 
     @classmethod
-    def batch_predict_smallnet_masks(cls, sml: SmallnetLearner, edirs: list["ExampleDir"], bs=256) -> None:
-        # we dont know how many each tile makes, we just get all of them in one go
+    def batch_predict_smallnet_masks(cls, sml: SmallnetLearner, edirs: list["ExampleDir"], bs=256, force=False) -> None:
+        # Filter out edirs whose output paths already exist (unless force=True)
+        edirs_to_process = []
+        if force:
+            # If force=True, remove existing files and process all edirs
+            for edir in edirs:
+                mask_path = edir._get_smallnet_mask_path(sml.label)
+                _unlinked_if_force(mask_path, force)
+                edirs_to_process.append(edir)
+        else:
+            # If force=False, only process edirs where output doesn't exist
+            for edir in edirs:
+                mask_path = edir._get_smallnet_mask_path(sml.label)
+                if not mask_path.exists():
+                    edirs_to_process.append(edir)
+        
+        # If no edirs need processing, return early
+        if not edirs_to_process:
+            return
+        
+        # Process the filtered edirs
         masks = []
-        batches = list(batched(edirs, bs))
+        batches = list(batched(edirs_to_process, bs))
         for batch in tqdm(batches):
             batch = [cls.load_and_resize_image(edir.image_path) for edir in batch]
             masks.extend(SmallnetLearner.batch_predict(sml, batch))
-        if len(masks) != len(edirs):
-            raise Exception(f"mismatch in predicted masks length, masks={len(masks)} edirs={len(edirs)}")
-        for mask, edir in zip(masks, edirs):
+        
+        # Verify correct number of predictions
+        if len(masks) != len(edirs_to_process):
+            raise Exception(f"mismatch in predicted masks length, masks={len(masks)} edirs_to_process={len(edirs_to_process)}")
+        
+        # Save predictions for the processed edirs
+        for mask, edir in zip(masks, edirs_to_process):
             mask_path = edir._get_smallnet_mask_path(sml.label)
             DiskBooleanMask.save(mask, mask_path)
 
     @classmethod
-    def batch_predict_negmask_masks(cls, nml: NegmaskLearner, edirs: list["ExampleDir"], from_smallnet_label: str, bs=256) -> None:
+    def batch_predict_negmask_masks(cls, nml: NegmaskLearner, edirs: list["ExampleDir"], from_smallnet_label: str, bs=256, force=False) -> None:
         """Batch predict negmask probabilities for multiple ExampleDirs"""
+        # Filter out edirs whose output paths already exist (unless force=True)
+        other_path_name, trash_path_name = nml.pathnames
+        edirs_to_process = []
+        
+        if force:
+            # If force=True, remove existing files and process all edirs
+            for edir in edirs:
+                other_path = edir.d / other_path_name
+                trash_path = edir.d / trash_path_name
+                _unlinked_if_force(other_path, force)
+                _unlinked_if_force(trash_path, force)
+                edirs_to_process.append(edir)
+        else:
+            # If force=False, only process edirs where output doesn't exist
+            for edir in edirs:
+                other_path = edir.d / other_path_name
+                trash_path = edir.d / trash_path_name
+                if not other_path.exists() or not trash_path.exists():
+                    edirs_to_process.append(edir)
+        
+        # If no edirs need processing, return early
+        if not edirs_to_process:
+            return
+        
+        # Process the filtered edirs
         results = []
-        batches = list(batched(edirs, bs))
+        batches = list(batched(edirs_to_process, bs))
         for batch in tqdm(batches):
             images = [cls.load_and_resize_image(edir.image_path) for edir in batch]
             masks = [DiskBooleanMask.load(edir.trimmed_mask_path(from_smallnet_label)) for edir in batch]
             results.extend(NegmaskLearner.batch_predict(nml, images, masks))
-        if len(results) != len(edirs):
-            raise Exception(f"mismatch in predicted results length, results={len(results)} edirs={len(edirs)}")
-        for (other_probs, trash_probs), edir in zip(results, edirs):
-            other_path_name, trash_path_name = nml.pathnames
+        
+        # Verify correct number of predictions
+        if len(results) != len(edirs_to_process):
+            raise Exception(f"mismatch in predicted results length, results={len(results)} edirs_to_process={len(edirs_to_process)}")
+        
+        # Save predictions for the processed edirs
+        for (other_probs, trash_probs), edir in zip(results, edirs_to_process):
             other_path = edir.d / other_path_name
             trash_path = edir.d / trash_path_name
             save_npz(other_path, other_probs)
