@@ -1,0 +1,5 @@
+outs:
+- md5: d792ab22e8965f7ead8b5e3cfca18e2c
+  size: 59072512
+  hash: md5
+  path: 16.tar
