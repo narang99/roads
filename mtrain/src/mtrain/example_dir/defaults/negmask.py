@@ -18,10 +18,6 @@ def default_negmask_learners(models_dir, labels, bs):
             "md", bs, 224, 10, step_downer, path
         )
     if "sm" in labels:
-        # path = models_dir / "successive-224" / "sm-st_ed_tfm0-final-all-data-with-taco-iter-10.pth"
-        # res["sm"] = get_configured_negmask_learner(
-        #     "sm", bs, 224, 10, step_downer, path, "xresnet18"
-        # )
         path = models_dir / "negmask" / "unblurred-iter100-arch-resnet18.pt"
         res["sm"] = get_configured_negmask_learner(
             "sm", bs, 128, 10, step_downer, path, "resnet18"
