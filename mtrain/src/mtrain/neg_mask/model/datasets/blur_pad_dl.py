@@ -71,11 +71,12 @@ class BlurPadInferDataset(Dataset):
     def __getitem__(self, index):
         image, mask = self.crops[index], self.masks[index]
         bbox, inner_bbox = self.bboxes[index]
-
         crop, cropped_mask = _get_crops(image, mask, bbox)
+        print(f"Index {index}: crop shape before mutator: {crop.shape}")
         crop = self.crop_mutator(crop, cropped_mask, inner_bbox)
+        print(f"Index {index}: crop shape after mutator: {crop.shape}")
         t_crop, t_mask = _with_tfms(crop, cropped_mask, self.tfms)
-
+        print(f"Index {index}: t_crop shape after transforms: {t_crop.shape}")
         return t_crop
 
 
