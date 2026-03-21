@@ -1,4 +1,5 @@
 from mtrain.example_dir.learners import SmallnetLearner, NegmaskLearner
+from itertools import batched
 from mtrain.example_dir.trim import get_mask_with_area_in_range
 from mtrain.example_dir.mapi_cons import MAPI_LABELS_TO_EXCLUDE, ELEV_LABELS_TO_EXCLUDE
 from pathlib import Path
@@ -73,14 +74,31 @@ class ExampleDir:
             img_arr = cv2.resize(img_arr, (1024, 1024), interpolation=cv2.INTER_CUBIC)
         return img_arr
 
+    def _get_smallnet_mask_path(self, label: str):
+        smn = self.label_by_smallnet[label]
+        return self.d / smn.pathname
+
     def smallnet_mask_path(self, label: str, force=False):
         smn = self.label_by_smallnet[label]
-        path = _unlinked_if_force(self.d / smn.pathname, force)
+        path = _unlinked_if_force(self._get_smallnet_mask_path(label), force)
         if not path.exists():
             img_arr = self.load_and_resize_image(self.image_path)
             mask = smn.predict(img_arr)
             DiskBooleanMask.save(mask, path)
         return path
+
+    @classmethod
+    def batch_predict_smallnet_masks(cls, sml: SmallnetLearner, edirs: list["ExampleDir"], bs=256) -> None:
+        # we dont know how many each tile makes, we just get all of them in one go
+        masks = []
+        for batch in batched(edirs, bs):
+            batch = [cls.load_and_resize_image(edir.image_path) for edir in batch]
+            masks.extend(SmallnetLearner.batch_predict(sml, batch))
+        if len(masks) != len(edirs):
+            raise Exception(f"mismatch in predicted masks length, masks={len(masks)} edirs={len(edirs)}")
+        for mask, edir in zip(masks, edirs):
+            mask_path = edir._get_smallnet_mask_path(sml.label)
+            DiskBooleanMask.save(mask, mask_path)
 
     def trimmed_mask_path(self, label, force=False):
         smn = self.label_by_smallnet[label]

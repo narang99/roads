@@ -19,6 +19,12 @@ def mkdir(p: Path | str):
     return p
 
 
+def globL(p: Path | str, pat: str) -> list[Path]:
+    return list(Path(p).glob(pat))
+
+def rglobL(p: Path | str, pat: str) -> list[Path]:
+    return list(Path(p).rglob(pat))
+
 def json_to_content(json_path_or_content) -> dict:
     content = json_path_or_content
     if isinstance(json_path_or_content, Path) or isinstance(json_path_or_content, str):

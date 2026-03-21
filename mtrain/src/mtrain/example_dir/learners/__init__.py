@@ -1,7 +1,8 @@
 from mtrain.neg_mask.model.datasets.blur_pad_dl import CropTfmsOutsideBbox
+import numpy as np
 from typing import Any, Callable
 from dataclasses import dataclass
-from mtrain.smallnet.unet.predict.strided import single
+from mtrain.smallnet.unet.predict.strided import single, multiple
 from mtrain.neg_mask.model.predict import trash as pred_trash
 from .smallnet import get_smallnet_learner as get_raw_smallnet_learner
 from .negmask import get_negmask_learner as get_raw_negmask_learner
@@ -30,6 +31,9 @@ class SmallnetLearner:
     def trimmed_pathname(self):
         return f"m2-{self.label}.png"
 
+    @classmethod
+    def batch_predict(cls, sml: "SmallnetLearner", batch: list[np.ndarray]):
+        return multiple.strided_predict_unet_only_mask(batch, sml.tile_size, sml.learner, sml.strides, sml.bs)
 
 @dataclass
 class NegmaskLearner:

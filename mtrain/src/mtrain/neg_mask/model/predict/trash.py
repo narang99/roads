@@ -82,6 +82,67 @@ def zero_overwriter(crop, crop_mask, inner_bbox):
 def id_mutator(crop, mask, bbox):
     return crop
 
+
+def batch_predict_and_return_prob_masks(
+    all_images,
+    all_masks,
+    learner,
+    crop_size=130,
+    device=None,
+    bbox_pad=5,
+    mutator=id_mutator,
+    bs=128,
+):
+    total_crops, total_masks, total_bboxes, total_inner_bboxes = [],[],[],[]
+    crop_to_image = {}
+    image_idx_to_bboxes = {}
+
+    for i, (image, mask) in enumerate(zip(all_images, all_masks)):
+        crops, masks, bboxes, inner_bboxes = get_crops_masks_bboxes(
+            image, mask, crop_size, bbox_pad
+        )
+        image_idx_to_bboxes[i] = bboxes
+        for (crop,mask,bbox,inner_bbox) in zip(crops, masks, bboxes, inner_bboxes):
+            total_crops.append(crop)
+            total_masks.append(mask)
+            total_bboxes.append(bbox)
+            total_inner_bboxes.append(inner_bbox)
+
+            cur_idx = len(total_crops) - 1
+            crop_to_image[cur_idx] = i
+
+    ds = BlurPadInferDataset(
+        total_crops,
+        total_masks,
+        total_inner_bboxes,
+        crop_size,
+        mutator,
+    )
+    dl = DataLoader(ds, bs)
+    learner.eval()
+    with torch.no_grad():
+        res = [learner.model(b).softmax(dim=1) for b in dl]
+        total_probs = list(itertools.chain.from_iterable(res))
+
+    probs_list = [[] for _ in range(len(all_images))]
+    for prob_idx, prob in enumerate(total_probs):
+        image_idx = crop_to_image[prob_idx]
+        probs_list[image_idx].append(prob)
+
+    reconstructed_masks = []
+    for image_idx, probs in enumerate(probs_list):
+        if not probs:
+            mask = all_masks[image_idx]
+            reconstructed_masks.append((np.zeros(mask.shape), np.zeros(mask.shape)))
+        else:
+            probs = torch.stack(probs)
+            other_mask, trash_mask = reconstruct_probability_masks(
+                all_images[image_idx], all_masks[image_idx], probs, image_idx_to_bboxes[image_idx]
+            )
+            reconstructed_masks.append((other_mask, trash_mask))
+
+    return reconstructed_masks
+
 def predict_and_return_prob_masks_using_unblurred(
     image,
     mask,
@@ -91,19 +152,6 @@ def predict_and_return_prob_masks_using_unblurred(
     bbox_pad=5,
     mutator=id_mutator,
 ):
-    # crops, masks, bboxes, inner_bboxes = get_crops_masks_bboxes(
-    #     image, mask, crop_size, bbox_pad
-    # )
-    # if not bboxes:
-    #     return np.zeros(mask.shape), np.zeros(mask.shape)
-    # ds = BlurPadInferDataset(
-    #     crops,
-    #     masks,
-    #     inner_bboxes,
-    #     crop_size,
-    #     mutator,
-    # )
-
     ds, bboxes = get_model_inputs(image, mask, crop_size, bbox_pad, mutator)
     if not bboxes:
         return np.zeros(mask.shape), np.zeros(mask.shape)
