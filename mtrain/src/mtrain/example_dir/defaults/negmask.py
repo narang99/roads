@@ -12,7 +12,7 @@ def default_negmask_learners(models_dir, labels, bs):
         path = (
             models_dir
             / "negmask"
-            / "tfm-stepedge_data-withtaco_iter-25_arch-xresnet18.pth"
+            / "tfm-stepedge_data-withusefultaco_iter-35_arch-xresnet18.pth"
         )
         res["md"] = get_configured_negmask_learner(
             "md", bs, 224, 10, step_downer, path
@@ -32,15 +32,10 @@ def default_negmask_learners(models_dir, labels, bs):
         res["unblurred"] = get_configured_negmask_learner(
             "unblurred", bs, 128, 10, step_downer, path, "resnet18"
         )
-    if "step_edge_v1" in labels:
-        path = models_dir / "negmask" / "step-edge-v1-xresnet18.pth"
-        res["step_edge_v1"] = get_configured_negmask_learner(
-            "step_edge_v1", bs, 128, 10, step_downer, path, "xresnet18"
-        )
-    if "latest" in labels:
-        path = models_dir / "successive-224" / "tfm-stepedge_data-withusefultaco_iter-35_arch-xresnet18.pth"
-        res["latest"] = get_configured_negmask_learner(
-            "latest", bs, 224, 10, step_downer, path, "xresnet18"
+    if "high-recall" in labels:
+        path = models_dir / "negmask" / "high-trash-recall-v2-tfm-stepedge_data-withusefultaco_iter-35_arch-xresnet18.pth"
+        res["high-recall"] = get_configured_negmask_learner(
+            "high-recall", bs, 224, 10, step_downer, path, "xresnet18"
         )
 
     return res

@@ -1,4 +1,5 @@
 from mtrain.example_dir.learners import SmallnetLearner, NegmaskLearner
+from tqdm import tqdm
 from itertools import batched
 from mtrain.example_dir.trim import get_mask_with_area_in_range
 from mtrain.example_dir.mapi_cons import MAPI_LABELS_TO_EXCLUDE, ELEV_LABELS_TO_EXCLUDE
@@ -91,7 +92,8 @@ class ExampleDir:
     def batch_predict_smallnet_masks(cls, sml: SmallnetLearner, edirs: list["ExampleDir"], bs=256) -> None:
         # we dont know how many each tile makes, we just get all of them in one go
         masks = []
-        for batch in batched(edirs, bs):
+        batches = list(batched(edirs, bs))
+        for batch in tqdm(batches):
             batch = [cls.load_and_resize_image(edir.image_path) for edir in batch]
             masks.extend(SmallnetLearner.batch_predict(sml, batch))
         if len(masks) != len(edirs):
@@ -104,7 +106,8 @@ class ExampleDir:
     def batch_predict_negmask_masks(cls, nml: NegmaskLearner, edirs: list["ExampleDir"], from_smallnet_label: str, bs=256) -> None:
         """Batch predict negmask probabilities for multiple ExampleDirs"""
         results = []
-        for batch in batched(edirs, bs):
+        batches = list(batched(edirs, bs))
+        for batch in tqdm(batches):
             images = [cls.load_and_resize_image(edir.image_path) for edir in batch]
             masks = [DiskBooleanMask.load(edir.trimmed_mask_path(from_smallnet_label)) for edir in batch]
             results.extend(NegmaskLearner.batch_predict(nml, images, masks))
