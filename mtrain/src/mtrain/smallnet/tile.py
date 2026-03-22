@@ -38,3 +38,45 @@ def split_image_into_tiles(
             tiles.append((tile, (y, x)))
 
     return tiles
+
+
+
+def split_image_into_tiles_only_non_zero(
+    img: np.ndarray, tile_size: int = 50
+) -> list[tuple[np.ndarray, tuple[int, int]]]:
+    """
+    Split an image into tiles of size tile_size x tile_size.
+    Edge tiles may be smaller.
+
+    Parameters
+    ----------
+    img : np.ndarray
+        Image array of shape (H, W) or (H, W, C)
+    tile_size : int
+        Size of each tile (default 50)
+
+    Returns
+    -------
+    tiles : list of (tile, (y, x))
+        tile: cropped image patch
+        (y, x): top-left coordinate of the tile in original image
+    """
+    H, W = img.shape[:2]
+    tiles = []
+
+    for y in range(0, H, tile_size):
+        for x in range(0, W, tile_size):
+            y0, y1 = y, y+tile_size
+            if y1 > H:
+                y0, y1 = H-tile_size, H
+            x0,x1 = x, x + tile_size
+            if x1 > W:
+                x0,x1 = W-tile_size, W
+
+            # tile = img[y : y + tile_size, x : x + tile_size]
+            tile = img[y0:y1, x0:x1]
+            if tile.sum() == 0:
+                continue
+            tiles.append((tile, (y, x)))
+
+    return tiles

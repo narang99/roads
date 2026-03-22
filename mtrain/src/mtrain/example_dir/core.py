@@ -55,11 +55,6 @@ class ExampleDir:
 
         self.label_by_smallnet = label_by_smallnet_learners
         self.label_by_negmask = label_by_negmask_learners
-        # self.flower_learner = (
-        #     flower_learner
-        #     if flower_learner is not None
-        #     else get_default_flower_learner()
-        # )
         self.mapillary_segformer = mapillary_segformer
         self.elev_segformer = elev_segformer
 
@@ -89,7 +84,7 @@ class ExampleDir:
         return path
 
     @classmethod
-    def batch_predict_smallnet_masks(cls, sml: SmallnetLearner, edirs: list["ExampleDir"], bs=256, force=False) -> None:
+    def batch_predict_smallnet_masks(cls, sml: SmallnetLearner, edirs: list["ExampleDir"], bs=2, force=False) -> None:
         # Filter out edirs whose output paths already exist (unless force=True)
         edirs_to_process = []
         if force:
@@ -200,14 +195,14 @@ class ExampleDir:
     def _generate_mapi_mask(self):
         """Generate mapillary segmentation mask"""
         img = self.load_and_resize_image(self.image_path)
-        mapi_pred = mapi.cached_predict(img)
+        mapi_pred = mapi.predict_with_array(img)
         DiskBooleanMask.save(mapi_pred.astype(np.uint8), self.d / "mapi.png")
         return mapi_pred
 
     def _generate_elev_mask(self):
         """Generate elevated vegetation segmentation mask"""
         img = self.load_and_resize_image(self.image_path)
-        elev_pred = elev.cached_predict(img, self.elev_segformer)
+        elev_pred = elev.predict_with_array(img, self.elev_segformer)
         DiskBooleanMask.save(elev_pred.astype(np.uint8), self.d / "elev.png")
         return elev_pred
 

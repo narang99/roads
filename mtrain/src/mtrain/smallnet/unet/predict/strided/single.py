@@ -1,27 +1,28 @@
 from itertools import batched, chain
+import time
 from tqdm import tqdm
 from PIL import Image
 import numpy as np
-from mtrain.smallnet.tile import split_image_into_tiles
+from mtrain.smallnet.tile import split_image_into_tiles, split_image_into_tiles_only_non_zero
 import torch
 
 
-def _do_batch(batch, learner):
+def _do_batch(batch, learner, bs):
     images = [Image.fromarray(arr) for (arr, _) in batch]
 
     with torch.no_grad():
         tdl = learner.dls.test_dl(test_items=images, with_labels=False)
+        tdl.bs = bs
         preds, _ = learner.get_preds(dl=tdl)
         masks = preds.argmax(dim=1)
 
-    return [(mask.numpy(), pos) for mask, (_, pos) in zip(masks, batch)]
+    res = [(mask.numpy(), pos) for mask, (_, pos) in zip(masks, batch)]
+    return res
 
 
 def predict_unet_only_mask(img_arr, sz, learner, bs):
     arr_and_coord = split_image_into_tiles(img_arr, sz)
-    mask_and_coord = list(chain.from_iterable((
-        _do_batch(batch, learner) for batch in (batched(arr_and_coord, bs))
-    )))
+    mask_and_coord = _do_batch(arr_and_coord, learner, bs)
     H, W = img_arr.shape[:2]
     res = np.zeros((H, W), dtype=np.bool)
     for mask, (y, x) in mask_and_coord:

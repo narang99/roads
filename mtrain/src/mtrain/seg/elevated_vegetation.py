@@ -23,6 +23,11 @@ def cached_predict(img_path, seg_former_path=None) -> np.ndarray:
     return model.predict(img_path)
 
 
+def predict_with_array(img_arr, seg_former_path=None) -> np.ndarray:
+    model = get_cached_seg_former(seg_former_path)
+    return model.predict(img_arr)
+
+
 class SegFormerElevatedVegetation:
     """
     example usage:

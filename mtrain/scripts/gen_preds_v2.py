@@ -1,3 +1,8 @@
+from mtrain.example_dir.bulk import to_example_dirs
+import sys
+import torch
+from tqdm import tqdm
+from mtrain.example_dir.defaults.smallnet import default_smallnet_learners
 from mtrain.example_dir.iterdir import get_dirs
 from mtrain.neg_mask.openai_clip import get_images_from_clip_file
 from mtrain.example_dir import run_bulk_inference, create_dirs_for_images
@@ -5,8 +10,9 @@ from pathlib import Path
 
 ################################# input images parameters #################################################
 ############# users should change this ############################
-DELHI_SAMPLES_TEST = Path("/Users/hariomnarang/Desktop/personal/roads/datasets/inference/delhi_sample_500_results_test")
-DIRECTORIES = list(get_dirs(DELHI_SAMPLES_TEST))
+CHUNKS_DIR = Path("/Users/hariomnarang/Desktop/personal/roads/datasets/inference/delhi/chunks")
+MODELS_DIR = Path("/Users/hariomnarang/Desktop/personal/roads/datasets/models")
+
 # CLIP_NAME = "delhi_litter"
 # CLIP_FILE = f"/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/neg-masking/V1/trash/clip_{CLIP_NAME}.txt"
 # CLS_DIR = Path("/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/neg-masking/V1/rocks/classification/crop_level")
@@ -31,9 +37,15 @@ DIRECTORIES = list(get_dirs(DELHI_SAMPLES_TEST))
 
 def main():
     # directories = create_dirs_for_images(IMAGES, DEST_DIR)
-    edirs = run_bulk_inference(DIRECTORIES)
-    for edir in edirs:
-        print(edir.d)
+    chunk_name = sys.argv[1]
+    print(chunk_name)
+
+    chunk_dir = CHUNKS_DIR / chunk_name
+    dirs = list(get_dirs(chunk_dir))
+    smallnet = default_smallnet_learners(MODELS_DIR, ["md"], 4)
+    edirs = to_example_dirs(dirs, smallnet, {}, True)
+    for edir in tqdm(edirs):
+        edir.smallnet_mask_path("md", False)
     print("Processing complete")
 
 

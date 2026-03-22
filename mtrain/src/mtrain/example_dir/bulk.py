@@ -17,7 +17,7 @@ def generate_smallnet_50x50(directories, verbose=True):
     _itgen(lambda edir: edir.smallnet_50x50_path(), "Pass 1 - 50x50 Smallnet masks")
     
 
-def run_bulk_inference(directories: list[Path | str | ExampleDir], verbose=True):
+def run_bulk_inference(directories: list[Path | str | ExampleDir], smallnet, negmask, verbose=True):
     """
     Run bulk inference on a list of directories in passes.
 
@@ -33,7 +33,7 @@ def run_bulk_inference(directories: list[Path | str | ExampleDir], verbose=True)
     Returns:
         list[ExampleDir]: list of ExampleDir instances for further processing
     """
-    example_dirs = _to_example_dirs(directories, verbose)
+    example_dirs = to_example_dirs(directories, smallnet, negmask, verbose)
 
     def _itgen(generator, title):
         iterate_and_generate(
@@ -57,7 +57,7 @@ def run_bulk_inference(directories: list[Path | str | ExampleDir], verbose=True)
     return example_dirs
 
 
-def _to_example_dirs(directories, verbose):
+def to_example_dirs(directories, smallnet, negmask, verbose):
     if verbose:
         print("Setting up ExampleDir instances...")
     example_dirs = []
@@ -66,7 +66,7 @@ def _to_example_dirs(directories, verbose):
             if isinstance(directory, ExampleDir):
                 example_dir = directory
             else:
-                example_dir = ExampleDir(directory)
+                example_dir = ExampleDir(directory, smallnet, negmask)
             example_dirs.append(example_dir)
         except Exception as e:
             if verbose:

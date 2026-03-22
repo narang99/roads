@@ -27,11 +27,12 @@ class TileTag:
     pos: tuple  # (y, x)
 
 
-def _do_batch(batch, learner):
+def _do_batch(batch, learner, bs):
     images = [Image.fromarray(arr) for (arr, _) in batch]
 
     with torch.no_grad():
         tdl = learner.dls.test_dl(test_items=images, with_labels=False, num_workers=4, device=default_device())
+        tdl.bs = bs
         preds, _ = learner.get_preds(dl=tdl)
         masks = preds.argmax(dim=1).cpu().numpy()
 
@@ -41,7 +42,7 @@ def _do_batch(batch, learner):
 def predict_unet_only_mask(img_arr, sz, learner, bs):
     arr_and_coord = split_image_into_tiles(img_arr, sz)
     mask_and_coord = list(chain.from_iterable((
-        _do_batch(batch, learner) for batch in batched(arr_and_coord, bs)
+        _do_batch(batch, learner, bs) for batch in batched(arr_and_coord, bs)
     )))
     H, W = img_arr.shape[:2]
     res = np.zeros((H, W), dtype=np.bool)
@@ -94,9 +95,10 @@ def strided_predict_unet_only_mask(
         for img_idx, img_arr in enumerate(img_arrs)
     ))
 
-    all_results = list(chain.from_iterable(
-        _do_batch(batch, learner) for batch in batched(all_tiles, bs)
-    ))
+    all_results = _do_batch(all_tiles, learner, bs)
+    # all_results = list(chain.from_iterable(
+    #     _do_batch(batch, learner, bs) for batch in batched(all_tiles, bs)
+    # ))
 
     img_by_tagged_masks = defaultdict(list)
     for mask, tag in all_results:

@@ -89,6 +89,11 @@ def cached_predict(img_path) -> np.ndarray:
     return model.predict(img_path)
 
 
+def predict_with_array(img_arr) -> np.ndarray:
+    model = get_cached_seg_former()
+    return model.predict(img_arr)
+
+
 class SegFormerMapillary:
     """
     example usage:
