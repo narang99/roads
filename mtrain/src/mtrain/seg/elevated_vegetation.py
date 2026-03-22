@@ -80,7 +80,10 @@ class SegFormerElevatedVegetation:
         return self._predict(Image.fromarray(img))
 
     def predict(self, img_path):
-        img = Image.open(img_path).convert("RGB")
+        if isinstance(img_path, np.ndarray):
+            img = Image.fromarray(img_path).convert("RGB")
+        else:
+            img = Image.open(img_path).convert("RGB")
         return self._predict(img)
 
     def get_mask(pred, lbl: Label):

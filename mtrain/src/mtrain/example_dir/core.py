@@ -199,13 +199,15 @@ class ExampleDir:
 
     def _generate_mapi_mask(self):
         """Generate mapillary segmentation mask"""
-        mapi_pred = mapi.cached_predict(self.image_path)
+        img = self.load_and_resize_image(self.image_path)
+        mapi_pred = mapi.cached_predict(img)
         DiskBooleanMask.save(mapi_pred.astype(np.uint8), self.d / "mapi.png")
         return mapi_pred
 
     def _generate_elev_mask(self):
         """Generate elevated vegetation segmentation mask"""
-        elev_pred = elev.cached_predict(self.image_path, self.elev_segformer)
+        img = self.load_and_resize_image(self.image_path)
+        elev_pred = elev.cached_predict(img, self.elev_segformer)
         DiskBooleanMask.save(elev_pred.astype(np.uint8), self.d / "elev.png")
         return elev_pred
 
