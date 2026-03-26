@@ -1,3 +1,5 @@
+from mtrain.example_dir.core import load_npz
+from mtrain.example_dir.defaults.negmask import default_negmask_learners
 from mtrain.example_dir.bulk import to_example_dirs
 import sys
 import torch
@@ -36,17 +38,53 @@ MODELS_DIR = Path("/Users/hariomnarang/Desktop/personal/roads/datasets/models")
 
 
 def main():
-    # directories = create_dirs_for_images(IMAGES, DEST_DIR)
-    chunk_name = sys.argv[1]
-    print(chunk_name)
+    import sys
+    min_val = int(sys.argv[1])
+    max_val = int(sys.argv[2])
+    print("range", min_val,max_val)
+    for chunk_name in range(min_val, max_val):
+        chunk_name = str(chunk_name)
+        print("start chunk:", chunk_name)
+        chunk_dir = CHUNKS_DIR / chunk_name
+        dirs = list(get_dirs(chunk_dir))
+        smallnet = default_smallnet_learners(MODELS_DIR, ["md"], 8)
+        negmask = default_negmask_learners(MODELS_DIR, ["other-high-recall"], 8)
+        edirs = to_example_dirs(dirs, smallnet, negmask, True)
+#        print("Stage: trim")
+#        for edir in tqdm(edirs):
+#            try:
+#                edir.trimmed_mask_path("md")
+#            except Exception as ex:
+#                print(f"WARN: edir={edir} {ex}")
+#            try:
+#                edir.trimmed_mask_path("sm")
+#            except Exception as ex:
+#                print(f"WARN: edir={edir} {ex}")
+#
+#        print("Stage: md")
+#        for edir in tqdm(edirs):
+#            try:
+#                edir.negmask_paths("md", "md")
+#            except Exception as ex:
+#                print(f"WARN: edir={edir} {ex}")
 
-    chunk_dir = CHUNKS_DIR / chunk_name
-    dirs = list(get_dirs(chunk_dir))
-    smallnet = default_smallnet_learners(MODELS_DIR, ["md"], 4)
-    edirs = to_example_dirs(dirs, smallnet, {}, True)
-    for edir in tqdm(edirs):
-        edir.smallnet_mask_path("md", False)
-    print("Processing complete")
+        print("Stage: other-high-recall")
+        for edir in tqdm(edirs):
+            o, t = edir.negmask_paths("md", "md")
+            o, t = load_npz(o), load_npz(t)
+            run_on = (t > o).sum() > 0
+            try:
+                edir.negmask_paths("other-high-recall", "md")
+            except Exception as ex:
+                print(f"WARN: edir={edir} {ex}")
+
+#        print("Stage: sm")
+#        for edir in tqdm(edirs):
+#            try:
+#                edir.negmask_paths("sm", "sm")
+#            except Exception as ex:
+#                print(f"WARN: edir={edir} {ex}")
+#        print("Processing complete")
 
 
 if __name__ == "__main__":

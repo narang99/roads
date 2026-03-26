@@ -46,6 +46,12 @@ def iter_crops(
         yield bbox, crop_img, crop_mask
 
 
+def get_largest_bbox(mask):
+    bboxes = list(get_region_crops(mask.astype(np.uint8)))
+    if not bboxes:
+        return None
+    return max([(bb.area(), bb) for bb in bboxes])[1]
+
 def get_region_crops(mask):
     _, labels = cv2.connectedComponents(mask)
     h, w = mask.shape[:2]

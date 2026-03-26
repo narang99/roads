@@ -1,3 +1,4 @@
+from prompt_toolkit.key_binding.bindings.completion import display_completions_like_readline
 from mtrain.example_dir.learners import SmallnetLearner, NegmaskLearner
 from tqdm import tqdm
 from itertools import batched
@@ -24,6 +25,25 @@ def load_npz(path):
 
 def save_npz(path, data):
     np.savez_compressed(path, data=data)
+
+
+
+def LD(retval):
+    if isinstance(retval, Path):
+        if retval.name == "image.jpg":
+            return ExampleDir.load_and_resize_image(retval)
+        elif ("mask" in retval.name or "m2" in retval.name) and retval.suffix == '.png':
+            return DiskBooleanMask.load(retval)
+        elif retval.name in ["mapi.png", "elev.png"]:
+            return DiskBooleanMask.load(retval)
+        else:
+            raise Exception(f"unknown path for loading {retval}")
+    elif isinstance(retval, tuple) and len(retval) == 2 and isinstance(retval[0], Path) and isinstance(retval[1], Path):
+        return load_npz(retval[0]), load_npz(retval[1])
+    else:
+        raise Exception(f"unknown type for loading {retval}")
+
+
 
 class ExampleDir:
     """Abstraction of the single directory in inference for the full inference pipeline
@@ -71,13 +91,16 @@ class ExampleDir:
         return img_arr
 
     def _get_smallnet_mask_path(self, label: str):
-        smn = self.label_by_smallnet[label]
-        return self.d / smn.pathname
+        return self.d / self._smallnet_path_name(label)
+
+    @classmethod
+    def _smallnet_path_name(cls, label):
+        return f"mask-{label}.png"
 
     def smallnet_mask_path(self, label: str, force=False):
-        smn = self.label_by_smallnet[label]
         path = _unlinked_if_force(self._get_smallnet_mask_path(label), force)
         if not path.exists():
+            smn = self.label_by_smallnet[label]
             img_arr = self.load_and_resize_image(self.image_path)
             mask = smn.predict(img_arr)
             DiskBooleanMask.save(mask, path)
@@ -120,11 +143,16 @@ class ExampleDir:
             mask_path = edir._get_smallnet_mask_path(sml.label)
             DiskBooleanMask.save(mask, mask_path)
 
+
+    @classmethod
+    def _get_negmask_pathnames(cls, label):
+        return (f"negmask-other-{label}.npz", f"negmask-trash-{label}.npz")
+
     @classmethod
     def batch_predict_negmask_masks(cls, nml: NegmaskLearner, edirs: list["ExampleDir"], from_smallnet_label: str, bs=256, force=False) -> None:
         """Batch predict negmask probabilities for multiple ExampleDirs"""
         # Filter out edirs whose output paths already exist (unless force=True)
-        other_path_name, trash_path_name = nml.pathnames
+        other_path_name, trash_path_name = cls._get_negmask_pathnames(nml.label)
         edirs_to_process = []
         
         if force:
@@ -167,24 +195,36 @@ class ExampleDir:
             save_npz(trash_path, trash_probs)
 
     def trimmed_mask_path(self, label, force=False):
-        smn = self.label_by_smallnet[label]
         prev = self.smallnet_mask_path(label)
-        path = _unlinked_if_force(self.d / smn.trimmed_pathname, force)
+        path = _unlinked_if_force(self.d / self._trimmed_mask_path_name(label), force)
         if not path.exists():
+            smn = self.label_by_smallnet[label]
             mask = DiskBooleanMask.load(prev)
             trimmed = self._get_trimmed_mask(mask)
             trimmed = get_mask_with_area_in_range(trimmed, smn.area_low, smn.area_high)
             DiskBooleanMask.save(trimmed, path)
         return path
 
+    @classmethod
+    def _trimmed_mask_path_name(cls, label):
+        return f"m2-{label}.png"
+
+    def get_trash_mask(self, label, from_smallnet_label):
+        """Get binary trash mask where trash > other"""
+        o, t = self.negmask_paths(label, from_smallnet_label)
+        o, t = load_npz(o), load_npz(t)
+        return t > o
+
     def negmask_paths(self, label, from_smallnet_label, force=False):
         """Generate trash/other probability arrays"""
-        nml = self.label_by_negmask[label]
-        other_path_name, trash_path_name = nml.pathnames
+
+        other_path_name, trash_path_name = self._get_negmask_pathnames(label)
+
         other_path = _unlinked_if_force(self.d / other_path_name, force)
         trash_path = _unlinked_if_force(self.d / trash_path_name, force)
 
         if not other_path.exists() or not trash_path.exists():
+            nml = self.label_by_negmask[label]
             image = DiskImage.load(self.image_path)
             mask = DiskBooleanMask.load(self.trimmed_mask_path(from_smallnet_label))
             other_probs, trash_probs = nml.predict(image, mask)
@@ -246,6 +286,43 @@ class ExampleDir:
         other_path, trash_path = self.negmask_paths(label, label)
         other, trash = load_npz(other_path), load_npz(trash_path)
         return mask.astype(bool) & (trash > other)
+
+
+
+    def load_all_assets(self, smallnet_label, negmask_label):
+        res = {}
+        try:
+            res["image"] = DiskImage.load(self.d / "image.jpg")
+        except:
+            pass
+
+        try:
+            res["mask"] = DiskBooleanMask.load(self.smallnet_mask_path(smallnet_label))
+        except:
+            pass
+        try:
+            res["m2"] = DiskBooleanMask.load(self.trimmed_mask_path(smallnet_label))
+        except:
+            pass
+        try:
+            o, t = self.negmask_paths(negmask_label, smallnet_label)
+            o, t = load_npz(o), load_npz(t)
+            res["other"], res["trash"] = o, t
+            res["trash_mask"] = t > o
+        except:
+            pass
+        try:
+            res["mapi_pred"] = DiskBooleanMask.load(self.mapi_mask_path())
+        except:
+            pass
+        try:
+            res["elev_pred"] = DiskBooleanMask.load(self.elev_mask_path())
+        except:
+            pass
+    
+        return res
+
+
 
     # def flower_pos_probs_path(self, from_smallnet_label, force=False):
     #     """Return path to flower positive probabilities, generate if missing"""

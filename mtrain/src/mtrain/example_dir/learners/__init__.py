@@ -23,14 +23,6 @@ class SmallnetLearner:
             image, self.tile_size, self.learner, self.strides, self.bs
         )
 
-    @property
-    def pathname(self):
-        return f"mask-{self.label}.png"
-
-    @property
-    def trimmed_pathname(self):
-        return f"m2-{self.label}.png"
-
     @classmethod
     def batch_predict(cls, sml: "SmallnetLearner", batch: list[np.ndarray]):
         return multiple.strided_predict_unet_only_mask(batch, sml.tile_size, sml.learner, sml.strides, sml.bs)
@@ -65,10 +57,6 @@ class NegmaskLearner:
             mutator=nml.mutator,
             bs=nml.bs,
         )
-
-    @property
-    def pathnames(self):
-        return (f"negmask-other-{self.label}.npz", f"negmask-trash-{self.label}.npz")
 
 
 def step_downer(cropped_image, mask, inner_bbox):

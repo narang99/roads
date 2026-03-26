@@ -519,11 +519,16 @@ def get_filtered_images_and_masks(image_paths, mask_paths, img_name_by_bbox):
 def get_coords_for_set(mask_paths, crop_size, bbox_pad, min_area, min_bbox_length, max_area) -> dict[str, Bbox]:
     res = {}
     for m in tqdm(mask_paths, desc="Getting Crop Coords"):
-        bbox, inner_bbox = get_center_crop_coords_from_mask(
-            DiskBooleanMask.load(m), crop_size, bbox_pad, min_area, min_bbox_length, max_area
-        )
+        # print("mask", m)
+        try:
+            bbox, inner_bbox = get_center_crop_coords_from_mask(
+                DiskBooleanMask.load(m), crop_size, bbox_pad, min_area, min_bbox_length, max_area
+            )
+        except Exception as ex:
+            print(f"failure for mask{m} ex={ex}")
+            continue
         if bbox is None:
-            print(f"SKIP: empty mask or too less area {m}")
+            # print(f"SKIP: empty mask or too less area {m}")
             continue
         res[m.stem] = (bbox, inner_bbox)
     return res

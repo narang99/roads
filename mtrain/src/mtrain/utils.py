@@ -78,6 +78,8 @@ def _plot(crops, figsize=None, ncols=2, axis="on", cmap=None):
 
 
 def show(crops, figsize=None, ncols=2, axis="on", cmap=None):
+    if len(crops) == 1:
+        ncols = 1
     fig, axs = _plot(crops, figsize, ncols, axis, cmap)
     plt.show()
 
@@ -254,3 +256,17 @@ def stack_batch(lofarrays):
         else:
             tns.append(torch.tensor(arr))
     return torch.stack(tns).unsqueeze(0)
+
+OV = overlay_mask_on_img
+
+
+def show_negmask_ds(ds_root, n_samples=8):
+    ds_root = Path(ds_root)
+    images = list((ds_root / "train").glob("*.jpg"))
+    images = random.sample(images, n_samples)
+    masks = [ds_root / "masks" / f"{img.stem}.png" for img in images]
+
+    im_masks = [(DiskImage.load(i), DiskBooleanMask.load(m)) for (i,m) in zip(images, masks)]
+    im_masks = [(i, overlay_mask_on_img(i, m)) for (i,m) in im_masks]
+    show(it_chain(im_masks))
+    return images, masks

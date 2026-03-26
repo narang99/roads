@@ -5,7 +5,7 @@ from .core import ExampleDir
 
 
 def generate_smallnet_50x50(directories, verbose=True):
-    example_dirs = _to_example_dirs(directories, verbose)
+    example_dirs = to_example_dirs(directories, verbose)
 
     def _itgen(generator, title):
         iterate_and_generate(

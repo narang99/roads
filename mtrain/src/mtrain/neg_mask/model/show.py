@@ -1,3 +1,17 @@
+from collections import defaultdict
+
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+import torch.nn.functional as F
+from fastai.vision.all import default_device
+from torch.utils.data import DataLoader as TorchDataLoader
+
+from .datasets.dataset import MaskClassificationDataset, _label_func
+from mtrain.utils import show, overlay_mask_on_img
+
+
 """
 usage examples
 
@@ -16,21 +30,6 @@ show_confusion_matrix_using_preds(all_valid_preds, all_valid_targs, labels=LABEL
 worst_idxs = [i for _, i in train_losses_and_idxes[:32]]
 show_images(train_ds, worst_idxs, all_train_preds, labels=LABELS, title="Worst train losses")
 """
-from mtrain.smallnet.unet.extract.draw import overlay_mask_on_img
-
-from collections import defaultdict
-
-import cv2
-import matplotlib.pyplot as plt
-import numpy as np
-import torch
-import torch.nn.functional as F
-from fastai.vision.all import default_device
-from torch.utils.data import DataLoader as TorchDataLoader
-
-from .datasets.dataset import MaskClassificationDataset, _label_func
-from mtrain.utils import show
-
 
 def get_preds_for_ds(learn, ds, bs=4, device=None):
     """Run inference over a dataset, return (preds, targs, decoded, losses)."""
