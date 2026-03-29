@@ -1,9 +1,13 @@
-from mtrain.neg_mask.model.datasets.blur_pad_dl import blur_overwriter, BlurPadFoveateInferDataset
+from mtrain.neg_mask.model.datasets.blur_pad_dl import (
+    blur_overwriter,
+    BlurPadFoveateInferDataset,
+)
 from mtrain.example_dir.learners import (
     NegmaskLearner,
     step_downer,
     get_raw_negmask_learner,
-    foveate_shrink_and_step_down, EnsembledNegmaskLearner,
+    foveate_shrink_and_step_down,
+    EnsembledNegmaskLearner,
 )
 
 
@@ -51,38 +55,41 @@ def default_negmask_learners(models_dir, labels, bs):
         )
     if "latest" in labels:
         path = models_dir / "foveated-224" / "iter-12-xresnet18.pth"
-        res["latest"] = get_configured_negmask_learner(
-            "latest",
-            bs,
-            1024,
-            3,
-            foveate_shrink_and_step_down,
-            path,
-            "xresnet18",
-            valid_tfms_crop_size=224,
-            dataset_class=BlurPadFoveateInferDataset,
+        res["latest"] = get_baseline_foveated_model("latest", models_dir, bs)
+    if "baseline" in labels:
+        res["baseline"] = EnsembledNegmaskLearner(
+            "baseline",
+            [
+                get_baseline_foveated_model("latest", models_dir, bs),
+                get_baseline_md_model("md", models_dir, bs),
+            ],
         )
-    if "ensemble" in labels:
-        foveated_model = get_configured_negmask_learner(
-            "ensemble-foveate",
-            bs,
-            1024,
-            3,
-            foveate_shrink_and_step_down,
-            models_dir / "foveated-224" / "iter-30-v2-with-walls-xresnet18.pth",
-            "xresnet18",
-            valid_tfms_crop_size=224,
-        )
-        md_learner_path = (
-            models_dir
-            / "negmask"
-            / "tfm-stepedge_data-withusefultaco_iter-35_arch-xresnet18.pth"
-        )
-        md_model = get_configured_negmask_learner("ensemble-md", bs, 224, 10, step_downer, md_learner_path)
-        res["ensemble"] = EnsembledNegmaskLearner("ensemble", [foveated_model, md_model])
-
 
     return res
+
+
+def get_baseline_md_model(label, models_dir, bs):
+    path = (
+        models_dir
+        / "negmask"
+        / "tfm-stepedge_data-withusefultaco_iter-35_arch-xresnet18.pth"
+    )
+    return get_configured_negmask_learner("md", bs, 224, 10, step_downer, path)
+
+
+def get_baseline_foveated_model(label, models_dir, bs):
+    path = models_dir / "foveated-224" / "iter-12-xresnet18.pth"
+    return get_configured_negmask_learner(
+        label,
+        bs,
+        1024,
+        3,
+        foveate_shrink_and_step_down,
+        path,
+        "xresnet18",
+        valid_tfms_crop_size=224,
+        dataset_class=BlurPadFoveateInferDataset,
+    )
 
 
 def get_configured_negmask_learner(

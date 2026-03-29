@@ -1,0 +1,1032 @@
+
+    <html>
+    <head>
+        <title>Evaluation: latest vs baseline</title>
+        <style>
+            body { font-family: sans-serif; margin: 20px; background: #f0f0f0; }
+            table { border-collapse: collapse; width: 100%; background: white; }
+            th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+            tr:hover { background-color: #f5f5f5; }
+            .diff-img { width: 400px; cursor: pointer; }
+            .legend { margin-bottom: 20px; padding: 10px; background: white; border-radius: 5px; }
+            .swatch { display: inline-block; width: 20px; height: 20px; vertical-align: middle; margin-right: 5px; border: 1px solid #000; }
+        </style>
+    </head>
+    <body>
+        <h1>Negmask Evaluation: latest vs baseline</h1>
+        <div class="legend">
+            <strong>Legend:</strong><br>
+            <span class="swatch" style="background: white;"></span> Agreement (Both Trash)<br>
+            <span class="swatch" style="background: #00ff00;"></span> Expansion (Iteration Only)<br>
+            <span class="swatch" style="background: #ff0000;"></span> Contraction (Baseline Only)<br>
+            <em>Images are sorted by IoU (Most different at the top).</em>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>IoU</th>
+                    <th>Base Trash Px</th>
+                    <th>New Trash Px</th>
+                    <th>Flipped to Trash</th>
+                    <th>Flipped to Other</th>
+                    <th>Visual Diff</th>
+                </tr>
+            </thead>
+            <tbody>
+    
+                <tr>
+                    <td>271937142353543</td>
+                    <td>0.0000</td>
+                    <td>542</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>542</td>
+                    <td><a href="assets/271937142353543_diff.jpg" target="_blank"><img class="diff-img" src="assets/271937142353543_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>935180533980655</td>
+                    <td>0.0000</td>
+                    <td>179</td>
+                    <td>673</td>
+                    <td>673</td>
+                    <td>179</td>
+                    <td><a href="assets/935180533980655_diff.jpg" target="_blank"><img class="diff-img" src="assets/935180533980655_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>884772330133126</td>
+                    <td>0.0000</td>
+                    <td>0</td>
+                    <td>2619</td>
+                    <td>2619</td>
+                    <td>0</td>
+                    <td><a href="assets/884772330133126_diff.jpg" target="_blank"><img class="diff-img" src="assets/884772330133126_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>144348374637763</td>
+                    <td>0.0000</td>
+                    <td>36</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>36</td>
+                    <td><a href="assets/144348374637763_diff.jpg" target="_blank"><img class="diff-img" src="assets/144348374637763_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>843858569843204</td>
+                    <td>0.0000</td>
+                    <td>222</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>222</td>
+                    <td><a href="assets/843858569843204_diff.jpg" target="_blank"><img class="diff-img" src="assets/843858569843204_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>1217095282865379</td>
+                    <td>0.0000</td>
+                    <td>0</td>
+                    <td>329</td>
+                    <td>329</td>
+                    <td>0</td>
+                    <td><a href="assets/1217095282865379_diff.jpg" target="_blank"><img class="diff-img" src="assets/1217095282865379_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>3625083887603287</td>
+                    <td>0.0000</td>
+                    <td>941</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>941</td>
+                    <td><a href="assets/3625083887603287_diff.jpg" target="_blank"><img class="diff-img" src="assets/3625083887603287_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>214125100125056</td>
+                    <td>0.0000</td>
+                    <td>10027</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>10027</td>
+                    <td><a href="assets/214125100125056_diff.jpg" target="_blank"><img class="diff-img" src="assets/214125100125056_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>2800723576860190</td>
+                    <td>0.0066</td>
+                    <td>6695</td>
+                    <td>44</td>
+                    <td>0</td>
+                    <td>6651</td>
+                    <td><a href="assets/2800723576860190_diff.jpg" target="_blank"><img class="diff-img" src="assets/2800723576860190_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>2926084337660344</td>
+                    <td>0.0379</td>
+                    <td>44</td>
+                    <td>1161</td>
+                    <td>1117</td>
+                    <td>0</td>
+                    <td><a href="assets/2926084337660344_diff.jpg" target="_blank"><img class="diff-img" src="assets/2926084337660344_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>322214212632654</td>
+                    <td>0.0752</td>
+                    <td>4124</td>
+                    <td>310</td>
+                    <td>0</td>
+                    <td>3814</td>
+                    <td><a href="assets/322214212632654_diff.jpg" target="_blank"><img class="diff-img" src="assets/322214212632654_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>831014837763053</td>
+                    <td>0.1027</td>
+                    <td>304</td>
+                    <td>2960</td>
+                    <td>2656</td>
+                    <td>0</td>
+                    <td><a href="assets/831014837763053_diff.jpg" target="_blank"><img class="diff-img" src="assets/831014837763053_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>3799706853575740</td>
+                    <td>0.1062</td>
+                    <td>84</td>
+                    <td>791</td>
+                    <td>707</td>
+                    <td>0</td>
+                    <td><a href="assets/3799706853575740_diff.jpg" target="_blank"><img class="diff-img" src="assets/3799706853575740_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>195067892836607</td>
+                    <td>0.1115</td>
+                    <td>323</td>
+                    <td>36</td>
+                    <td>0</td>
+                    <td>287</td>
+                    <td><a href="assets/195067892836607_diff.jpg" target="_blank"><img class="diff-img" src="assets/195067892836607_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>be0310d2-258c-46f3-9479-65d4efa2cb77</td>
+                    <td>0.1342</td>
+                    <td>365</td>
+                    <td>49</td>
+                    <td>0</td>
+                    <td>316</td>
+                    <td><a href="assets/be0310d2-258c-46f3-9479-65d4efa2cb77_diff.jpg" target="_blank"><img class="diff-img" src="assets/be0310d2-258c-46f3-9479-65d4efa2cb77_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>0088848f-175b-45f9-9dad-0093e8d216e9</td>
+                    <td>0.1607</td>
+                    <td>180</td>
+                    <td>1120</td>
+                    <td>940</td>
+                    <td>0</td>
+                    <td><a href="assets/0088848f-175b-45f9-9dad-0093e8d216e9_diff.jpg" target="_blank"><img class="diff-img" src="assets/0088848f-175b-45f9-9dad-0093e8d216e9_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>930842434423691</td>
+                    <td>0.1814</td>
+                    <td>943</td>
+                    <td>3877</td>
+                    <td>3137</td>
+                    <td>203</td>
+                    <td><a href="assets/930842434423691_diff.jpg" target="_blank"><img class="diff-img" src="assets/930842434423691_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>671811303998480</td>
+                    <td>0.2517</td>
+                    <td>143</td>
+                    <td>36</td>
+                    <td>0</td>
+                    <td>107</td>
+                    <td><a href="assets/671811303998480_diff.jpg" target="_blank"><img class="diff-img" src="assets/671811303998480_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>1131950611202217</td>
+                    <td>0.3035</td>
+                    <td>346</td>
+                    <td>105</td>
+                    <td>0</td>
+                    <td>241</td>
+                    <td><a href="assets/1131950611202217_diff.jpg" target="_blank"><img class="diff-img" src="assets/1131950611202217_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>299603061792440</td>
+                    <td>0.3070</td>
+                    <td>323</td>
+                    <td>686</td>
+                    <td>449</td>
+                    <td>86</td>
+                    <td><a href="assets/299603061792440_diff.jpg" target="_blank"><img class="diff-img" src="assets/299603061792440_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>822560908385930</td>
+                    <td>0.3506</td>
+                    <td>61</td>
+                    <td>174</td>
+                    <td>113</td>
+                    <td>0</td>
+                    <td><a href="assets/822560908385930_diff.jpg" target="_blank"><img class="diff-img" src="assets/822560908385930_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>1490763574593712</td>
+                    <td>0.3731</td>
+                    <td>595</td>
+                    <td>222</td>
+                    <td>0</td>
+                    <td>373</td>
+                    <td><a href="assets/1490763574593712_diff.jpg" target="_blank"><img class="diff-img" src="assets/1490763574593712_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>ef723505-5bf0-4327-8638-e0703af368f3</td>
+                    <td>0.5532</td>
+                    <td>602</td>
+                    <td>333</td>
+                    <td>0</td>
+                    <td>269</td>
+                    <td><a href="assets/ef723505-5bf0-4327-8638-e0703af368f3_diff.jpg" target="_blank"><img class="diff-img" src="assets/ef723505-5bf0-4327-8638-e0703af368f3_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>471611377923092</td>
+                    <td>0.5639</td>
+                    <td>15022</td>
+                    <td>8471</td>
+                    <td>0</td>
+                    <td>6551</td>
+                    <td><a href="assets/471611377923092_diff.jpg" target="_blank"><img class="diff-img" src="assets/471611377923092_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>212281790352108</td>
+                    <td>0.6303</td>
+                    <td>357</td>
+                    <td>225</td>
+                    <td>0</td>
+                    <td>132</td>
+                    <td><a href="assets/212281790352108_diff.jpg" target="_blank"><img class="diff-img" src="assets/212281790352108_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>d9a52391-0e32-4bae-9e39-48a216aa562e</td>
+                    <td>0.6708</td>
+                    <td>161</td>
+                    <td>108</td>
+                    <td>0</td>
+                    <td>53</td>
+                    <td><a href="assets/d9a52391-0e32-4bae-9e39-48a216aa562e_diff.jpg" target="_blank"><img class="diff-img" src="assets/d9a52391-0e32-4bae-9e39-48a216aa562e_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>318666179638135</td>
+                    <td>0.6722</td>
+                    <td>26459</td>
+                    <td>18229</td>
+                    <td>265</td>
+                    <td>8495</td>
+                    <td><a href="assets/318666179638135_diff.jpg" target="_blank"><img class="diff-img" src="assets/318666179638135_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>3674672a-35d9-43b3-b442-249642dafaa8</td>
+                    <td>0.6729</td>
+                    <td>751</td>
+                    <td>1116</td>
+                    <td>365</td>
+                    <td>0</td>
+                    <td><a href="assets/3674672a-35d9-43b3-b442-249642dafaa8_diff.jpg" target="_blank"><img class="diff-img" src="assets/3674672a-35d9-43b3-b442-249642dafaa8_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>857578969238303</td>
+                    <td>0.7269</td>
+                    <td>1739</td>
+                    <td>2200</td>
+                    <td>542</td>
+                    <td>81</td>
+                    <td><a href="assets/857578969238303_diff.jpg" target="_blank"><img class="diff-img" src="assets/857578969238303_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>1019440569393347</td>
+                    <td>0.7293</td>
+                    <td>4583</td>
+                    <td>6284</td>
+                    <td>1701</td>
+                    <td>0</td>
+                    <td><a href="assets/1019440569393347_diff.jpg" target="_blank"><img class="diff-img" src="assets/1019440569393347_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>161598622858285</td>
+                    <td>0.7374</td>
+                    <td>1310</td>
+                    <td>966</td>
+                    <td>0</td>
+                    <td>344</td>
+                    <td><a href="assets/161598622858285_diff.jpg" target="_blank"><img class="diff-img" src="assets/161598622858285_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>196244582323540</td>
+                    <td>0.7546</td>
+                    <td>269</td>
+                    <td>203</td>
+                    <td>0</td>
+                    <td>66</td>
+                    <td><a href="assets/196244582323540_diff.jpg" target="_blank"><img class="diff-img" src="assets/196244582323540_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>870f9898-961b-4404-bee8-03cf5f1e8a3d</td>
+                    <td>0.7727</td>
+                    <td>1867</td>
+                    <td>1760</td>
+                    <td>179</td>
+                    <td>286</td>
+                    <td><a href="assets/870f9898-961b-4404-bee8-03cf5f1e8a3d_diff.jpg" target="_blank"><img class="diff-img" src="assets/870f9898-961b-4404-bee8-03cf5f1e8a3d_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>125035310018047</td>
+                    <td>0.7918</td>
+                    <td>1310</td>
+                    <td>1564</td>
+                    <td>294</td>
+                    <td>40</td>
+                    <td><a href="assets/125035310018047_diff.jpg" target="_blank"><img class="diff-img" src="assets/125035310018047_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>f95f7a10-3239-446b-b0be-c7dbcac6a3fb</td>
+                    <td>0.7988</td>
+                    <td>343</td>
+                    <td>274</td>
+                    <td>0</td>
+                    <td>69</td>
+                    <td><a href="assets/f95f7a10-3239-446b-b0be-c7dbcac6a3fb_diff.jpg" target="_blank"><img class="diff-img" src="assets/f95f7a10-3239-446b-b0be-c7dbcac6a3fb_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>8792094944191192</td>
+                    <td>0.8198</td>
+                    <td>273</td>
+                    <td>333</td>
+                    <td>60</td>
+                    <td>0</td>
+                    <td><a href="assets/8792094944191192_diff.jpg" target="_blank"><img class="diff-img" src="assets/8792094944191192_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>2985603351766082</td>
+                    <td>0.8328</td>
+                    <td>2386</td>
+                    <td>1987</td>
+                    <td>0</td>
+                    <td>399</td>
+                    <td><a href="assets/2985603351766082_diff.jpg" target="_blank"><img class="diff-img" src="assets/2985603351766082_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>b7d8e1b5-2a4b-45a8-9892-06fcdb334640</td>
+                    <td>0.8538</td>
+                    <td>3835</td>
+                    <td>4092</td>
+                    <td>441</td>
+                    <td>184</td>
+                    <td><a href="assets/b7d8e1b5-2a4b-45a8-9892-06fcdb334640_diff.jpg" target="_blank"><img class="diff-img" src="assets/b7d8e1b5-2a4b-45a8-9892-06fcdb334640_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>532628267735038</td>
+                    <td>0.8924</td>
+                    <td>19449</td>
+                    <td>21795</td>
+                    <td>2346</td>
+                    <td>0</td>
+                    <td><a href="assets/532628267735038_diff.jpg" target="_blank"><img class="diff-img" src="assets/532628267735038_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>fefcc432-4afc-4522-a6ab-40a7f536f20a</td>
+                    <td>0.9017</td>
+                    <td>468</td>
+                    <td>422</td>
+                    <td>0</td>
+                    <td>46</td>
+                    <td><a href="assets/fefcc432-4afc-4522-a6ab-40a7f536f20a_diff.jpg" target="_blank"><img class="diff-img" src="assets/fefcc432-4afc-4522-a6ab-40a7f536f20a_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>f1e7b7b8-6943-4ac4-89ba-57cf79066f1d</td>
+                    <td>0.9295</td>
+                    <td>3860</td>
+                    <td>3588</td>
+                    <td>0</td>
+                    <td>272</td>
+                    <td><a href="assets/f1e7b7b8-6943-4ac4-89ba-57cf79066f1d_diff.jpg" target="_blank"><img class="diff-img" src="assets/f1e7b7b8-6943-4ac4-89ba-57cf79066f1d_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>2c6b671a-b667-4ad4-bbb8-e0a1f17e3818</td>
+                    <td>0.9298</td>
+                    <td>6232</td>
+                    <td>6283</td>
+                    <td>253</td>
+                    <td>202</td>
+                    <td><a href="assets/2c6b671a-b667-4ad4-bbb8-e0a1f17e3818_diff.jpg" target="_blank"><img class="diff-img" src="assets/2c6b671a-b667-4ad4-bbb8-e0a1f17e3818_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>e9b95962-54c2-456f-b2e1-3cb60da0a6d6</td>
+                    <td>0.9313</td>
+                    <td>1310</td>
+                    <td>1220</td>
+                    <td>0</td>
+                    <td>90</td>
+                    <td><a href="assets/e9b95962-54c2-456f-b2e1-3cb60da0a6d6_diff.jpg" target="_blank"><img class="diff-img" src="assets/e9b95962-54c2-456f-b2e1-3cb60da0a6d6_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>955227375338093</td>
+                    <td>0.9332</td>
+                    <td>9419</td>
+                    <td>10060</td>
+                    <td>657</td>
+                    <td>16</td>
+                    <td><a href="assets/955227375338093_diff.jpg" target="_blank"><img class="diff-img" src="assets/955227375338093_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>167994091824213</td>
+                    <td>0.9452</td>
+                    <td>766</td>
+                    <td>724</td>
+                    <td>0</td>
+                    <td>42</td>
+                    <td><a href="assets/167994091824213_diff.jpg" target="_blank"><img class="diff-img" src="assets/167994091824213_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>933090527327250</td>
+                    <td>0.9489</td>
+                    <td>9702</td>
+                    <td>9206</td>
+                    <td>0</td>
+                    <td>496</td>
+                    <td><a href="assets/933090527327250_diff.jpg" target="_blank"><img class="diff-img" src="assets/933090527327250_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>d7416875-28ea-4d22-aec3-e4724d674894</td>
+                    <td>0.9540</td>
+                    <td>5165</td>
+                    <td>5414</td>
+                    <td>249</td>
+                    <td>0</td>
+                    <td><a href="assets/d7416875-28ea-4d22-aec3-e4724d674894_diff.jpg" target="_blank"><img class="diff-img" src="assets/d7416875-28ea-4d22-aec3-e4724d674894_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>904411971827702</td>
+                    <td>0.9562</td>
+                    <td>52337</td>
+                    <td>53181</td>
+                    <td>1602</td>
+                    <td>758</td>
+                    <td><a href="assets/904411971827702_diff.jpg" target="_blank"><img class="diff-img" src="assets/904411971827702_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>1384373959095157</td>
+                    <td>0.9571</td>
+                    <td>1633</td>
+                    <td>1563</td>
+                    <td>0</td>
+                    <td>70</td>
+                    <td><a href="assets/1384373959095157_diff.jpg" target="_blank"><img class="diff-img" src="assets/1384373959095157_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>1fb1a1c8-4c40-4055-b734-1f39093ffa92</td>
+                    <td>0.9668</td>
+                    <td>4271</td>
+                    <td>4129</td>
+                    <td>0</td>
+                    <td>142</td>
+                    <td><a href="assets/1fb1a1c8-4c40-4055-b734-1f39093ffa92_diff.jpg" target="_blank"><img class="diff-img" src="assets/1fb1a1c8-4c40-4055-b734-1f39093ffa92_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>68605857-43e8-4c45-8e8b-7a4477313936</td>
+                    <td>0.9672</td>
+                    <td>5036</td>
+                    <td>5207</td>
+                    <td>171</td>
+                    <td>0</td>
+                    <td><a href="assets/68605857-43e8-4c45-8e8b-7a4477313936_diff.jpg" target="_blank"><img class="diff-img" src="assets/68605857-43e8-4c45-8e8b-7a4477313936_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>9fc4378b-9775-413b-a7bb-284527e0d911</td>
+                    <td>0.9690</td>
+                    <td>1259</td>
+                    <td>1220</td>
+                    <td>0</td>
+                    <td>39</td>
+                    <td><a href="assets/9fc4378b-9775-413b-a7bb-284527e0d911_diff.jpg" target="_blank"><img class="diff-img" src="assets/9fc4378b-9775-413b-a7bb-284527e0d911_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>ce53c7cb-3aec-4a00-ba1d-37b944ac55ad</td>
+                    <td>0.9708</td>
+                    <td>1198</td>
+                    <td>1163</td>
+                    <td>0</td>
+                    <td>35</td>
+                    <td><a href="assets/ce53c7cb-3aec-4a00-ba1d-37b944ac55ad_diff.jpg" target="_blank"><img class="diff-img" src="assets/ce53c7cb-3aec-4a00-ba1d-37b944ac55ad_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>57cb177e-4b17-4a31-8932-bcabe29d3cc0</td>
+                    <td>0.9744</td>
+                    <td>14568</td>
+                    <td>14331</td>
+                    <td>69</td>
+                    <td>306</td>
+                    <td><a href="assets/57cb177e-4b17-4a31-8932-bcabe29d3cc0_diff.jpg" target="_blank"><img class="diff-img" src="assets/57cb177e-4b17-4a31-8932-bcabe29d3cc0_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>409495874297166</td>
+                    <td>0.9749</td>
+                    <td>40996</td>
+                    <td>39965</td>
+                    <td>0</td>
+                    <td>1031</td>
+                    <td><a href="assets/409495874297166_diff.jpg" target="_blank"><img class="diff-img" src="assets/409495874297166_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>bc3fec88-a009-4196-b5f6-e04f2ed713bf</td>
+                    <td>0.9752</td>
+                    <td>3861</td>
+                    <td>3959</td>
+                    <td>98</td>
+                    <td>0</td>
+                    <td><a href="assets/bc3fec88-a009-4196-b5f6-e04f2ed713bf_diff.jpg" target="_blank"><img class="diff-img" src="assets/bc3fec88-a009-4196-b5f6-e04f2ed713bf_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>bccad94d-7cff-4343-9665-b9b24069bd23</td>
+                    <td>0.9753</td>
+                    <td>4149</td>
+                    <td>4254</td>
+                    <td>105</td>
+                    <td>0</td>
+                    <td><a href="assets/bccad94d-7cff-4343-9665-b9b24069bd23_diff.jpg" target="_blank"><img class="diff-img" src="assets/bccad94d-7cff-4343-9665-b9b24069bd23_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>52694ad9-6fe7-4745-979d-3a173b25f804</td>
+                    <td>0.9767</td>
+                    <td>3815</td>
+                    <td>3821</td>
+                    <td>48</td>
+                    <td>42</td>
+                    <td><a href="assets/52694ad9-6fe7-4745-979d-3a173b25f804_diff.jpg" target="_blank"><img class="diff-img" src="assets/52694ad9-6fe7-4745-979d-3a173b25f804_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>263fe0a8-cf89-4ab5-a947-99f20adee585</td>
+                    <td>0.9789</td>
+                    <td>2362</td>
+                    <td>2413</td>
+                    <td>51</td>
+                    <td>0</td>
+                    <td><a href="assets/263fe0a8-cf89-4ab5-a947-99f20adee585_diff.jpg" target="_blank"><img class="diff-img" src="assets/263fe0a8-cf89-4ab5-a947-99f20adee585_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>03722627-0f39-46ac-b929-93ff5253b4b6</td>
+                    <td>0.9830</td>
+                    <td>6879</td>
+                    <td>6917</td>
+                    <td>78</td>
+                    <td>40</td>
+                    <td><a href="assets/03722627-0f39-46ac-b929-93ff5253b4b6_diff.jpg" target="_blank"><img class="diff-img" src="assets/03722627-0f39-46ac-b929-93ff5253b4b6_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>73f87440-b282-4863-bd32-083256c16908</td>
+                    <td>0.9840</td>
+                    <td>4300</td>
+                    <td>4370</td>
+                    <td>70</td>
+                    <td>0</td>
+                    <td><a href="assets/73f87440-b282-4863-bd32-083256c16908_diff.jpg" target="_blank"><img class="diff-img" src="assets/73f87440-b282-4863-bd32-083256c16908_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>26210846388517270</td>
+                    <td>0.9868</td>
+                    <td>29624</td>
+                    <td>29917</td>
+                    <td>345</td>
+                    <td>52</td>
+                    <td><a href="assets/26210846388517270_diff.jpg" target="_blank"><img class="diff-img" src="assets/26210846388517270_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>2deedd9c-1cff-4f40-9958-308b7954bb45</td>
+                    <td>0.9898</td>
+                    <td>18205</td>
+                    <td>18301</td>
+                    <td>142</td>
+                    <td>46</td>
+                    <td><a href="assets/2deedd9c-1cff-4f40-9958-308b7954bb45_diff.jpg" target="_blank"><img class="diff-img" src="assets/2deedd9c-1cff-4f40-9958-308b7954bb45_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>173239464669959</td>
+                    <td>1.0000</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/173239464669959_diff.jpg" target="_blank"><img class="diff-img" src="assets/173239464669959_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>1634936550227999</td>
+                    <td>1.0000</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/1634936550227999_diff.jpg" target="_blank"><img class="diff-img" src="assets/1634936550227999_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>291967965907673</td>
+                    <td>1.0000</td>
+                    <td>153</td>
+                    <td>153</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/291967965907673_diff.jpg" target="_blank"><img class="diff-img" src="assets/291967965907673_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>871543466734475</td>
+                    <td>1.0000</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/871543466734475_diff.jpg" target="_blank"><img class="diff-img" src="assets/871543466734475_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>2562170430756718</td>
+                    <td>1.0000</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/2562170430756718_diff.jpg" target="_blank"><img class="diff-img" src="assets/2562170430756718_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>9b1114b1-387f-4764-bf3c-6db5809ab2db</td>
+                    <td>1.0000</td>
+                    <td>409</td>
+                    <td>409</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/9b1114b1-387f-4764-bf3c-6db5809ab2db_diff.jpg" target="_blank"><img class="diff-img" src="assets/9b1114b1-387f-4764-bf3c-6db5809ab2db_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>da8c722f-7b41-4bc8-b81e-af8f33cd4165</td>
+                    <td>1.0000</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/da8c722f-7b41-4bc8-b81e-af8f33cd4165_diff.jpg" target="_blank"><img class="diff-img" src="assets/da8c722f-7b41-4bc8-b81e-af8f33cd4165_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>801754743801999</td>
+                    <td>1.0000</td>
+                    <td>291</td>
+                    <td>291</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/801754743801999_diff.jpg" target="_blank"><img class="diff-img" src="assets/801754743801999_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>1397649970633008</td>
+                    <td>1.0000</td>
+                    <td>223</td>
+                    <td>223</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/1397649970633008_diff.jpg" target="_blank"><img class="diff-img" src="assets/1397649970633008_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>1407390010751492</td>
+                    <td>1.0000</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/1407390010751492_diff.jpg" target="_blank"><img class="diff-img" src="assets/1407390010751492_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>1043236500247070</td>
+                    <td>1.0000</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/1043236500247070_diff.jpg" target="_blank"><img class="diff-img" src="assets/1043236500247070_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>566935955515605</td>
+                    <td>1.0000</td>
+                    <td>296</td>
+                    <td>296</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/566935955515605_diff.jpg" target="_blank"><img class="diff-img" src="assets/566935955515605_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>550822005934553</td>
+                    <td>1.0000</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/550822005934553_diff.jpg" target="_blank"><img class="diff-img" src="assets/550822005934553_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>810183961580401</td>
+                    <td>1.0000</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/810183961580401_diff.jpg" target="_blank"><img class="diff-img" src="assets/810183961580401_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>332198098541859</td>
+                    <td>1.0000</td>
+                    <td>242</td>
+                    <td>242</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/332198098541859_diff.jpg" target="_blank"><img class="diff-img" src="assets/332198098541859_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>672731224796321</td>
+                    <td>1.0000</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/672731224796321_diff.jpg" target="_blank"><img class="diff-img" src="assets/672731224796321_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>992742956405587</td>
+                    <td>1.0000</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/992742956405587_diff.jpg" target="_blank"><img class="diff-img" src="assets/992742956405587_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>1253130721794975</td>
+                    <td>1.0000</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/1253130721794975_diff.jpg" target="_blank"><img class="diff-img" src="assets/1253130721794975_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>2769241939938889</td>
+                    <td>1.0000</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/2769241939938889_diff.jpg" target="_blank"><img class="diff-img" src="assets/2769241939938889_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>1765386860738037</td>
+                    <td>1.0000</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/1765386860738037_diff.jpg" target="_blank"><img class="diff-img" src="assets/1765386860738037_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>669848760702786</td>
+                    <td>1.0000</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/669848760702786_diff.jpg" target="_blank"><img class="diff-img" src="assets/669848760702786_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>535408762984577</td>
+                    <td>1.0000</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/535408762984577_diff.jpg" target="_blank"><img class="diff-img" src="assets/535408762984577_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>369602612275380</td>
+                    <td>1.0000</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/369602612275380_diff.jpg" target="_blank"><img class="diff-img" src="assets/369602612275380_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>1000795241832418</td>
+                    <td>1.0000</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/1000795241832418_diff.jpg" target="_blank"><img class="diff-img" src="assets/1000795241832418_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>1357433225213341</td>
+                    <td>1.0000</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/1357433225213341_diff.jpg" target="_blank"><img class="diff-img" src="assets/1357433225213341_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>d3715f72-3c9e-4136-8999-34c734436437</td>
+                    <td>1.0000</td>
+                    <td>43</td>
+                    <td>43</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/d3715f72-3c9e-4136-8999-34c734436437_diff.jpg" target="_blank"><img class="diff-img" src="assets/d3715f72-3c9e-4136-8999-34c734436437_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>1132072153938604</td>
+                    <td>1.0000</td>
+                    <td>17187</td>
+                    <td>17187</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/1132072153938604_diff.jpg" target="_blank"><img class="diff-img" src="assets/1132072153938604_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>1acc5018-b719-407c-b9f5-145b7712f865</td>
+                    <td>1.0000</td>
+                    <td>566</td>
+                    <td>566</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/1acc5018-b719-407c-b9f5-145b7712f865_diff.jpg" target="_blank"><img class="diff-img" src="assets/1acc5018-b719-407c-b9f5-145b7712f865_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>b37c2bce-98d0-4df2-8970-b177bed9fd45</td>
+                    <td>1.0000</td>
+                    <td>7710</td>
+                    <td>7710</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/b37c2bce-98d0-4df2-8970-b177bed9fd45_diff.jpg" target="_blank"><img class="diff-img" src="assets/b37c2bce-98d0-4df2-8970-b177bed9fd45_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>0215f316-0a2a-41de-877c-30fff06c76b9</td>
+                    <td>1.0000</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/0215f316-0a2a-41de-877c-30fff06c76b9_diff.jpg" target="_blank"><img class="diff-img" src="assets/0215f316-0a2a-41de-877c-30fff06c76b9_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>064b3a0f-ce4a-4996-879f-93c10350d15b</td>
+                    <td>1.0000</td>
+                    <td>49</td>
+                    <td>49</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/064b3a0f-ce4a-4996-879f-93c10350d15b_diff.jpg" target="_blank"><img class="diff-img" src="assets/064b3a0f-ce4a-4996-879f-93c10350d15b_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>ce4c9ccc-4705-477a-8457-159a8aedd692</td>
+                    <td>1.0000</td>
+                    <td>4610</td>
+                    <td>4610</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/ce4c9ccc-4705-477a-8457-159a8aedd692_diff.jpg" target="_blank"><img class="diff-img" src="assets/ce4c9ccc-4705-477a-8457-159a8aedd692_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>b28f1d03-c617-43ba-b42c-bd8f7b739ccc</td>
+                    <td>1.0000</td>
+                    <td>321</td>
+                    <td>321</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/b28f1d03-c617-43ba-b42c-bd8f7b739ccc_diff.jpg" target="_blank"><img class="diff-img" src="assets/b28f1d03-c617-43ba-b42c-bd8f7b739ccc_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>98715996-db6e-4c46-862b-1d4af6336852</td>
+                    <td>1.0000</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/98715996-db6e-4c46-862b-1d4af6336852_diff.jpg" target="_blank"><img class="diff-img" src="assets/98715996-db6e-4c46-862b-1d4af6336852_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>6b328706-b488-40ad-9b45-27e9f2f3cd16</td>
+                    <td>1.0000</td>
+                    <td>172</td>
+                    <td>172</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/6b328706-b488-40ad-9b45-27e9f2f3cd16_diff.jpg" target="_blank"><img class="diff-img" src="assets/6b328706-b488-40ad-9b45-27e9f2f3cd16_diff.jpg"></a></td>
+                </tr>
+        
+                <tr>
+                    <td>5abb3af9-803c-47c0-87ed-af67a80f309d</td>
+                    <td>1.0000</td>
+                    <td>943</td>
+                    <td>943</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td><a href="assets/5abb3af9-803c-47c0-87ed-af67a80f309d_diff.jpg" target="_blank"><img class="diff-img" src="assets/5abb3af9-803c-47c0-87ed-af67a80f309d_diff.jpg"></a></td>
+                </tr>
+        
+            </tbody>
+        </table>
+    </body>
+    </html>
+    
