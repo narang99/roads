@@ -1,7 +1,61 @@
 from mtrain.neg_mask.crops import get_largest_bbox
 import cv2
 import numpy as np
-from mtrain.neg_mask.crops import bbox_only_mask, get_region_crops, Bbox
+from mtrain.neg_mask.crops import bbox_only_mask, get_region_crops
+
+
+def get_trash_masks_which_are_part_of_wall(full_trash_mask, full_wall_mask):
+    part_of_wall_masks = []
+    pairs = find_trash_wall_pairs(full_trash_mask, full_wall_mask)
+    for pair in pairs:
+        pair = make_wall_mask_surround_only_trash_region(pair)
+        pair = decrease_wall_height_in_pair(pair)
+
+        if do_trash_and_wall_intersect(pair):
+            part_of_wall_masks.append(pair[0].astype(bool))
+    return part_of_wall_masks
+
+
+def find_trash_wall_pairs(trash_mask, wall_mask):
+    wmasks = _get_individual_masks(wall_mask)
+    tmasks = _get_individual_masks(trash_mask)
+
+    tm_and_wm = []
+    for tm in tmasks:
+        max_sum = 0
+        mywall = None
+        for wm in wmasks:
+            inters = tm & wm
+            cursum = inters.sum()
+            if max_sum < cursum:
+                max_sum = cursum
+                mywall = wm
+        if mywall is not None:
+            tm_and_wm.append((tm, mywall))
+
+    return tm_and_wm
+
+
+def _get_individual_masks(mask):
+    mask = mask.astype(np.uint8)
+    bboxes = list(get_region_crops(mask))
+    return [bbox_only_mask(mask, bb, -1) for bb in bboxes]
+
+
+def make_wall_mask_surround_only_trash_region(pair):
+    trash_mask, wall_mask = pair
+    bbox = get_largest_bbox(trash_mask)
+
+    full_rect_along_roi_length = cv2.rectangle(
+        np.zeros(trash_mask.shape), (bbox.x, 0), (bbox.x2, trash_mask.shape[0]), 255, -1
+    )
+
+    # only the wall mask surrounding trash object horizontally
+    wall_roi_mask = (
+        wall_mask.astype(bool) & full_rect_along_roi_length.astype(bool)
+    ).astype(np.uint8)
+    return (trash_mask, wall_roi_mask)
+
 
 def decrease_wall_height_in_pair(pair):
     """given a trash mask and wall mask, we decrease the height of the wall mask at the bottom
@@ -39,32 +93,6 @@ def decrease_wall_height_in_pair(pair):
     boxed = cv2.drawContours(np.zeros(wall_mask.shape), [box], 0, 255, -1)
 
     return (pair[0], boxed.astype(bool) & wall_mask.astype(bool))
-
-
-def _get_individual_masks(mask):
-    mask = mask.astype(np.uint8)
-    bboxes = list(get_region_crops(mask))
-    return [bbox_only_mask(mask, bb, 2000) for bb in bboxes]
-
-
-def find_trash_wall_pairs(trash_mask, wall_mask):
-    wmasks = _get_individual_masks(wall_mask)
-    tmasks = _get_individual_masks(trash_mask)
-
-    tm_and_wm = []
-    for tm in tmasks:
-        max_sum = 0
-        mywall = None
-        for wm in wmasks:
-            inters = tm & wm
-            cursum = inters.sum()
-            if max_sum < cursum:
-                max_sum = cursum
-                mywall = wm
-        if mywall is not None:
-            tm_and_wm.append((tm, mywall))
-
-    return tm_and_wm
 
 
 def shrink_bottom_only(rect, pixels_to_remove=100):
@@ -107,35 +135,6 @@ def shrink_bottom_only(rect, pixels_to_remove=100):
     return np.intp(box)
 
 
-
-def make_wall_mask_surround_only_trash_region(pair):
-    trash_mask, wall_mask = pair
-    bbox = get_largest_bbox(trash_mask)
-
-    full_rect_along_roi_length = cv2.rectangle(
-        np.zeros(trash_mask.shape), (bbox.x, 0), (bbox.x2, trash_mask.shape[0]), 255, -1
-    )
-
-    # only the wall mask surrounding trash object horizontally
-    wall_roi_mask = (
-        wall_mask.astype(bool) & full_rect_along_roi_length.astype(bool)
-    ).astype(np.uint8)
-    return (trash_mask, wall_roi_mask)
-
-
 def do_trash_and_wall_intersect(pair):
     mask, wallmask = pair
     return (mask & wallmask).sum() > 0
-
-
-def get_trash_masks_which_are_part_of_wall(full_trash_mask, full_wall_mask):
-    part_of_wall_masks = []
-    pairs = find_trash_wall_pairs(full_trash_mask, full_wall_mask)
-    for pair in pairs:
-        pair = make_wall_mask_surround_only_trash_region(pair)
-        pair = decrease_wall_height_in_pair(pair)
-        # part_of_wall_masks.append(pair)
-
-        if do_trash_and_wall_intersect(pair):
-            part_of_wall_masks.append(pair[0].astype(bool))
-    return part_of_wall_masks

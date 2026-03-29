@@ -1,0 +1,6 @@
+outs:
+- md5: f671857941e7d6ae90f73cc9b21af4e3.dir
+  size: 46997285
+  nfiles: 1
+  hash: md5
+  path: foveated-224

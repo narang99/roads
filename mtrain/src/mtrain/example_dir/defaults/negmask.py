@@ -54,7 +54,6 @@ def default_negmask_learners(models_dir, labels, bs):
             "other-high-recall", bs, 224, 10, step_downer, path, "xresnet18"
         )
     if "latest" in labels:
-        path = models_dir / "foveated-224" / "iter-12-xresnet18.pth"
         res["latest"] = get_baseline_foveated_model("latest", models_dir, bs)
     if "baseline" in labels:
         res["baseline"] = EnsembledNegmaskLearner(
@@ -68,6 +67,7 @@ def default_negmask_learners(models_dir, labels, bs):
     return res
 
 
+
 def get_baseline_md_model(label, models_dir, bs):
     path = (
         models_dir
@@ -78,7 +78,7 @@ def get_baseline_md_model(label, models_dir, bs):
 
 
 def get_baseline_foveated_model(label, models_dir, bs):
-    path = models_dir / "foveated-224" / "iter-12-xresnet18.pth"
+    path = models_dir / "foveated-224" / "iter-7-xresnet18.pth"
     return get_configured_negmask_learner(
         label,
         bs,
