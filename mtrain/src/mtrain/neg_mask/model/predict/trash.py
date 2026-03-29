@@ -25,42 +25,19 @@ from mtrain.neg_mask.model.predict.core import reconstruct_probability_masks
 from mtrain.neg_mask.model.datasets.blur_pad_dl import (
     BlurPadDataset,
     BlurPadInferDataset,
-    BlurPadStepEdgeInferDataset,
-    noise_adder,
     CropTfmsOutsideBbox,
 )
 
 
-def predict_and_return_prob_masks_using_step_edge(
-    image,
-    mask,
-    learner,
-    crop_size=130,
-    device=None,
-    max_noise=30,
-    bbox_pad=5,
-):
-    crops, masks, bboxes, inner_bboxes = get_crops_masks_bboxes(
-        image, mask, crop_size, bbox_pad
-    )
-    ds = BlurPadStepEdgeInferDataset(
-        crops,
-        masks,
-        inner_bboxes,
-        crop_size,
-        noise_adder(max_noise),
-    )
-    return _predict_and_return_probs(ds, learner, image, mask, bboxes)
-
-
 def blur_and_noise_adder(blur_kernel_sz, blur_sigma, max_noise):
     def wrapped(crop, mask, inner_bbox):
-        return (
+        cropped = (
             CropTfmsOutsideBbox(crop, inner_bbox)
             .overwrite_with_blur(blur_kernel_sz, blur_sigma)
             .add_noise(max_noise)
             .crop
         )
+        return cropped, mask
 
     return wrapped
 
@@ -68,21 +45,21 @@ def blur_and_noise_adder(blur_kernel_sz, blur_sigma, max_noise):
 def step_down_gauss_tfm(cropped_image, mask, inner_bbox, min_value):
     tfm = CropTfmsOutsideBbox(cropped_image, inner_bbox)
     tfm = tfm.step_down_gaussian(min_value)
-    return tfm.crop
+    return tfm.crop, mask
 
 
 def step_down_edge_tfm(cropped_image, mask, inner_bbox, ratio):
     tfm = CropTfmsOutsideBbox(cropped_image, inner_bbox)
     tfm = tfm.step_down(ratio)
-    return tfm.crop
+    return tfm.crop, mask
 
 
 def zero_overwriter(crop, crop_mask, inner_bbox):
-    return CropTfmsOutsideBbox(crop, inner_bbox).overwrite_with_zeros().crop
+    return CropTfmsOutsideBbox(crop, inner_bbox).overwrite_with_zeros().crop, crop_mask
 
 
 def id_mutator(crop, mask, bbox):
-    return crop
+    return crop, mask
 
 
 def _prepare_batched_input(all_images, all_masks, crop_size, bbox_pad):
@@ -165,7 +142,11 @@ def batch_predict_and_return_prob_masks(
         total_probs = list(itertools.chain.from_iterable(res))
 
     return _reconstruct_masks_of_batch(
-        all_images, all_masks, total_probs, inputs["crop_to_image"], inputs["image_idx_to_bboxes"]
+        all_images,
+        all_masks,
+        total_probs,
+        inputs["crop_to_image"],
+        inputs["image_idx_to_bboxes"],
     )
 
 
@@ -177,27 +158,40 @@ def predict_and_return_prob_masks_using_unblurred(
     device=None,
     bbox_pad=5,
     mutator=id_mutator,
+    valid_tfms_crop_size=None,
+    dataset_class=BlurPadInferDataset,
 ):
-    inputs = get_model_inputs(image, mask, crop_size, bbox_pad, mutator)
+    inputs = get_model_inputs(
+        image,
+        mask,
+        crop_size,
+        bbox_pad,
+        mutator,
+        valid_tfms_crop_size=valid_tfms_crop_size,
+        dataset_class=dataset_class,
+    )
     if inputs is None:
         return np.zeros(mask.shape), np.zeros(mask.shape)
     ds, bboxes = inputs
     return _predict_and_return_probs(ds, learner, image, mask, bboxes)
 
 
-def get_model_inputs(image, mask, crop_size, bbox_pad, mutator):
+def get_model_inputs(
+    image, mask, crop_size, bbox_pad, mutator, valid_tfms_crop_size=None, dataset_class=BlurPadInferDataset,
+):
     crops, masks, bboxes, inner_bboxes = get_crops_masks_bboxes(
         image, mask, crop_size, bbox_pad
     )
     if not bboxes:
         return None
 
-    ds = BlurPadInferDataset(
+    ds = dataset_class(
         crops,
         masks,
         inner_bboxes,
         crop_size,
         mutator,
+        valid_tfms_crop_size=valid_tfms_crop_size,
     )
     return ds, bboxes
 

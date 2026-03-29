@@ -267,6 +267,6 @@ def show_negmask_ds(ds_root, n_samples=8):
     masks = [ds_root / "masks" / f"{img.stem}.png" for img in images]
 
     im_masks = [(DiskImage.load(i), DiskBooleanMask.load(m)) for (i,m) in zip(images, masks)]
-    im_masks = [(i, overlay_mask_on_img(i, m)) for (i,m) in im_masks]
-    show(it_chain(im_masks))
+    im_masks = [(i, m, overlay_mask_on_img(i, m)) for (i,m) in im_masks]
+    show(it_chain(im_masks), ncols=3)
     return images, masks

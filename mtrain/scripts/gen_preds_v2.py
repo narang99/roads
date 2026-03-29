@@ -1,3 +1,4 @@
+from mtrain.utils import globL
 from mtrain.example_dir.core import load_npz
 from mtrain.example_dir.defaults.negmask import default_negmask_learners
 from mtrain.example_dir.bulk import to_example_dirs
@@ -12,7 +13,9 @@ from pathlib import Path
 
 ################################# input images parameters #################################################
 ############# users should change this ############################
-CHUNKS_DIR = Path("/Users/hariomnarang/Desktop/personal/roads/datasets/inference/delhi/chunks")
+CHUNKS_DIR = Path(
+    "/Users/hariomnarang/Desktop/personal/roads/datasets/inference/delhi/chunks"
+)
 MODELS_DIR = Path("/Users/hariomnarang/Desktop/personal/roads/datasets/models")
 
 # CLIP_NAME = "delhi_litter"
@@ -37,46 +40,63 @@ MODELS_DIR = Path("/Users/hariomnarang/Desktop/personal/roads/datasets/models")
 ##########################################################################################################
 
 
-def main():
-    import sys
-    min_val = int(sys.argv[1])
-    max_val = int(sys.argv[2])
-    print("range", min_val,max_val)
-    for chunk_name in range(min_val, max_val):
-        chunk_name = str(chunk_name)
-        print("start chunk:", chunk_name)
-        chunk_dir = CHUNKS_DIR / chunk_name
-        dirs = list(get_dirs(chunk_dir))
-        smallnet = default_smallnet_learners(MODELS_DIR, ["md"], 8)
-        negmask = default_negmask_learners(MODELS_DIR, ["other-high-recall"], 8)
-        edirs = to_example_dirs(dirs, smallnet, negmask, True)
-#        print("Stage: trim")
-#        for edir in tqdm(edirs):
-#            try:
-#                edir.trimmed_mask_path("md")
-#            except Exception as ex:
-#                print(f"WARN: edir={edir} {ex}")
-#            try:
-#                edir.trimmed_mask_path("sm")
-#            except Exception as ex:
-#                print(f"WARN: edir={edir} {ex}")
+def _run_stages(edirs):
+    #print("Stage: smallnet")
 #
-#        print("Stage: md")
-#        for edir in tqdm(edirs):
-#            try:
-#                edir.negmask_paths("md", "md")
-#            except Exception as ex:
-#                print(f"WARN: edir={edir} {ex}")
+    #for edir in tqdm(edirs):
+        #try:
+            #edir.smallnet_mask_path("md")
+        #except Exception as ex:
+            #print(f"WARN: edir={edir} {ex}")
+#
+    #print("stage: trim")
+    #for edir in edirs:
+        #try:
+            #edir.trimmed_mask_path("md")
+        #except Exception as ex:
+            #print(f"WARN: edir={edir} {ex}")
 
-        print("Stage: other-high-recall")
-        for edir in tqdm(edirs):
-            o, t = edir.negmask_paths("md", "md")
-            o, t = load_npz(o), load_npz(t)
-            run_on = (t > o).sum() > 0
-            try:
-                edir.negmask_paths("other-high-recall", "md")
-            except Exception as ex:
-                print(f"WARN: edir={edir} {ex}")
+    print("Stage: md")
+    for edir in tqdm(edirs):
+        try:
+            edir.negmask_paths("md", "md")
+        except Exception as ex:
+            print(f"WARN: edir={edir} {ex}")
+
+
+def main():
+    dirs = globL(
+        "/Users/hariomnarang/Desktop/personal/roads/datasets/test-samples/neg-masking/V1/rocks/classification/blurred/clean/walls-mapillary/raw_data",
+        "*",
+    )
+    smallnet = default_smallnet_learners(MODELS_DIR, ["md"], 8)
+    negmask = default_negmask_learners(MODELS_DIR, ["md"], 8)
+    edirs = to_example_dirs(dirs, smallnet, negmask, True)
+    _run_stages(edirs)
+    # import sys
+    # min_val = int(sys.argv[1])
+    # max_val = int(sys.argv[2])
+    # print("range", min_val,max_val)
+    # for chunk_name in range(min_val, max_val):
+    #     chunk_name = str(chunk_name)
+    #     print("start chunk:", chunk_name)
+    #     chunk_dir = CHUNKS_DIR / chunk_name
+    #     dirs = list(get_dirs(chunk_dir))
+    #     smallnet = default_smallnet_learners(MODELS_DIR, ["md"], 8)
+    #     negmask = default_negmask_learners(MODELS_DIR, ["other-high-recall"], 8)
+    #     edirs = to_example_dirs(dirs, smallnet, negmask, True)
+    #     _run_stages(edirs, smallnet, negmask)
+
+    # print("Stage: other-high-recall")
+    # for edir in tqdm(edirs):
+    #     o, t = edir.negmask_paths("md", "md")
+    #     o, t = load_npz(o), load_npz(t)
+    #     run_on = (t > o).sum() > 0
+    #     try:
+    #         edir.negmask_paths("other-high-recall", "md")
+    #     except Exception as ex:
+    #         print(f"WARN: edir={edir} {ex}")
+
 
 #        print("Stage: sm")
 #        for edir in tqdm(edirs):

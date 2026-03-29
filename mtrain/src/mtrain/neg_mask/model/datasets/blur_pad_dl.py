@@ -1,5 +1,10 @@
+import albumentations as A
+from mtrain.neg_mask.model.datasets.foviate_shrink import (
+    do_foviate_shrink,
+    get_foviated_image_and_mask,
+    get_zero_mask_with_bbox_colored,
+)
 import random
-from mpmath.libmp.libmpi import gamma_min
 from mtrain.neg_mask.model.datasets.crop_dataset_base import (
     MASK_DS_IMAGENET_MEAN,
     MASK_DS_IMAGENET_STD,
@@ -19,7 +24,7 @@ from PIL import Image
 import numpy as np
 
 # Import ImageNet normalization constants from existing codebase
-from mtrain.neg_mask.crops import Bbox, padded_bbox
+from mtrain.neg_mask.crops import Bbox, padded_bbox, get_largest_bbox
 
 DEFAULT_LABEL_BY_IDX = {
     "other": 0,
@@ -51,14 +56,27 @@ class BlurPadInferDataset(Dataset):
 
     LABEL_BY_IDX = DEFAULT_LABEL_BY_IDX
 
-    def __init__(self, crops, masks, bboxes: list[Bbox], crop_size, crop_mutator):
+    def __init__(
+        self,
+        crops,
+        masks,
+        bboxes: list[Bbox],
+        crop_size,
+        crop_mutator: Callable[
+            [np.ndarray, np.ndarray, Bbox], tuple[np.ndarray, np.ndarray]
+        ],
+        valid_tfms_crop_size=None,
+    ):
         self.crop_size = crop_size
-        self.crops, self.masks = crops, masks
+        self.images, self.masks = crops, masks
+        # self.bboxes = bboxes
         self.bboxes = [
             make_box_of_crop_size_centered_at_box(mask.shape, bbox, crop_size)
             for mask, bbox in zip(masks, bboxes)
         ]
-        self.tfms = get_valid_tfms(self.crop_size)
+        if valid_tfms_crop_size is None:
+            valid_tfms_crop_size = self.crop_size
+        self.tfms = get_valid_tfms(valid_tfms_crop_size)
         self.crop_mutator = crop_mutator
 
     @classmethod
@@ -66,56 +84,86 @@ class BlurPadInferDataset(Dataset):
         return BlurPadDataset.label_func(image_path)
 
     def __len__(self):
-        return len(self.crops)
+        return len(self.images)
 
     def __getitem__(self, index):
-        image, mask = self.crops[index], self.masks[index]
+        image, mask = self.images[index], self.masks[index]
         bbox, inner_bbox = self.bboxes[index]
+        # inner_bbox = self.bboxes[index]
 
         crop, cropped_mask = _get_crops(image, mask, bbox)
-        crop = self.crop_mutator(crop, cropped_mask, inner_bbox)
+        crop, cropped_mask = self.crop_mutator(crop, cropped_mask, inner_bbox)
         t_crop, t_mask = _with_tfms(crop, cropped_mask, self.tfms)
 
         return t_crop
 
 
-class BlurPadStepEdgeInferDataset(BlurPadInferDataset):
-    """Step edge inference version of blurpadinferdataset. The equivalent of blurpadgaussian
+class BlurPadFoveateInferDataset(Dataset):
+    """Specific for foveate, very minor differences
 
-    Check the doc of parent class for what to pass
+    The main difference is that step edge requires us to center the crop ish (the usage of function make_box_of_crop_size_centered_at_box)
+    This is most likely a legacy problem (because of how i generated the original data for training)
     """
+    LABEL_BY_IDX = DEFAULT_LABEL_BY_IDX
+
+    def __init__(
+        self,
+        crops,
+        masks,
+        bboxes: list[Bbox],
+        crop_size,
+        crop_mutator: Callable[
+            [np.ndarray, np.ndarray, Bbox], tuple[np.ndarray, np.ndarray]
+        ],
+        valid_tfms_crop_size=None,
+    ):
+        self.crop_size = crop_size
+        self.images, self.masks = crops, masks
+        self.bboxes = bboxes
+        if valid_tfms_crop_size is None:
+            valid_tfms_crop_size = self.crop_size
+        self.tfms = get_valid_tfms(valid_tfms_crop_size)
+        self.crop_mutator = crop_mutator
+
+    @classmethod
+    def label_func(cls, image_path):
+        return BlurPadDataset.label_func(image_path)
+
+    def __len__(self):
+        return len(self.images)
 
     def __getitem__(self, index):
-        image, mask = self.crops[index], self.masks[index]
-        bbox, inner_bbox = self.bboxes[index]
+        image, mask = self.images[index], self.masks[index]
+        inner_bbox = self.bboxes[index]
 
-        crop, cropped_mask = _get_crops(image, mask, bbox)
-        crop = self.crop_mutator(crop, cropped_mask, inner_bbox)
-        step_edge_mask = get_step_edge_mask(cropped_mask.shape, inner_bbox)
-        t_crop, t_mask = _with_tfms(crop, step_edge_mask, self.tfms)
-        return t_crop * t_mask
+        crop, cropped_mask = self.crop_mutator(image, mask, inner_bbox)
+        t_crop, t_mask = _with_tfms(crop, cropped_mask, self.tfms)
+
+        return t_crop
+
 
 
 def noise_adder(max_noise):
     def wrapped(crop, mask, inner_bbox):
-        return CropTfmsOutsideBbox(crop, inner_bbox).add_noise(max_noise).crop
+        return CropTfmsOutsideBbox(crop, inner_bbox).add_noise(max_noise).crop, mask
 
     return wrapped
 
 
 def blur_overwriter(blur_kernel_sz, blur_sigma):
     def wrapped(crop, mask, inner_bbox):
-        return (
+        crop = (
             CropTfmsOutsideBbox(crop, inner_bbox)
             .overwrite_with_blur(blur_kernel_sz, blur_sigma)
             .crop
         )
+        return crop, mask
 
     return wrapped
 
 
 def _id_crop_mutator(crop, cropped_mask, inner_bbox):
-    return crop
+    return crop, cropped_mask
 
 
 # class BlurPad2ChanDataset(Dataset):
@@ -180,17 +228,37 @@ class BlurPadDataset(Dataset):
     LABEL_BY_IDX = DEFAULT_LABEL_BY_IDX
 
     def __init__(
-        self, image_paths, mask_dir, crop_size, is_valid, crop_mutator=_id_crop_mutator, bbox_pad=0, min_area=35, min_bbox_length=3, max_area=None,
+        self,
+        image_paths,
+        mask_dir,
+        crop_size,
+        is_valid,
+        crop_mutator=_id_crop_mutator,
+        bbox_pad=0,
+        min_area=35,
+        min_bbox_length=3,
+        max_area=None,
+        tfms_crop_size=None,
     ):
         self.crop_size = crop_size
         self.min_area = min_area
         self.image_paths, self.mask_paths, self.img_name_by_bbox = (
-            get_image_mask_and_bbox(image_paths, mask_dir, crop_size, bbox_pad, min_area, min_bbox_length, max_area)
+            get_image_mask_and_bbox(
+                image_paths,
+                mask_dir,
+                crop_size,
+                bbox_pad,
+                min_area,
+                min_bbox_length,
+                max_area,
+            )
         )
         self._labels = [label_func(i.name) for i in self.image_paths]
         self.is_valid = is_valid
-        self._train_tfms = get_train_tfms(self.crop_size)
-        self._valid_tfms = get_valid_tfms(self.crop_size)
+        if tfms_crop_size is None:
+            tfms_crop_size = self.crop_size
+        self._train_tfms = get_train_tfms(tfms_crop_size)
+        self._valid_tfms = get_valid_tfms(tfms_crop_size)
 
         self.crop_mutator = crop_mutator
 
@@ -206,7 +274,7 @@ class BlurPadDataset(Dataset):
         image, mask, bbox, inner_bbox = self.get_loaded_objects(index)
 
         crop, cropped_mask = _get_crops(image, mask, bbox)
-        crop = self.crop_mutator(crop, cropped_mask, inner_bbox)
+        crop, cropped_mask = self.crop_mutator(crop, cropped_mask, inner_bbox)
         t_crop, t_mask = _with_tfms(crop, cropped_mask, tfms)
 
         label_tensor = get_label_tensor(self._labels[index], self.LABEL_BY_IDX)
@@ -232,33 +300,34 @@ def random_tfm(cropped_image, mask, inner_bbox):
     STEP_GAUSE_0_3 = 5
 
     i = random.randint(0, 5)
-    add_noise_change = random.randint(0,2)
+    add_noise_change = random.randint(0, 2)
+
     def _add_noise(tfm):
         if add_noise_change == 1:
             return tfm.add_noise(20)
         return tfm
 
     if i == NOISE_OVERWRITE:
-        return tfm.overwrite_with_noise(30).crop
+        return tfm.overwrite_with_noise(30).crop, mask
     elif i == BLUR_1_7:
         tfm = tfm.overwrite_with_blur(7, 1)
-        return _add_noise(tfm).crop
+        return _add_noise(tfm).crop, mask
     elif i == BLUR_2_13:
         tfm = tfm.overwrite_with_blur(13, 2)
-        return _add_noise(tfm).crop
+        return _add_noise(tfm).crop, mask
     elif i == STEP_EDGE_0_3:
         tfm = tfm.step_down(0.3)
-        return _add_noise(tfm).crop
+        return _add_noise(tfm).crop, mask
     elif i == STEP_EDGE_0_7:
         tfm = tfm.step_down(0.7)
-        return _add_noise(tfm).crop
+        return _add_noise(tfm).crop, mask
     elif i == STEP_GAUSE_0_3:
         tfm = tfm.step_down_gaussian(0.3)
-        return _add_noise(tfm).crop
+        return _add_noise(tfm).crop, mask
     else:
         raise Exception(f"invalid i={i}")
 
-    
+
 class BlurPadGaussianDataset(BlurPadDataset):
     """similar to blurpad but instead of overwriting with noise, we change the intensity of pixels around bbox, along with adding some noise
 
@@ -495,10 +564,14 @@ class CropTfmsOutsideBbox:
         return CropTfmsOutsideBbox(crop.astype(np.uint8), self.inner_bbox)
 
 
-def get_image_mask_and_bbox(image_paths, mask_dir, crop_size, bbox_pad, min_area, min_bbox_length, max_area):
+def get_image_mask_and_bbox(
+    image_paths, mask_dir, crop_size, bbox_pad, min_area, min_bbox_length, max_area
+):
     image_paths = list(image_paths)
     mask_paths = [mask_dir / f"{i.stem}.png" for i in image_paths]
-    img_name_by_bbox = get_coords_for_set(mask_paths, crop_size, bbox_pad, min_area, min_bbox_length, max_area)
+    img_name_by_bbox = get_coords_for_set(
+        mask_paths, crop_size, bbox_pad, min_area, min_bbox_length, max_area
+    )
     image_paths, mask_paths = get_filtered_images_and_masks(
         image_paths, mask_paths, img_name_by_bbox
     )
@@ -516,13 +589,20 @@ def get_filtered_images_and_masks(image_paths, mask_paths, img_name_by_bbox):
     return images, masks
 
 
-def get_coords_for_set(mask_paths, crop_size, bbox_pad, min_area, min_bbox_length, max_area) -> dict[str, Bbox]:
+def get_coords_for_set(
+    mask_paths, crop_size, bbox_pad, min_area, min_bbox_length, max_area
+) -> dict[str, Bbox]:
     res = {}
     for m in tqdm(mask_paths, desc="Getting Crop Coords"):
         # print("mask", m)
         try:
             bbox, inner_bbox = get_center_crop_coords_from_mask(
-                DiskBooleanMask.load(m), crop_size, bbox_pad, min_area, min_bbox_length, max_area
+                DiskBooleanMask.load(m),
+                crop_size,
+                bbox_pad,
+                min_area,
+                min_bbox_length,
+                max_area,
             )
         except Exception as ex:
             print(f"failure for mask{m} ex={ex}")
@@ -552,7 +632,10 @@ def get_max_area_bbox(bboxes: list[Bbox]):
         raise Exception("bboxes cannot be empty for get_max_area_bbox")
     return max([(bb.h * bb.w, bb) for bb in bboxes])[1]
 
-def get_center_crop_coords_from_mask(mask, crop_size, bbox_pad, min_area, min_bbox_length, max_area):
+
+def get_center_crop_coords_from_mask(
+    mask, crop_size, bbox_pad, min_area, min_bbox_length, max_area
+):
     bboxes = list(get_region_crops(mask))
     bboxes = [padded_bbox(bbox, bbox_pad, mask.shape) for bbox in bboxes]
     if not bboxes:

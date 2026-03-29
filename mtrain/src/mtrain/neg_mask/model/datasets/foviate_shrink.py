@@ -13,7 +13,7 @@ def get_foviated_image_and_mask(img, mask, bbox, full_image_size, crop_size, bbo
                 full_image_size, full_image_size, border_mode=cv2.BORDER_CONSTANT
             ),
         ],
-        additional_targets={"bbox_mask": "mask"},
+        additional_targets={"bbox_mask": "mask", "padded_bbox_mask": "mask"},
     )
 
     post_tfm = A.Compose(
@@ -27,23 +27,38 @@ def get_foviated_image_and_mask(img, mask, bbox, full_image_size, crop_size, bbo
     res = pre_tfm(
         image=img,
         mask=mask,
-        bbox_mask=_get_bbox_mask(
-            padded_bbox(bbox, 10, mask.shape), mask.shape
+        bbox_mask=get_zero_mask_with_bbox_colored(
+            bbox, mask.shape
+        ),
+        padded_bbox_mask=get_zero_mask_with_bbox_colored(
+            padded_bbox(bbox, bbox_pad, mask.shape), mask.shape
         ),
     )
-    t_image, t_mask, t_bbox_mask = res["image"], res["mask"], res["bbox_mask"]
-    t_bb = get_largest_bbox(t_bbox_mask)
+    t_image, t_mask = res["image"], res["mask"]
+    t_bbox_mask, t_padded_bbox_mask = res["bbox_mask"], res["padded_bbox_mask"]
+    
+    # we remap using the padded mask
+    t_bb = get_largest_bbox(t_padded_bbox_mask)
     map_x, map_y = get_foviate_remaps(t_image.shape, t_bb, crop_size)
+
+    # now remap stuff
     re_img = cv2.remap(t_image, map_x, map_y, interpolation=cv2.INTER_LINEAR)
     re_mask = cv2.remap(t_mask, map_x, map_y, interpolation=cv2.INTER_LINEAR)
+    # remap the original bbox mask also (without padding)
+    # we return this bbox, not the padded one
+    re_bbox_mask = cv2.remap(t_bbox_mask, map_x, map_y, interpolation=cv2.INTER_LINEAR)
 
-    res = post_tfm(image=re_img, mask=re_mask)
+    # but we use the original bbox shape (Without padding) to return the final bbox
+    # this is so that for downstream transformers we have not added any extra padding
+    res = post_tfm(image=re_img, mask=re_mask, bbox_mask=re_bbox_mask)
     re_img, re_mask = res["image"], res["mask"]
 
-    return (t_image, t_mask), (re_img, re_mask)
+    bbox = get_largest_bbox(res["bbox_mask"])
+
+    return (t_image, t_mask), (re_img, re_mask), res["bbox_mask"], bbox
 
 
-def _get_bbox_mask(bb, shape):
+def get_zero_mask_with_bbox_colored(bb, shape):
     zero = np.zeros(shape)
     zero[bb.y : bb.y2, bb.x : bb.x2] = 1
     return zero

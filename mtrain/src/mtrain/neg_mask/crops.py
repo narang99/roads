@@ -152,6 +152,8 @@ def bbox_only_mask(mask: np.ndarray, bbox: Bbox, pad: int) -> np.ndarray:
     bbox : bounding box
     pad  : context padding in pixels
     """
+    if pad == -1:
+        return _original_mask_with_only_bbox_data(mask, bbox)
     crop, y1c, x1c = padded_crop(mask, bbox, pad)
 
     # Local bbox coordinates inside the padded crop
@@ -161,3 +163,9 @@ def bbox_only_mask(mask: np.ndarray, bbox: Bbox, pad: int) -> np.ndarray:
     result = np.zeros(crop.shape, dtype=np.uint8)
     result[ry1:ry2, rx1:rx2] = crop[ry1:ry2, rx1:rx2].astype(bool).astype(np.uint8)
     return result
+
+
+def _original_mask_with_only_bbox_data(mask: np.ndarray, bb: Bbox):
+    zero = np.zeros_like(mask)
+    zero[bb.y:bb.y2, bb.x:bb.x2] = mask[bb.y:bb.y2, bb.x:bb.x2]
+    return zero

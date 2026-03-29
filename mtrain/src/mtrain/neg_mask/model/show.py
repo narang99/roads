@@ -1,5 +1,5 @@
 from collections import defaultdict
-
+import pandas as pd
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -107,7 +107,22 @@ def show_confusion_matrix_using_preds(preds, targs, labels):
 
     pred_classes = preds.argmax(dim=1)
     cm = confusion_matrix(targs, pred_classes)
-    ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels).plot()
+    # Wrap in a DataFrame for nice text alignment
+    df_cm = pd.DataFrame(cm, index=[f"Actual {l}" for l in labels], 
+                             columns=[f"Pred {l}" for l in labels])
+    print(df_cm)
+    # print(cm)
+    # ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels).plot()
+
+# def show_confusion_matrix_text(preds, targs, labels):
+#     pred_classes = preds.argmax(dim=1)
+#     cm = confusion_matrix(targs, pred_classes)
+    
+#     # Wrap in a DataFrame for nice text alignment
+#     df_cm = pd.DataFrame(cm, index=[f"Actual {l}" for l in labels], 
+#                              columns=[f"Pred {l}" for l in labels])
+    
+#     print(df_cm)
 
 
 def show_images(dataset, idxs, preds, labels, title, nrows=4):
