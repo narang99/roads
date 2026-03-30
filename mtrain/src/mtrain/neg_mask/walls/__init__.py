@@ -2,17 +2,46 @@ from mtrain.neg_mask.crops import get_largest_bbox
 import cv2
 import numpy as np
 from mtrain.neg_mask.crops import bbox_only_mask, get_region_crops
+from dataclasses import dataclass
 
 
-def get_trash_masks_which_are_part_of_wall(full_trash_mask, full_wall_mask):
+def get_trash_mask_regions_fully_enclosed_in_mapi_region(
+    full_trash_mask, full_mapi_mask
+):
+    """Given a trash mask and a mapillary segmentation mask
+    we return masks containing trash objects which are guessed to be part of a full enclosing region in the full_mapi_mask
+
+    The algorithm is simple:
+    - Get all individual mask regions of in trash mask, and in mapi mask
+    - For each region in trash mask, find the region in mapi_mask which has the highest intersection with the trash mask, lets call this enclosing region
+    - The problem with mapillary masks is that if there is trash lying around a wall lets say (at its base), it would be marked as WALL in the panoptic segmentation
+        - This seems intentional as it works well with mapillary motives, but is bad for us
+        - A lot of trash ends up on the edges of the road, at curb side, at base of walls, etc.
+        - The negmask model is struggling with painted walls etc. In general with walls, we want some data to train it to recognise walls
+        - The smallnet model works at 128px tile sizes, so we assume that if there is some trash mask region 100px above the bottom of the wall
+        - then it is not trash and is really a part of the wall
+        - (because if it is trash, we assume its 128px max size, so it cant go above the 100px wall height)
+        - it is a reasonable estimate, statistically should be fine
+    - This function will cut the bottom 100px in the enclosing region of the wall mask
+    - It then finds the intersection of the cutted region with the trash region we are concerned with
+        - For any non-zero intersection, we good (include that region)
+
+    For each such region, we return a separate mask (only that region included). This works well with our negmask dataset
+    """
     part_of_wall_masks = []
-    pairs = find_trash_wall_pairs(full_trash_mask, full_wall_mask)
+    pairs = find_trash_wall_pairs(full_trash_mask, full_mapi_mask)
     for pair in pairs:
-        pair = make_wall_mask_surround_only_trash_region(pair)
+        try:
+            pair, bbox = make_wall_mask_surround_only_trash_region(pair)
+        except Exception as ex:
+            print("WARN: failure in creating pair, skipping")
+            continue
         pair = decrease_wall_height_in_pair(pair)
+        if not pair:
+            continue
 
         if do_trash_and_wall_intersect(pair):
-            part_of_wall_masks.append(pair[0].astype(bool))
+            part_of_wall_masks.append((pair[0].astype(bool), bbox))
     return part_of_wall_masks
 
 
@@ -54,7 +83,7 @@ def make_wall_mask_surround_only_trash_region(pair):
     wall_roi_mask = (
         wall_mask.astype(bool) & full_rect_along_roi_length.astype(bool)
     ).astype(np.uint8)
-    return (trash_mask, wall_roi_mask)
+    return (trash_mask, wall_roi_mask), bbox
 
 
 def decrease_wall_height_in_pair(pair):
@@ -88,6 +117,8 @@ def decrease_wall_height_in_pair(pair):
 
     trash_mask, wall_mask = pair
     cnt, hierarchy = cv2.findContours(wall_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    if not cnt:
+        return None
     rect = cv2.minAreaRect(cnt[0])
     box = shrink_bottom_only(rect, 100)
     boxed = cv2.drawContours(np.zeros(wall_mask.shape), [box], 0, 255, -1)
