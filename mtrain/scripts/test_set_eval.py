@@ -47,8 +47,10 @@ def create_diff_image(image, mask_baseline, mask_new):
 def main():
     parser = argparse.ArgumentParser(description="Evaluate a new negmask iteration against baseline.")
     parser.add_argument("--label", required=True, help="Label of the new model iteration.")
+    parser.add_argument("--force-new-model", help="Force predictions of the new model.", action="store_true")
     parser.add_argument("--baseline", default="baseline", help="Label of the baseline model.")
     parser.add_argument("--bs", type=int, default=8, help="Batch size for learners.")
+    parser.add_argument("--test-dir", default=TEST_SET_PATH, type=Path, help="Location of the directory containing examples (of structure ExampleDir uses)")
     args = parser.parse_args()
 
     new_label = args.label
@@ -62,8 +64,10 @@ def main():
     smallnet = default_smallnet_learners(MODELS_DIR, ["md"], args.bs)
     negmask = default_negmask_learners(MODELS_DIR, [baseline_label, new_label], args.bs)
 
-    dirs = list(get_dirs(TEST_SET_PATH))
+    test_dir = Path(args.test_dir)
+    dirs = list(get_dirs(test_dir))
     print(f"Found {len(dirs)} directories in test set.")
+    print("Will force new model? ", args.force_new_model)
 
     results = []
 
@@ -73,7 +77,7 @@ def main():
             
             # 1. Ensure predictions exist
             edir.negmask_paths(baseline_label, "md", force=False)
-            edir.negmask_paths(new_label, "md", force=False)
+            edir.negmask_paths(new_label, "md", force=args.force_new_model)
             
             # 2. Get masks
             m_base = edir.get_trash_mask(baseline_label, "md")
@@ -129,7 +133,7 @@ def main():
         </style>
     </head>
     <body>
-        <h1>Negmask Evaluation: {new_label} vs {baseline_label}</h1>
+        <h1>Negmask Evaluation:  {new_label} vs {baseline_label} (New vs Old)</h1>
         <div class="legend">
             <strong>Legend:</strong><br>
             <span class="swatch" style="background: white;"></span> Agreement (Both Trash)<br>

@@ -1,3 +1,4 @@
+from regex import W
 from pathlib import Path
 import itertools
 import numpy as np
@@ -57,9 +58,11 @@ def random_filename(k, suffix=None):
     else:
         return f"{name}{suffix}"
 
-def _plot(crops, figsize=None, ncols=2, axis="on", cmap=None):
+def _plot(crops, figsize=None, ncols=2, axis="on", cmap=None, titles=None):
     crops = list(crops)
     rows = math.ceil(len(crops) / ncols)
+    if titles is not None:
+        titles = list(titles)
     if figsize is None:
         figsize = (10 * rows, 10 * rows)
     fig, axs = plt.subplots(rows, ncols, figsize=figsize)
@@ -68,19 +71,24 @@ def _plot(crops, figsize=None, ncols=2, axis="on", cmap=None):
     else:
         axs = [axs]
     for i, c in enumerate(crops):
+        title = None
+        if titles is not None and i < len(titles):
+            title = titles[i]
         if cmap is not None:
             axs[i].imshow(c, cmap=cmap)
         else:
             axs[i].imshow(c)
+        if title is not None:
+            axs[i].set_title(title)
         axs[i].axis(axis)
     plt.tight_layout()
     return fig, axs
 
 
-def show(crops, figsize=None, ncols=2, axis="on", cmap=None):
+def show(crops, figsize=None, ncols=2, axis="on", cmap=None, titles=None):
     if len(crops) == 1:
         ncols = 1
-    fig, axs = _plot(crops, figsize, ncols, axis, cmap)
+    fig, axs = _plot(crops, figsize, ncols, axis, cmap, titles)
     plt.show()
 
 

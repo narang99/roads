@@ -1,3 +1,5 @@
+from mtrain.neg_mask.model.datasets.foviate_shrink import get_foviate_remaps
+from torch.ao.ns.fx.mappings import get_base_name_to_sets_of_related_ops
 from mtrain.neg_mask.model.datasets.blur_pad_dl import (
     blur_overwriter,
     BlurPadFoveateInferDataset,
@@ -56,16 +58,22 @@ def default_negmask_learners(models_dir, labels, bs):
     if "latest" in labels:
         res["latest"] = get_baseline_foveated_model("latest", models_dir, bs)
     if "baseline" in labels:
-        res["baseline"] = EnsembledNegmaskLearner(
-            "baseline",
-            [
-                get_baseline_foveated_model("latest", models_dir, bs),
-                get_baseline_md_model("md", models_dir, bs),
-            ],
+        res["baseline"] = get_baseline_foveated_model("baseline", models_dir, bs)
+        # res["baseline"] = EnsembledNegmaskLearner(
+        #     "baseline",
+        #     [
+        #         get_baseline_foveated_model("latest", models_dir, bs),
+        #         get_baseline_md_model("md", models_dir, bs),
+        #     ],
+        # )
+    if "experimental" in labels:
+        res["experimental"] = get_foveated_model(
+            "experimental",
+            models_dir / "foveated-224" / "iter-7-with-walls-v1-xresnet18.pth",
+            bs,
         )
 
     return res
-
 
 
 def get_baseline_md_model(label, models_dir, bs):
@@ -91,6 +99,19 @@ def get_baseline_foveated_model(label, models_dir, bs):
         dataset_class=BlurPadFoveateInferDataset,
     )
 
+
+def get_foveated_model(label, path, bs):
+    return get_configured_negmask_learner(
+        label,
+        bs,
+        1024,
+        3,
+        foveate_shrink_and_step_down,
+        path,
+        "xresnet18",
+        valid_tfms_crop_size=224,
+        dataset_class=BlurPadFoveateInferDataset,
+    )
 
 def get_configured_negmask_learner(
     label,

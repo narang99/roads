@@ -270,15 +270,18 @@ class BlurPadDataset(Dataset):
         return len(self.image_paths)
 
     def __getitem__(self, index):
+        t_crop, t_mask = self.get_image_and_mask_tensor(index)
+        label_tensor = get_label_tensor(self._labels[index], self.LABEL_BY_IDX)
+        return t_crop, label_tensor
+
+    def get_image_and_mask_tensor(self, index):
         tfms = self._valid_tfms if self.is_valid else self._train_tfms
         image, mask, bbox, inner_bbox = self.get_loaded_objects(index)
 
         crop, cropped_mask = _get_crops(image, mask, bbox)
         crop, cropped_mask = self.crop_mutator(crop, cropped_mask, inner_bbox)
         t_crop, t_mask = _with_tfms(crop, cropped_mask, tfms)
-
-        label_tensor = get_label_tensor(self._labels[index], self.LABEL_BY_IDX)
-        return t_crop, label_tensor
+        return t_crop, t_mask
 
     def get_loaded_objects(self, index):
         image_path = self.image_paths[index]
@@ -288,6 +291,45 @@ class BlurPadDataset(Dataset):
         )
         bbox, inner_bbox = self.img_name_by_bbox[image_path.stem]
         return image, mask, bbox, inner_bbox
+
+
+class BlurPadRepeatedDataset(BlurPadDataset):
+    def __init__(
+        self,
+        image_paths,
+        mask_dir,
+        crop_size,
+        is_valid,
+        crop_mutator=_id_crop_mutator,
+        bbox_pad=0,
+        min_area=35,
+        min_bbox_length=3,
+        max_area=None,
+        tfms_crop_size=None,
+        repeat_n=4,
+    ):
+        super().__init__(
+            image_paths,
+            mask_dir,
+            crop_size,
+            is_valid,
+            crop_mutator,
+            bbox_pad,
+            min_area,
+            min_bbox_length,
+            max_area,
+            tfms_crop_size,
+        )
+        self.repeat_n = repeat_n
+    def __len__(self):
+        return len(self.image_paths) * self.repeat_n
+
+    def __getitem__(self, index):
+        # we send the same image again, but hope the mutator would give a differenet result
+        index = index // self.repeat_n
+        t_crop, t_mask = self.get_image_and_mask_tensor(index)
+        label_tensor = get_label_tensor(self._labels[index], self.LABEL_BY_IDX)
+        return t_crop, label_tensor
 
 
 def random_tfm(cropped_image, mask, inner_bbox):
@@ -365,42 +407,13 @@ class BlurPad4ChanDataset(BlurPadDataset):
     I tried hoping the model would make a correlation, but convolutions seem to suck at making these correlations across channels.
     """
 
-    def __init__(
-        self,
-        image_paths,
-        mask_dir,
-        crop_size,
-        is_valid,
-        crop_mutator=_id_crop_mutator,
-        gaussian_mask_sigma_ratio_to_box_len=1.0,
-        gaussian_mask_min_value=0.3,
-    ):
-        super().__init__(image_paths, mask_dir, crop_size, is_valid, crop_mutator)
-        self.gaussian_mask_sigma_ratio_to_box_len = gaussian_mask_sigma_ratio_to_box_len
-        self.gaussian_mask_min_value = gaussian_mask_min_value
-
     def __getitem__(self, index):
-        tfms = self._valid_tfms if self.is_valid else self._train_tfms
-        image_path = self.image_paths[index]
-        image, mask = (
-            DiskImage.load(image_path),
-            DiskBooleanMask.load(self.mask_paths[index]),
-        )
-        bbox, inner_bbox = self.img_name_by_bbox[image_path.stem]
-        crop, cropped_mask = _get_crops(image, mask, bbox)
-        cropped_mask = get_gaussian_mask(
-            cropped_mask.shape[:2],
-            inner_bbox,
-            self.gaussian_mask_sigma_ratio_to_box_len,
-            self.gaussian_mask_min_value,
-        )
-        crop = self.crop_mutator(crop, cropped_mask, inner_bbox)
-        t_crop, t_mask = _with_tfms(crop, cropped_mask, tfms)
+        t_crop, t_mask = self.get_image_and_mask_tensor(index)
         t_mask = t_mask.to(torch.float32)
         combined = torch.cat([t_crop, t_mask])
-        # print("dtypes", t_crop.dtype, t_mask.dtype, combined.dtype)
         label_tensor = get_label_tensor(self._labels[index], self.LABEL_BY_IDX)
         return combined, label_tensor
+
 
 
 def get_step_edge_mask(shape, bbox: Bbox, ratio=0.3):
