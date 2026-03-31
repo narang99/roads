@@ -1,0 +1,5 @@
+outs:
+- md5: 69c70e3d0353664fd2fcf4eb957f82c8
+  size: 283447808
+  hash: md5
+  path: splits_dataset.tar
