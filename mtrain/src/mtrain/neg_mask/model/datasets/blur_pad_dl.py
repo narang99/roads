@@ -1,3 +1,4 @@
+from mtrain.denorm import denormalize_imagenet
 import albumentations as A
 from mtrain.neg_mask.model.datasets.foviate_shrink import (
     do_foviate_shrink,
@@ -270,16 +271,16 @@ class BlurPadDataset(Dataset):
         return len(self.image_paths)
 
     def __getitem__(self, index):
-        t_crop, t_mask = self.get_image_and_mask_tensor(index)
+        t_crop, t_mask = self.get_image_and_mask_tensor(index, self.crop_mutator)
         label_tensor = get_label_tensor(self._labels[index], self.LABEL_BY_IDX)
         return t_crop, label_tensor
 
-    def get_image_and_mask_tensor(self, index):
+    def get_image_and_mask_tensor(self, index, mutator):
         tfms = self._valid_tfms if self.is_valid else self._train_tfms
         image, mask, bbox, inner_bbox = self.get_loaded_objects(index)
 
         crop, cropped_mask = _get_crops(image, mask, bbox)
-        crop, cropped_mask = self.crop_mutator(crop, cropped_mask, inner_bbox)
+        crop, cropped_mask = mutator(crop, cropped_mask, inner_bbox)
         t_crop, t_mask = _with_tfms(crop, cropped_mask, tfms)
         return t_crop, t_mask
 
@@ -327,7 +328,7 @@ class BlurPadRepeatedDataset(BlurPadDataset):
     def __getitem__(self, index):
         # we send the same image again, but hope the mutator would give a differenet result
         index = index // self.repeat_n
-        t_crop, t_mask = self.get_image_and_mask_tensor(index)
+        t_crop, t_mask = self.get_image_and_mask_tensor(index, self.crop_mutator)
         label_tensor = get_label_tensor(self._labels[index], self.LABEL_BY_IDX)
         return t_crop, label_tensor
 
@@ -335,13 +336,10 @@ class BlurPadRepeatedDataset(BlurPadDataset):
 def random_tfm(cropped_image, mask, inner_bbox):
     tfm = CropTfmsOutsideBbox(cropped_image, inner_bbox)
     NOISE_OVERWRITE = 0
-    BLUR_1_7 = 1
-    BLUR_2_13 = 2
-    STEP_EDGE_0_3 = 3
-    STEP_EDGE_0_7 = 4
-    STEP_GAUSE_0_3 = 5
+    STEP_EDGE_0_3 = 1
+    STEP_EDGE_0_7 = 2
 
-    i = random.randint(0, 5)
+    i = random.randint(0, 2)
     add_noise_change = random.randint(0, 2)
 
     def _add_noise(tfm):
@@ -351,20 +349,11 @@ def random_tfm(cropped_image, mask, inner_bbox):
 
     if i == NOISE_OVERWRITE:
         return tfm.overwrite_with_noise(30).crop, mask
-    elif i == BLUR_1_7:
-        tfm = tfm.overwrite_with_blur(7, 1)
-        return _add_noise(tfm).crop, mask
-    elif i == BLUR_2_13:
-        tfm = tfm.overwrite_with_blur(13, 2)
-        return _add_noise(tfm).crop, mask
     elif i == STEP_EDGE_0_3:
         tfm = tfm.step_down(0.3)
         return _add_noise(tfm).crop, mask
     elif i == STEP_EDGE_0_7:
         tfm = tfm.step_down(0.7)
-        return _add_noise(tfm).crop, mask
-    elif i == STEP_GAUSE_0_3:
-        tfm = tfm.step_down_gaussian(0.3)
         return _add_noise(tfm).crop, mask
     else:
         raise Exception(f"invalid i={i}")
@@ -408,12 +397,118 @@ class BlurPad4ChanDataset(BlurPadDataset):
     """
 
     def __getitem__(self, index):
-        t_crop, t_mask = self.get_image_and_mask_tensor(index)
+        t_crop, t_mask = self.get_image_and_mask_tensor(index, self.crop_mutator)
         t_mask = t_mask.to(torch.float32)
         combined = torch.cat([t_crop, t_mask])
         label_tensor = get_label_tensor(self._labels[index], self.LABEL_BY_IDX)
         return combined, label_tensor
 
+
+
+class BlurPad8ChanDataset(Dataset):
+    # the first one is simply taken by taking a closeup crop
+    # the second one is the full image scaled down to 0->150 and the mask pixels as 255
+    LABEL_BY_IDX = DEFAULT_LABEL_BY_IDX
+
+    def __init__(
+        self,
+        image_paths,
+        mask_dir,
+        small_crop_size,
+        big_crop_size,
+        is_valid,
+        bbox_pad=3,
+        min_area=35,
+        min_bbox_length=3,
+        max_area=None,
+    ):
+        self.image_paths, self.mask_paths, self.bboxes = (
+            self._get_valid_paths_masks_bboxes(image_paths, mask_dir, min_area, max_area, min_bbox_length)
+        )
+        self._sm_crop_size = small_crop_size
+        self._sm_train_tfms = get_train_tfms(self._sm_crop_size)
+        self._sm_valid_tfms = get_valid_tfms(self._sm_crop_size)
+    
+
+        self._bg_crop_size = big_crop_size
+        self._bg_train_tfms = get_train_tfms(self._bg_crop_size)
+        self._bg_valid_tfms = get_valid_tfms(self._bg_crop_size)
+
+        self.bbox_pad = bbox_pad
+        self.is_valid = is_valid
+
+        self._labels = [label_func(i.name) for i in self.image_paths]
+
+    def _get_valid_paths_masks_bboxes(self, image_paths, mask_dir, min_area, max_area, min_bbox_length):
+        valid_image_paths = []
+        valid_bboxes = []
+        valid_mask_paths = []
+
+        for image_path in tqdm(image_paths):
+            try:
+                mask_path = mask_dir / f"{image_path.stem}.png"
+                mask = DiskBooleanMask.load(mask_path)
+                bbox = get_largest_bbox(mask)
+            except Exception as ex:
+                print(f"SKIP: {image_path.name}", ex)
+            if self._is_mask_valid(mask, bbox, min_area, max_area, min_bbox_length):
+                valid_image_paths.append(image_path)
+                valid_mask_paths.append(mask_path)
+                valid_bboxes.append(bbox)
+        return valid_image_paths, valid_mask_paths, valid_bboxes
+
+    def _is_mask_valid(self, mask, bbox, min_area, max_area, min_bbox_length):
+        sm = mask.sum()
+        is_gt_min = sm >= min_area and bbox.h >= min_bbox_length and bbox.w >= min_bbox_length
+        if not is_gt_min:
+            return False
+        if max_area is not None and sm > max_area:
+            return False
+        return True
+
+    @classmethod
+    def label_func(cls, image_path):
+        return label_func(Path(image_path).name)
+
+    def __len__(self):
+        return len(self.image_paths)
+
+    def __getitem__(self, index):
+        image, mask, bbox = self.get_loaded_objects(index)
+        bbox = padded_bbox(bbox, self.bbox_pad, mask.shape)
+
+
+        sm_image = image[bbox.y:bbox.y2, bbox.x:bbox.x2, :]
+        sm_mask = mask[bbox.y:bbox.y2, bbox.x:bbox.x2]
+        sm_tfms = self._sm_valid_tfms if self.is_valid else self._sm_train_tfms
+        t_sm_image, t_sm_mask = _with_tfms(sm_image, sm_mask, sm_tfms)
+
+        bg_image = image.copy().astype(float)
+        bg_image = ((bg_image * 150) / 255).astype(np.uint8)
+        bg_image[mask > 0] = [255, 255, 255]
+        bg_tfms = self._bg_valid_tfms if self.is_valid else self._bg_train_tfms
+        t_bg_image, t_bg_mask = _with_tfms(bg_image, mask, bg_tfms)
+
+        # sm_comb = torch.cat([t_sm_image, t_sm_mask])
+        # bg_comb = torch.cat([t_bg_image, t_bg_mask])
+        label_tensor = get_label_tensor(self._labels[index], self.LABEL_BY_IDX)
+        return t_sm_image, t_bg_image, label_tensor
+
+    def get_loaded_objects(self, index):
+        image_path = self.image_paths[index]
+        image, mask = (
+            DiskImage.load(image_path),
+            DiskBooleanMask.load(self.mask_paths[index]),
+        )
+        bbox = self.bboxes[index]
+        return image, mask, bbox
+
+    @classmethod
+    def denormalize(cls, tens):
+        img = tens[:3, :, :]
+        mask = tens[3, :, :]
+        img = denormalize_imagenet(img).permute([1,2,0])
+        return img, mask
 
 
 def get_step_edge_mask(shape, bbox: Bbox, ratio=0.3):
@@ -740,10 +835,29 @@ def mask_to_gaussian_torch(mask):
     return torch.exp(exponent)
 
 
+class ResizeIfLarger:
+    """Conditionally resize only if image exceeds size threshold."""
+
+    def __init__(self, size: int, max_size: int):
+        self.size = size
+        self.resize = v2.Resize(size, max_size=max_size, antialias=True)
+
+    def __call__(self, img_and_mask):
+        img, mask = img_and_mask
+        h, w = img.shape[-2], img.shape[-1]
+        if h > self.size or w > self.size:
+            img = self.resize(img)
+        h, w = mask.shape[-2], mask.shape[-1]
+        if h > self.size or w > self.size:
+            mask = self.resize(mask)
+        return img, mask
+
+
 def get_train_tfms(crop_size):
     return v2.Compose(
         [
-            v2.Resize(size=crop_size - 1, max_size=crop_size),
+            # v2.Resize(size=crop_size - 1, max_size=crop_size),
+            ResizeIfLarger(size=crop_size - 1, max_size=crop_size),
             v2.CenterCrop(crop_size),
             v2.RandomHorizontalFlip(p=0.5),
             v2.ToDtype(torch.float32, scale=True),
@@ -756,7 +870,8 @@ def get_train_tfms(crop_size):
 def get_valid_tfms(crop_size):
     return v2.Compose(
         [
-            v2.Resize(size=crop_size - 1, max_size=crop_size),
+            # v2.Resize(size=crop_size - 1, max_size=crop_size),
+            ResizeIfLarger(size=crop_size - 1, max_size=crop_size),
             v2.CenterCrop(crop_size),
             v2.ToDtype(torch.float32, scale=True),
             v2.Normalize(mean=MASK_DS_IMAGENET_MEAN, std=MASK_DS_IMAGENET_STD),
