@@ -1,0 +1,5 @@
+outs:
+- md5: 95b6aa54367693209b9b398e9ae76fea
+  size: 185572864
+  hash: md5
+  path: seg-whitter.tar
